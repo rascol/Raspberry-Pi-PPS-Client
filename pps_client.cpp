@@ -2,14 +2,31 @@
  * pps_client.cpp - Client for a PPS source synchronized to
  * time of day
  *
- *  Created on: Sept 1, 2015
- *      Author: ray
+ * Created on: Sept 1, 2015
+ *
+ * Copyright (C) 2015  Raymond S. Connell
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * NOTES:
  *
  * This daemon synchronizes the system clock to a Pulse-Per-
  * Second (PPS) source. Athough the Linux pps-gpio module can
  * provide an ATOM PPS clock from a PPS source to the ntpd
  * daemon which will synchronize the system clock to the ATOM
- * PPS clock, that synchronization is slow and does not take
+ * PPS clock, NTP synchronization is slow and does not take
  * adequate advantage of the sample per second rate available
  * from a PPS source. To get better performance this client,
  * which does not require ATOM support, synchronizes the system
@@ -132,39 +149,6 @@
  *
  * In general no special settings are required in the /etc/ntp.conf
  * file.
- *
- * This is the NTP config file for Rpi-RT-2:
- *
-******************************************************************
-# /etc/ntp.conf, configuration for ntpd; see ntp.conf(5) for help
-
-logfile   /var/log/ntp          # alternate log file
-logconfig =allall
-
-# Enable this if you want statistics to be logged.
-#statsdir /var/log/ntpstats/
-filegen loopstats file loopstats type day enable
-filegen peerstats file peerstats type day enable
-filegen clockstats file clockstats type day enable
-
-#enable stats
-statistics clockstats loopstats peerstats protostats
-
-server 192.168.0.101 minpoll 4 maxpoll 4 iburst prefer true
-
-# By default, exchange time with everybody, but don't allow configuration.
-restrict -4 default kod notrap nomodify nopeer noquery
-restrict -6 default kod notrap nomodify nopeer noquery
-
-# Local users may interrogate the ntp server more closely.
-restrict 127.0.0.1
-restrict ::1
-
-# If you want to listen to time broadcasts on your local subnet, de-comment the
-# next lines.  Please do this only if you trust everybody on the network!
-disable auth
-broadcastclient
-******************************************************************
  */
 
 #include <stdio.h>
