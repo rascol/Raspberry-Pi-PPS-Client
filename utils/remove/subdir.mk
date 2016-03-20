@@ -1,14 +1,13 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
+CPP_SRCS += \
+./pps-client-remove.cpp 
+
 OBJS += \
-./pps-client.o \
-./pps-files.o \
-./pps-sntp.o 
+./pps-client-remove.o
 
 CPP_DEPS += \
-./pps-client.d \
-./pps-files.d \
-./pps-sntp.d 
+./pps-client-remove.d
 
 # Each subdirectory must supply rules for building sources it contributes
 %.o: ./%.cpp

@@ -4,22 +4,20 @@ RM := rm -rf
 # All of the sources participating in the build are defined here
 -include subdir.mk
 
-LIBS := -lrt
-
 # All Target
-all: pps-client
+all: pps-client-make-install
 
 # Tool invocations
-pps-client: $(OBJS) $(USER_OBJS)
+pps-client-make-install: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
-	@echo 'Invoking: Cross G++ Linker'
-	$(CROSS_COMPILE)g++ -pthread -L/usr/local/lib -o "pps-client" $(OBJS) $(USER_OBJS) $(LIBS)
+	@echo 'Invoking: G++ Linker'
+	g++ -o "pps-client-make-install" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(CPP_DEPS)$(EXECUTABLES) pps-client
+	-$(RM) $(OBJS) $(CPP_DEPS) $(EXECUTABLES) pps-client-make-install
 	-@echo ' '
 
 .PHONY: all clean dependents
