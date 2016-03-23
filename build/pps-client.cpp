@@ -195,7 +195,7 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.2.1";
+const char *version = "0.2.2";
 
 /**
  * Declares the global variables.
@@ -267,7 +267,7 @@ bool getAcquireState(void){
  */
 void setHardLimit(double avgCorrection){
 
-	double avgErrorMag = fabs(avgCorrection);
+	double avgMedianMag = fabs(avgCorrection);
 
 	if (g.activeCount < SECS_PER_MINUTE){
 		g.hardLimit = HARD_LIMIT_NONE;
@@ -284,17 +284,17 @@ void setHardLimit(double avgCorrection){
 	}
 
 	if (g.hardLimit == HARD_LIMIT_1){
-		if (avgErrorMag > HARD_LIMIT_05){
+		if (avgMedianMag > HARD_LIMIT_05){
 			g.hardLimit = g.hardLimit << 1;
 		}
 	}
-	else if (avgErrorMag < HARD_LIMIT_05){
+	else if (avgMedianMag < HARD_LIMIT_05){
 		g.hardLimit = HARD_LIMIT_1;
 	}
-	else if (avgErrorMag < (g.hardLimit >> 2)){		// If avgCorrection is below 1/4 of limitValue
+	else if (avgMedianMag < (g.hardLimit >> 2)){	// If avgCorrection is below 1/4 of limitValue
 		g.hardLimit = g.hardLimit >> 1;				// then halve limitValue.
 	}
-	else if (avgErrorMag > (g.hardLimit >> 1)){		// If avgCorrection is above 1/2 of limitValue
+	else if (avgMedianMag > (g.hardLimit >> 1)){	// If avgCorrection is above 1/2 of limitValue
 		g.hardLimit = g.hardLimit << 1;				// then double limitValue.
 
 		if (g.hardLimit > HARD_LIMIT_NONE){
@@ -513,7 +513,7 @@ void makeAverageIntegral(double avgCorrection){
 			g.integralCount = 0;
 		}
 
-		g.integral[i] = g.integral[i] + avgCorrection;			// avgCorrection sums into g.integral[i] once each
+		g.integral[i] = g.integral[i] + avgCorrection;		// avgCorrection sums into g.integral[i] once each
 																// minute forming the ith integral over the last minute.
 		if (g.hardLimit == HARD_LIMIT_1){
 			g.avgIntegral += g.integral[i];						// Accumulate each integral that is being formed
@@ -556,7 +556,15 @@ bool integralIsReady(void){
  * Maintains g.correctionFifo which contains second-by-second
  * values of time corrections over the last minute, accumulates
  * a rolling sum of these and returns the average correction
- * up to the current second.
+ * over the last minute.
+ *
+ * Since timeCorrection converges to a sequence of positive
+ * and negative values each of magnitude one, the average
+ * timeCorrection which is forced to be zero by the controller
+ * also corresponds to the time delay where the number of
+ * positive and negative corrections are equal and thus this
+ * time delay, although not directly measureable, is the
+ * median of the time delays causing the corrections.
  */
 double getAverageCorrection(int timeCorrection){
 
@@ -632,7 +640,7 @@ int removeNoise(int rawError){
 
 	getTimeSlew(rawError);
 
-	zeroError = clampJitter(rawError);			// Recover the time error by
+	zeroError = clampJitter(rawError);				// Recover the time error by
 													// limiting away the jitter.
 	if (g.isAcquiring){
 		g.invProportionalGain = INV_GAIN_1;
@@ -842,18 +850,19 @@ void buildInterruptDistrib(int intrptDelay){
 
 /**
  * Accumulates a decaying distribution of interrupt
- * delay that is used to estimate the most probable
+ * delay that is used to estimate the most frequent
  * value of interrupt delay for the purpose of
- * removing burst noise from the interrupt measurement.
+ * removing burst noise from the interrupt delay
+ * easurement.
  */
-void buildInterruptMostDistrib(int intrptDelay){
+void getMostFrequentDelay(int intrptDelay){
 	int len = INTRPT_DISTRIB_LEN - 1;
 	int idx = intrptDelay;
 
 	if (idx > len){
 		idx = len;
 	}
-	g.interruptMostDistrib[idx] += 1.0;
+	g.peakDelayDistrib[idx] += 1.0;
 
 	if (g.interruptCount > 0){
 		if (g.interruptCount % 60 == 0){	// Every minute
@@ -861,20 +870,20 @@ void buildInterruptMostDistrib(int intrptDelay){
 			double mostVal = 0.0;
 
 			for (int i = 0; i < len; i++){
-				if (g.interruptMostDistrib[i] > mostVal){
-					mostVal = g.interruptMostDistrib[i];
+				if (g.peakDelayDistrib[i] > mostVal){
+					mostVal = g.peakDelayDistrib[i];
 					idxOfMost = i;
 				}
 			}
-			g.interruptMost = idxOfMost;
+			g.mostFreqentDelay = idxOfMost;
 
 			for (int i = 0; i < len; i++){
-				g.interruptMostDistrib[i] *= INTRPT_MOST_DECAY_RATE;
+				g.peakDelayDistrib[i] *= INTRPT_MOST_DECAY_RATE;
 			}
 		}
 	}
 	else {
-		g.interruptMost = g.sysDelay;
+		g.mostFreqentDelay = g.sysDelay;
 	}
 
 	g.interruptCount += 1;
@@ -906,13 +915,13 @@ void buildSysDelayDistrib(int sysDelay){
  */
 void getDelayMedian(int intrptDelay){
 
-	buildInterruptMostDistrib(intrptDelay);
+	getMostFrequentDelay(intrptDelay);
 
 	int diff = 0;
 
-	if ((intrptDelay - g.interruptMost)
+	if ((intrptDelay - g.mostFreqentDelay)
 			>= INTRPT_BURST_LEVEL){ 			// If intrptDelay is a jitter burst
-		return;									// discard the intrptDelay value.
+		return;									// ignore the intrptDelay value.
 	}
 
 	diff = intrptDelay - g.sysDelay;
@@ -982,7 +991,7 @@ void getInterruptDelay(int pps_fd){
 
 	rec.tv_sec = 0;
 	rec.tv_nsec = 100000;						// Wait until the PPS interrupt has occurred to
-	nanosleep(&rec, &rem);						// avoid collision with the calibrate interrupt
+	nanosleep(&rec, &rem);						// avoid a collision with the calibrate interrupt
 
 	int out = 1;
 	write(pps_fd, &out, sizeof(int));			// Set the output pin and disable PPS interrupt reads.
@@ -1018,7 +1027,7 @@ void getInterruptDelay(int pps_fd){
  * Requests a read of the reception time of the PPS hardware
  * interrupt by the pps-client driver and passes the value
  * read to makeTimeCorrection(). The driver is accessed with
- * pps_fd.
+ * the pps_fd file descriptor.
  *
  * When read(pps_fd) is called, the driver puts pps-client to
  * sleep until a PPS hardware interrupt has occurred. When it

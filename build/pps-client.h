@@ -199,8 +199,8 @@ struct ppsClientGlobalVars {
 	int interruptDistrib[INTRPT_DISTRIB_LEN];
 
 	int interruptCount;
-	int interruptMost;
-	double interruptMostDistrib[INTRPT_DISTRIB_LEN];
+	int mostFreqentDelay;
+	double peakDelayDistrib[INTRPT_DISTRIB_LEN];
 
 	int consensisTimeError;
 
