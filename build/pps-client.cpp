@@ -195,7 +195,7 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.2.2";
+const char *version = "0.3.0";
 
 /**
  * Declares the global variables.
@@ -741,7 +741,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 	g.t3.offset = timeCorrection;						// correction to about 500 microseconds each second so
 	adjtimex(&g.t3);									// it can take up to 20 minutes to start pps-client.
 
-	g.isAcquiring = getAcquireState();					// Allows time to reduce time slew on startup.
+	g.isAcquiring = getAcquireState();					// Provides some time to reduce time slew on startup.
 	if (g.isAcquiring){
 
 		g.avgCorrection = getAverageCorrection(timeCorrection);
@@ -768,6 +768,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 	}
 
 	getPPStime(pps_t, timeCorrection);
+	writeSysDelay();
 	return;
 }
 

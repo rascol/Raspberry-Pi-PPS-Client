@@ -135,6 +135,9 @@ int main(int argc, char *argv[]){
 
 	printf("Moving pps-client.sh to /etc/init.d/pps-client\n");
 	system("mv ./pkg/pps-client.sh /etc/init.d/pps-client");
+	system("chmod +x /etc/init.d/pps-client");
+	system("chown root /etc/init.d/pps-client");
+	system("chgrp root /etc/init.d/pps-client");
 
 	char *cmd = (char *)fbuf;
 	strcpy(cmd, "mv ./pkg/pps-client.ko /lib/modules/");
@@ -154,6 +157,8 @@ int main(int argc, char *argv[]){
 	system("rm pkg.tar.gz");
 
 	delete fbuf;
+
+	printf("Done.\n");
 	return 0;
 }
 

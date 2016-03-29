@@ -21,6 +21,7 @@ const char *last_burst_distrib_file = "/var/local/burst-distrib";	// File storin
 const char *burst_distrib_file = "/var/local/burst-distrib-forming";// File storing distribution of jitter burst lengths
 const char *longburst_file = "/var/local/longbursts";
 const char *assert_file = "/run/shm/pps-assert";					// The timestamps of the time corrections each second
+const char *sysDelay_file = "/run/shm/pps-sysDelay";				// The current sysDelay value updated each second
 const char *last_intrpt_distrib_file = "/var/local/intrpt-distrib";	// File storing the completed distribution of offset corrections.
 const char *interrupt_distrib_file = "/var/local/intrpt-distrib-forming";// File storing an incompleted distribution of offset corrections.
 const char *displayParams_file = "/run/shm/display-params";
@@ -733,7 +734,26 @@ void processFiles(char *configVals[], char *pbuf, int sz){
 }
 
 /**
- * Write a timestamp provided as a double to a file.
+ * Write g.sysDelay to a temporary file each second.
+ *
+ * The sysDelay value can be read by other programs
+ * that are timing external interrupts.
+ */
+void writeSysDelay(void){
+	memset(g.strbuf, 0, STRBUF_SZ);
+	sprintf(g.strbuf, "%d#%d\n", g.sysDelay, g.seq_num);
+	remove(sysDelay_file);
+	int pfd = open_logerr(sysDelay_file, O_CREAT | O_WRONLY);
+	if (pfd == -1){
+		return;
+	}
+	write(pfd, g.strbuf, strlen(g.strbuf) + 1);		// Write PPS sysDelay to sysDelay_file
+	close(pfd);
+}
+
+/**
+ * Write a timestamp provided as a double to a temporary
+ * file each second.
  */
 void writeTimestamp(double timestamp){
 	memset(g.strbuf, 0, STRBUF_SZ);
@@ -1051,24 +1071,6 @@ char *copyMajorTo(char *majorPos){
 }
 
 /**
- * Returns the Linux kernel identifier
- * string that would result from typing
- * "uname -r" at the command line.
- */
-char *getUname(char *str, int sz){
-	system("uname -r > /run/shm/uname");
-	int fd = open("/run/shm/uname", O_RDONLY);
-	read(fd, str, sz);
-	close(fd);
-	remove("/run/shm/uname");
-
-	sz = strcspn(str, "\r\n");
-	str[sz] = '\0';
-
-	return str;
-}
-
-/**
  * Loads the hardware driver required by pps-client which
  * is expected to be available in the file:
  * "/lib/modules/'uname -r'/kernel/drivers/misc/pps-client.ko".
@@ -1076,13 +1078,7 @@ char *getUname(char *str, int sz){
 int driver_load(void){
 
 	char *insmod = g.strbuf;
-	strcpy(insmod, "/sbin/insmod /lib/modules/");
-
-	getUname(insmod + strlen(insmod), STRBUF_SZ - strlen(g.strbuf));
-
-	char *end = strpbrk(insmod, "\n");				// Remove the CR from getUname()
-
-	strcpy(end, "/kernel/drivers/misc/pps-client.ko");
+	strcpy(insmod, "/sbin/insmod /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko");
 
 	system("rm -f /dev/pps-client");				// Clean up any old device files.
 

@@ -14,13 +14,12 @@ EXTRA_CFLAGS += $(DEBFLAGS)
 EXTRA_CFLAGS += -I..
 
 ifneq ($(KERNELRELEASE),)
-# call from kernel build system
 
-obj-m	:= pps-client.o
+obj-m := pps-client.o
 
 else
 
-PWD       := $(shell pwd)
+PWD := $(shell pwd)
 
 default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
