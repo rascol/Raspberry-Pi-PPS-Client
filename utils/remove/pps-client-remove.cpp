@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	strcat(cmd, argv[0]);
 	system(cmd);
 
-	system("chkconfig --del pps-client");
+//	system("chkconfig --del pps-client");
 
 	return 0;
 }
