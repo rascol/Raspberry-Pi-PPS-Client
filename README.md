@@ -61,7 +61,7 @@ NTP is provided out the box on Raspian. NTP sets the whole seconds of the initia
  
 `$ sudo apt-get install chkconfig`
 
-This is necessary if you want automatic operation of pps-client on system startup.
+This is necessary if you want to install pps-client as a system service.
 
 # Installing
 ---
@@ -98,9 +98,14 @@ will preserve your current configuration.
 
 # Building from Source
 ---
-Because pps-client contains a Linux kernel driver, building pps-client involves more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built on either a Linux workstation (preferred) or directly on the RPi (much slower). In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi. 
+Because pps-client contains a Linux kernel driver, building pps-client involves more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built on either a Linux workstation (preferred) or directly on the RPi (slower). In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi. 
 
 The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. If you are unable to match your kernel version to the source found [here](https://github.com/raspberrypi/linux) instructions for doing a complete kernel install can be found [here](https://www.raspberrypi.org/documentation/linux/kernel/building.md). Otherwise follow the steps below.
+
+If you need to install git:
+```
+$ sudo apt-get install git
+```
 
 ## Building on a Linux Workstation
 
@@ -195,25 +200,36 @@ That completes the pps-client installation.
 # Operation
 ---
 
-The pps-client requires that a PPS hardware signal is available from a GPS module. Once the GPS is connected and the PPS output is present on GPIO 4:
+The pps-client requires that a PPS hardware signal is available from a GPS module. Once the GPS is connected and the PPS output is present on GPIO 4 you can do a quick try-out with,
 ```
 $ sudo pps-client
 ```
-This installs pps-client as a temporary system service. To watch the controller acquire you can subsequently enter
+That installs pps-client as a daemon. To watch the controller acquire you can subsequently enter
 ```
 $ pps-client -v
 ```
-This runs a secondary copy of pps-client that does nothing more than display the tracking parameters that the pps-client daemon saves to a temporary file. See the notes at the top of the `pps-client.cpp` source file for a description of these parameters. It may take as long as 10 to 20 minutes for pps-client to fully acquire the first time it runs. This happens if the jitter value shown in the tracking display is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces this value. That happens because system functions that pps-client calls internally prevent changes of more than about 500 microseconds in each second. To stop the display type ctrl-c.
+That runs a secondary copy of pps-client that does nothing more than display the tracking parameters that the pps-client daemon saves to a temporary file. See the notes at the top of the `pps-client.cpp` source file for a description of these parameters. It may take as long as 10 to 20 minutes for pps-client to fully acquire the first time it runs. This happens if the jitter value shown in the tracking display is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces this value. That happens because system functions that pps-client calls internally prevent changes of more than about 500 microseconds in each second.
 
-To stop the daemon type
+To stop the display type ctrl-c.
+
+The daemon will continue to run until you reboot the system or until you stop the daemon with
 ```
-$ sudo service pps-client stop
+$ sudo pps-client-stop
 ```
 
-To have the pps-client daemon be automatically loaded and enabled on system boot, from the RPi command line do:
+To have the pps-client daemon be installed as a system service and loaded on system boot, from the RPi command line enter:
 ```
 $ sudo chkconfig --add pps-client
 ```
+If you have installed pps-client as a system service you should start it with 
+```
+$ sudo service pps-client start
+```
+and you should stop it with
+```
+$ sudo service pps-client stop
+```
+The `pps-client -v` command continues to work as described above.
 
 # Performance
 ---
