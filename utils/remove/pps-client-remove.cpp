@@ -19,8 +19,8 @@ int main(int argc, char *argv[])
 	}
 
 	system("service pps-client stop");
-	system("chkconfig --del pps-client");
 	system("pps-client-stop");					// In case not started as a service
+	system("chkconfig --del pps-client");
 
 	printf("Removing /usr/sbin/pps-client\n");
 	system("rm /usr/sbin/pps-client");
