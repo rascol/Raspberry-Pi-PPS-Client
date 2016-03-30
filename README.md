@@ -102,7 +102,7 @@ Because pps-client contains a Linux kernel driver, building pps-client involves 
 
 The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. If you are unable to match your kernel version to the source found [here](https://github.com/raspberrypi/linux) instructions for doing a complete kernel install can be found [here](https://www.raspberrypi.org/documentation/linux/kernel/building.md). Otherwise follow the steps below.
 
-If you need to install git:
+If you need git:
 ```
 $ sudo apt-get install git
 ```
@@ -352,7 +352,7 @@ The one microsecond limit on time precision (and corresponding accuracy limit of
 
 ## Time Synchronizing Clusters of Computers
 
-Although the goal of high accuracy computer timekeeping, evident from even a cursory search on the internet, has been around since at least the inception of the Network Time Protocol, general support for high precision timekeeping over the internet is still not available. However GPS is avalable everywhere and in conjunction with NTP can be used for that purpose now. While it might seem that GPS reception is limited to locations with or near open sky, in fact commercially available GPS repeaters are available that can bring GPS reception indoors with local coverage up to 30 meters.
+Although the goal of high accuracy computer timekeeping, evident from even a cursory search on the internet, has been around since at least the inception of the Network Time Protocol, general support for high precision timekeeping over the internet is still not available. However GPS is avalable everywhere and in conjunction with a daemon like pps-client can be used for that purpose now. While it might seem that GPS reception is limited to locations with or near open sky, in fact commercially available GPS repeaters are available that can bring GPS reception indoors with local coverage up to 30 meters.
 
 ## Using the Raspberry Pi as a Stratum 1 NTP Server
 

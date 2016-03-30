@@ -150,7 +150,7 @@
 			<a href="https://github.com/raspberrypi/linux">here</a> instructions for doing a complete kernel install can be found 
 			<a href="https://www.raspberrypi.org/documentation/linux/kernel/building.md">here</a>. Otherwise follow the steps below.
 		</p>
-		<p>If you need to install git:</p>
+		<p>If you need git:</p>
 		<pre><code>$ sudo apt-get install git
 </code></pre>
 		<h2 id="building-on-a-linux-workstation">Building on a Linux Workstation</h2>
@@ -455,7 +455,7 @@ $ cd PPS-Client
 			<code>clock_gettime()</code> is not). That seems to be the only limitation. On architectures where the clock can be read to nanosecond precision it should be possible to synchronize time to the practical limit of accuracy of the GPS PPS which is on the order of 100 nanoseconds.
 		</p>
 		<h2 id="time-synchronizing-clusters-of-computers">Time Synchronizing Clusters of Computers</h2>
-		<p>Although the goal of high accuracy computer timekeeping, evident from even a cursory search on the internet, has been around since at least the inception of the Network Time Protocol, general support for high precision timekeeping over the internet is still not available. However GPS is avalable everywhere and in conjunction with NTP can be used for that purpose now. While it might seem that GPS reception is limited to locations with or near open sky, in fact commercially available GPS repeaters are available that can bring GPS reception indoors with local coverage up to 30 meters.</p>
+		<p>Although the goal of high accuracy computer timekeeping, evident from even a cursory search on the internet, has been around since at least the inception of the Network Time Protocol, general support for high precision timekeeping over the internet is still not available. However GPS is avalable everywhere and in conjunction with a daemon like pps-client can be used for that purpose now. While it might seem that GPS reception is limited to locations with or near open sky, in fact commercially available GPS repeaters are available that can bring GPS reception indoors with local coverage up to 30 meters.</p>
 		<h2 id="using-the-raspberry-pi-as-a-stratum-1-ntp-server">Using the Raspberry Pi as a Stratum 1 NTP Server</h2>
 		<p>A Rasperry Pi 2 server synchronized to a GPS PPS source with pps-client can be used as an NTP Stratum 1 time server by adding the following lines to the server list in local /etc/ntp.conf (e.g. 
 			<code>sudo nano /etc/ntp.conf</code>):

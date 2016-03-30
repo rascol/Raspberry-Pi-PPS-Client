@@ -24,6 +24,9 @@ int main(int argc, char *argv[])
 	printf("Removing /usr/sbin/pps-client\n");
 	system("rm /usr/sbin/pps-client");
 
+	printf("Removing /usr/sbin/pps-client-stop\n");
+	system("rm /usr/sbin/pps-client-stop");
+
 	printf("Removing /etc/init.d/pps-client\n");
 	system("rm /etc/init.d/pps-client");
 
@@ -32,6 +35,9 @@ int main(int argc, char *argv[])
 
 	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko\n");
 	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko");
+
+	printf("Removing /var/log/pps-client.log\n");
+	system("rm /var/log/pps-client.log");
 
 	printf("Removing /usr/sbin/pps-client-remove\n");
 	char cmd[50];
