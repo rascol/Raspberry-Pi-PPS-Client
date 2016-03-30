@@ -18,10 +18,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-//	system("service pps-client stop");
-//	system("chkconfig --del pps-client");
-//	system("pps-client-stop");					// In case not started as a service
-
 	printf("Removing /usr/sbin/pps-client\n");
 	system("rm /usr/sbin/pps-client");
 
@@ -46,6 +42,8 @@ int main(int argc, char *argv[])
 	strcat(cmd, argv[0]);
 	system(cmd);
 
-
+	system("service pps-client stop");
+	system("chkconfig --del pps-client");
+	system("pps-client-stop");					// In case not started as a service
 	return 0;
 }
