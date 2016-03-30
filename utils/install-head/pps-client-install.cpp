@@ -31,7 +31,6 @@ char *getUname(char *str, int sz){
 	return str;
 }
 
-
 int main(int argc, char *argv[]){
 	unsigned char pkg_start[8];
 	pkg_start[0] = 0xff;
@@ -152,6 +151,10 @@ int main(int argc, char *argv[]){
 
 	printf("Moving pps-client-remove to /usr/sbin/pps-client-remove\n");
 	system("mv ./pkg/pps-client-remove /usr/sbin/pps-client-remove");
+
+	printf("Moving pps-client-stop to /usr/sbin/pps-client-stop\n");
+	system("mv ./pkg/pps-client-stop /usr/sbin/pps-client-stop");
+	system("chmod +x /usr/sbin/pps-client-stop");
 
 	system("rm -rf ./pkg");
 	system("rm pkg.tar.gz");

@@ -1,0 +1,3 @@
+#! /bin/sh
+kill `ps -e | grep pps-client | sed 's/\( [0-9]*\).*/\1/'`
+

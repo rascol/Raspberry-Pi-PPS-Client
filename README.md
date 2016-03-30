@@ -5,7 +5,7 @@ A fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry P
 
 <center><img src="./figures/RPi_with_GPS.jpg" alt="Drawing" style="width: 400px;"/></center>
 
-This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (PPS) source such as the PPS available from a GPS module with a precision of 1 micosecond and an accuracy of 5 microseconds by design. 
+This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (PPS) source such as the PPS available from a GPS module with a precision of 1 micosecond and a timekeeping accuracy of 5 microseconds by design. 
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -16,6 +16,7 @@ This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (
   - [The chkconfig system services manager](#the-chkconfig-system-services-manager)
 - [Installing](#installing)
 - [Uninstalling](#uninstalling)
+- [Reinstalling](#reinstalling)
 - [Building from Source](#building-from-source)
   - [Building the RPi Kernel on a Linux Workstation](#building-the-rpi-kernel-on-a-linux-workstation)
   - [Building the RPi Kernel on the RPi](#building-the-rpi-kernel-on-the-rpi)
@@ -36,6 +37,7 @@ This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Hardware Requirements
+---
 
 1. A Raspberry Pi 2 Model B or later.
 
@@ -46,6 +48,7 @@ This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (
 4. A wired connection from GPIO_17 (pin 11) to GPIO_22 (pin 15) to support self calibration (Note the yellow jumper in the photo above).
  
 # Software Requirements
+---
 ## The Raspian OS
 
 Version 3.18.9-rt5 and later versions of Linux kernel 4.1.y are supported. Initial development was done with the [EMLID Navio kernel](http://docs.emlid.com/Downloads/Real-time-Linux-RPi2/) because it had real-time patches that were necessay for Linux 3.18.x. The stock 4.1.y kernel now provides equal or better timekeeping performance. 
@@ -61,16 +64,18 @@ NTP is provided out the box on Raspian. NTP sets the whole seconds of the initia
 This is necessary if you want automatic operation of pps-client on system startup.
 
 # Installing
+---
 
 The pps-client has several versions of the installer. Copy the appropriate one to the RPi and run it from a terminal:
 ```
 $ sudo ./pps-client-4.1.20-v7+
 ```
-The pps-client version must match the version of the Linux kernel on the RPi. The kernel version can be determined by running "`uname -r`" on an RPi terminal. Version matching is necessary because pps-client contains a kernel driver and all kernel drivers must be version specific to the kernel on which they are compiled.
+The pps-client version must match the version of the Linux kernel on the RPi. The kernel version can be determined by running "`uname -r`" on an RPi terminal. Version matching is necessary because pps-client contains a kernel driver and all kernel drivers are compiled against a specific version of the Linux kernel and can only run on that kernel version.
 
 A few different Linux kernels are currently supported and more will be. This is not the best solution because it means that pps-client has to be re-installed every time Raspian updates the kernel version. The hope is that if there is enough interest in this project, the driver will be accepted into mainline in the upstream kernel.
 
 # Uninstalling
+---
 
 Uninstall pps-client on the RPi with:
 ```
@@ -78,8 +83,21 @@ $ sudo pps-client-remove
 ```
 Uninstalling isn't necessary if you are installing over an older version of pps-client.
 
-# Building from Source
+# Reinstalling
+---
 
+If you want to keep your current pps-client configuration file rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. Something like,
+
+$ sudo mv /ect/pps-client.conf /etc/pps-client.conf.orig
+
+and then, after installing pps-client,
+
+$ sudo mv /etc/pps-client.conf.orig  /ect/pps-client.conf
+
+will preserve your current configuration.
+
+# Building from Source
+---
 Because pps-client contains a Linux kernel driver, building pps-client involves more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built on either a Linux workstation (preferred) or directly on the RPi (much slower). In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi. 
 
 The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. If you are unable to match your kernel version to the source found [here](https://github.com/raspberrypi/linux) instructions for doing a complete kernel install can be found [here](https://www.raspberrypi.org/documentation/linux/kernel/building.md). Otherwise follow the steps below.
@@ -175,6 +193,7 @@ $ sudo ./pps-client-4.1.20-v7+
 That completes the pps-client installation.
 
 # Operation
+---
 
 The pps-client requires that a PPS hardware signal is available from a GPS module. Once the GPS is connected and the PPS output is present on GPIO 4:
 ```
@@ -197,7 +216,7 @@ $ sudo chkconfig --add pps-client
 ```
 
 # Performance
-
+---
 Figure 1 is a distribution of the corrections (dark blue) made by pps-client to the system time of an RPi 2 over a 24 hour period and continuously accumulated in the file `/var/local/error-distrib` when `error-distrib=enable` was set in the pps-client configuration file. These time corrections are superimposed on jitter values (light blue) accumulated over the same period and stored in the file, `/var/local/jitter-distrib`, with `jitter-distrib=enable` set in the config. 
 
 Jitter is the variation in the PPS delay reported to the controller by its kernel driver. After being cleaned up by the pps-client controller, corrections to the time never exceeded one microsecond in any second over this particular 24 hour period. This establishes that the system time is being maintained with a precision of 1 microsecond over this 24 hour period. Also, taking into account other system offsets and uncertainties, absolute time accuracy is within 5 microseconds.
@@ -211,6 +230,7 @@ The frequency offset is compensating for ambient temperature and temperature cha
 ![Frequency Offset](./figures/frequency-vars.png)
 
 # Achieving High Timekeeping Accuracy
+---
 
 The pps-client is implemented as a [proportional-integral (PI) controller](https://en.wikipedia.org/wiki/PID_controller) (a.k.a. a Type 2 Servo) with proportional and integral feedback provided each second but with the value of the integral feedback adjusted once per minute. The PI controller model provides a view of time synchronization as a linear feedback system in which gain coefficients can be adjusted to provide a good compromise among stability, transient response and amount of noise introduced by the error signal. 
 
@@ -239,7 +259,7 @@ Removing jitter bursts, however, requires a different technique. A typical jitte
 Jitter bursts vary in rate of occurrence and duration and are the result of sporadic activity in the processes currently running on the system. But since they are easily identified by the amount of delay, they can be removed by suspending controller time and frequency updates as long as delay duration exceeds a time value that distinguishes between random noise and a jitter burst. This is the technique used to remove burst noise in the controller. The frequency stability provided by the controller makes it possible to suspend updates for several seconds, without a measurable effect, while waiting for a jitter burst to subside.
 
 # Controller Software Details
-
+---
 The discussion below refers to the source code in the `pps-client.cpp` file. Comments in the source file expand on what is discussed here. Identifiers displayed in text script correspond to those in the source file.
 
 ## The Feedback Controller
@@ -303,10 +323,12 @@ To get some idea of what the worst case corrections might be, Figure 5 demonstra
 ![Offsets to stress](./figures/pps-offsets-stress.png)
 
 # Error Handling
+---
 
 All trapped errors are reported to the log file `/var/log/pps-client.log`. In addition to the usual suspects, pps-client also reports interrupt dropouts. Also because sustained dropouts may indicate a fault with the PPS source, there is a provision to allow hardware enunciation of PPS dropouts. Setting the configuration option `alert-pps-lost=enable` will cause RPi GPIO header pin 15 to go to a logic HIGH on loss of the PPS interrupt and to return to a logic LOW when the interrupt resumes.
 
 # Uses
+---
 
 This project is the reference design for a general technique that provides high precision timekeeping. It was implemented on an arm processor that is computationally relatively limited. That fact should emphasize that the same kind of software solution can be employed on typical application processors that have substantially better performance. On Linux systems, the userland code can be used with little or no change on most processors. The kernel driver code is unique to each kind of processor but is simple code that could easily be rewritten.
 
