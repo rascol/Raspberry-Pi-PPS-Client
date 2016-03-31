@@ -40,6 +40,9 @@ int main(int argc, char *argv[])
 	printf("Removing /var/log/pps-client.log\n");
 	system("rm /var/log/pps-client.log");
 
+	printf("Removing /usr/share/doc/pps-client\n");
+	system("rm -rf /usr/share/doc/pps-client");
+
 	printf("Removing /usr/sbin/pps-client-remove\n");
 	char cmd[50];
 	strcpy(cmd, "rm /usr/sbin/");

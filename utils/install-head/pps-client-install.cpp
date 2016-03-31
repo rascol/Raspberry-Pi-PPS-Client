@@ -156,6 +156,21 @@ int main(int argc, char *argv[]){
 	system("mv ./pkg/pps-client-stop /usr/sbin/pps-client-stop");
 	system("chmod +x /usr/sbin/pps-client-stop");
 
+	printf("Moving README.md to /usr/share/doc/pps-client/README.md\n");
+	system("mkdir /usr/share/doc/pps-client");
+	system("mv ./pkg/README.md /usr/share/doc/pps-client/README.md");
+
+	printf("Moving README.html to /usr/share/doc/pps-client/README.html\n");
+	system("mv ./pkg/README.html /usr/share/doc/pps-client/README.html");
+	system("mkdir /usr/share/doc/pps-client/figures");
+	system("mv ./pkg/frequency-vars.png /usr/share/doc/pps-client/figures/frequency-vars.png");
+	system("mv ./pkg/JitterBurst.png /usr/share/doc/pps-client/figures/JitterBurst.png");
+	system("mv ./pkg/offset-distrib.png /usr/share/doc/pps-client/figures/offset-distrib.png");
+	system("mv ./pkg/pps-offsets-stress.png /usr/share/doc/pps-client/figures/pps-offsets-stress.png");
+	system("mv ./pkg/pps-offsets-to-300.png /usr/share/doc/pps-client/figures/pps-offsets-to-300.png");
+	system("mv ./pkg/pps-offsets-to-720.png /usr/share/doc/pps-client/figures/pps-offsets-to-720.png");
+	system("mv ./pkg/RPi_with_GPS.jpg /usr/share/doc/pps-client/figures/RPi_with_GPS.jpg");
+
 	system("rm -rf ./pkg");
 	system("rm pkg.tar.gz");
 

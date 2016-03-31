@@ -33,6 +33,7 @@ This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (
 - [Uses](#uses)
   - [Time Synchronizing Clusters of Computers](#time-synchronizing-clusters-of-computers)
   - [Using the Raspberry Pi as a Stratum 1 NTP Server](#using-the-raspberry-pi-as-a-stratum-1-ntp-server)
+- [Testing](#testing)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -276,11 +277,11 @@ Jitter bursts vary in rate of occurrence and duration and are the result of spor
 
 # Controller Software Details
 ---
-The discussion below refers to the source code in the `pps-client.cpp` file. Comments in the source file expand on what is discussed here. Identifiers displayed in text script correspond to those in the source file.
+The discussion below summarizes the source code in `pps-client.cpp` found in the `build` folder of the project. Comments in the source file expand on what is discussed here. Identifiers displayed in text script below correspond to those in the source file.
 
 ## The Feedback Controller
 
-The pps-client controller algorithm processes timestamps of interrupts from a hardware GPIO pin triggered by the rising edges of a PPS signal. These PPS timestamps are recorded by a kernel driver, `pps-client.ko`, that was specifically designed to record the times as closely as possible to when the processor responded to the PPS interrupts. This is important because the time at which the interrupt is recorded minus the time at which it actually toggled the input pin is the interrupt delay that must be compensated by `sysDelay` and this delay should be as short as possible in order to reduce the uncertainty of the delay value.
+The pps-client controller algorithm processes timestamps of interrupts from a hardware GPIO pin triggered by the rising edges of a PPS signal. These PPS timestamps are recorded by a kernel driver, `pps-client.ko`, that was specifically designed to record the timestamps as closely as possible to when the processor responded to the PPS interrupts. This is important because the time at which the system responded to the interrupt minus the time at which it actually toggled the input pin is the interrupt delay that must be compensated by `sysDelay` and this delay should be as short as possible in order to reduce the uncertainty of the delay value.
 
 The `makeTimeCorrection()` routine is the central controller routine and it waits in the timer loop, `waitForPPS()` inside the `readPPS_SetTime()` routine, until a PPS timestamp becomes available. At that instant the timestamp is passed into `makeTimeCorrection()` where it becomes available as the variable `interruptTime` which is converted to the controller error variable as,
 ```
@@ -290,7 +291,7 @@ Each `rawError` is a time correction corrupted by jitter. Thus the value of `raw
 
 The sign reversal of `timeCorrection` is necessary in order to provide a proportional control step that subtracts the time correction from the current time slew, making a time that is too large smaller and vice versa. That happens by passing `timeCorrection` to the system `adjtimex()` routine which slews the time by exactly that value unless the magnitude is greater than about 500 usec, in which case the slew adjustment is restricted to 500 usec by `adjtimex()`. This is usually what happens when pps-client starts. After several minutes of 500 usec steps, `timeCorrection` will be in a range to allow the integral control step to begin.
 
-But before the integral control step can begin, an average of the second-by-second time corrections over the previous minute must be available for the integral. That average is constructed in the `getAverageCorrection()` routine which sequences the time corrections through a circular buffer `correctionFifo` and simultaneously generates a rolling sum in `correctionAccum` which is scaled to form a rolling average of time corrections that is returned as `avgCorrection` by `getAverageCorrection()` each second. At feedback convergence, the rolling sum of unit `timeCorrection` values makes `avgCorrection` converge to the median of `timeCorrection` values. 
+But before the integral control step can begin, an average of the second-by-second time corrections over the previous minute must be available for the integral. That average is constructed in the `getAverageCorrection()` routine which sequences the time corrections through a circular buffer `correctionFifo` and simultaneously generates a rolling sum in `correctionAccum` which is scaled to form a rolling average of time corrections that is returned as `avgCorrection` by `getAverageCorrection()` each second. At feedback convergence, the rolling sum of *unit* `timeCorrection` values makes `avgCorrection` correspond to the *median* of `timeCorrection` values. 
 
 At the end of each minute the integral control step in the `makeAverageIntegral()` routine sums `avgCorrection` into one of 10 accumulators `integral[i]` each of which accumulates a separate integral that is offset by one second from the others. At the end of the minute those are averaged into `avgIntegral`.
 
@@ -308,7 +309,7 @@ It does that by setting the local clock so that the difference between `interrup
 ```
 	0 ± 1 = interruptTime - sysDelay
 ```
-Since `sysDelay` is an independent variable unaffected by controller feedback, and since `interruptTime` converges to a median of the times at which the system responded to the rising edge of the PPS interrupt according to the local system clock then the result is to make the `interruptTime` median equal to `sysDelay` (`±1`) so that ultimately it is the value of `sysDelay` that determines the value of `interruptTime`. Consequently, if `sysDelay` is accurately the median of interrupt delay times over the last minute then `interruptTime` will be the correct median of times of PPS interrupt recognition on the local clock.  When that occurs local system time is in accurate agreement with the GPS time provided by the PPS.
+Although `interruptTime` is the median of the times at which the system responded to the rising edge of the PPS interrupt, the value of `interruptTime` can't be independently determined by the feedback controller. As indicated by the equation, the controller just sets `interruptTime` to be equal to `sysDelay`. However `sysDelay` is an independent variable not determined by controller feedback. Thus when the controller has satisifed the equation of time, the result is to make the `interruptTime` median equal to `sysDelay` (`±1`) so that it is the value of `sysDelay` that determines the value of `interruptTime`. Consequently, if `sysDelay` is accurately the median of interrupt delay times over the last minute then `interruptTime` will be the correct median of times of PPS interrupt recognition on the local clock.  When that occurs local system time is in accurate agreement with the GPS time provided by the PPS.
 
 To achieve that the `sysDelay` value is determined from time measurements of a calibration interrupt made every second immediately following the PPS interrupt (with the exception that measurements are suspended during a jitter burst from the PPS interrupt). These time measurements are requested from the `pps-client.ko` kernel driver in the `getInterruptDelay()` routine. That routine calculates `intrptDelay` from the time measurements and calls `getDelayMedian()` with that value. The `getDelayMedian()` routine generates `delayMedian`, an estimate of the median of the `intrptDelay` value, that is then assigned to `sysDelay`.
 
@@ -362,4 +363,6 @@ server 127.127.1.0 prefer true
 fudge 127.127.1.0 refid "GPS" stratum 0
 ```
 The address of this Raspberry Pi can then be added to the server lists of other computers on the same network using an appropriate "server" or "peer" format as described in `/etc/ntp.conf` or the `ntp.conf(5)` man page.
+
+# Testing
 

@@ -1,13 +1,3 @@
-#export CROSS_COMPILE=~/Dropbox/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-
-#export KERNELDIR=~/Dropbox/RPi/Linux_kernels/linux-4.1.19
-#export KERNELVERS=4.1.19-v7+
-
-#export KERNELDIR=~/Dropbox/RPi/Linux_kernels/linux-rt-rpi-3.18.9
-#export KERNELVERS=3.18.9-rt5-v7+
-
-#export CROSS_COMPILE=~/Dropbox/RPi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-
-#export KERNELDIR=~/Dropbox/RPi/Linux_kernels/linux-4.1.20
-#export KERNELVERS=4.1.20-v7+
 
 all:
 	mkdir pkg
@@ -38,6 +28,8 @@ all:
 	mv ./make-install ./utils
 	cp ./utils/make-install/pps-client-make-install ./utils/pps-client-make-install
 	
+	cp ./README.md ./pkg/README.md
+	cp ./README.html ./pkg/README.html
 	cp ./build/pps-client.conf ./pkg/pps-client.conf
 	cp ./build/pps-client.sh ./pkg/pps-client.sh
 	tar czf pkg.tar.gz ./pkg

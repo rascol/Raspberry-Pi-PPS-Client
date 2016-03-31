@@ -88,6 +88,9 @@
 					</li>
 				</ul>
 			</li>
+			<li>
+				<a href="#testing">Testing</a>
+			</li>
 		</ul><!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 		<h1 id="hardware-requirements">Hardware Requirements</h1>
@@ -308,12 +311,13 @@ $ cd PPS-Client
 		<p>Jitter bursts vary in rate of occurrence and duration and are the result of sporadic activity in the processes currently running on the system. But since they are easily identified by the amount of delay, they can be removed by suspending controller time and frequency updates as long as delay duration exceeds a time value that distinguishes between random noise and a jitter burst. This is the technique used to remove burst noise in the controller. The frequency stability provided by the controller makes it possible to suspend updates for several seconds, without a measurable effect, while waiting for a jitter burst to subside.</p>
 		<h1 id="controller-software-details">Controller Software Details</h1>
 		<hr/>
-		<p>The discussion below refers to the source code in the 
-			<code>pps-client.cpp</code> file. Comments in the source file expand on what is discussed here. Identifiers displayed in text script correspond to those in the source file.
+		<p>The discussion below summarizes the source code in 
+			<code>pps-client.cpp</code> found in the 
+			<code>build</code> folder of the project. Comments in the source file expand on what is discussed here. Identifiers displayed in text script below correspond to those in the source file.
 		</p>
 		<h2 id="the-feedback-controller">The Feedback Controller</h2>
 		<p>The pps-client controller algorithm processes timestamps of interrupts from a hardware GPIO pin triggered by the rising edges of a PPS signal. These PPS timestamps are recorded by a kernel driver, 
-			<code>pps-client.ko</code>, that was specifically designed to record the times as closely as possible to when the processor responded to the PPS interrupts. This is important because the time at which the interrupt is recorded minus the time at which it actually toggled the input pin is the interrupt delay that must be compensated by 
+			<code>pps-client.ko</code>, that was specifically designed to record the timestamps as closely as possible to when the processor responded to the PPS interrupts. This is important because the time at which the system responded to the interrupt minus the time at which it actually toggled the input pin is the interrupt delay that must be compensated by 
 			<code>sysDelay</code> and this delay should be as short as possible in order to reduce the uncertainty of the delay value.
 		</p>
 		<p>The 
@@ -353,9 +357,11 @@ $ cd PPS-Client
 			<code>correctionFifo</code> and simultaneously generates a rolling sum in 
 			<code>correctionAccum</code> which is scaled to form a rolling average of time corrections that is returned as 
 			<code>avgCorrection</code> by 
-			<code>getAverageCorrection()</code> each second. At feedback convergence, the rolling sum of unit 
+			<code>getAverageCorrection()</code> each second. At feedback convergence, the rolling sum of 
+			<em>unit</em> 
 			<code>timeCorrection</code> values makes 
-			<code>avgCorrection</code> converge to the median of 
+			<code>avgCorrection</code> correspond to the 
+			<em>median</em> of 
 			<code>timeCorrection</code> values. 
 		</p>
 		<p>At the end of each minute the integral control step in the 
@@ -393,12 +399,15 @@ $ cd PPS-Client
 		</p>
 		<pre><code>	0 ± 1 = interruptTime - sysDelay
 </code></pre>
-		<p>Since 
-			<code>sysDelay</code> is an independent variable unaffected by controller feedback, and since 
-			<code>interruptTime</code> converges to a median of the times at which the system responded to the rising edge of the PPS interrupt according to the local system clock then the result is to make the 
+		<p>Although 
+			<code>interruptTime</code> is the median of the times at which the system responded to the rising edge of the PPS interrupt, the value of 
+			<code>interruptTime</code> can't be independently determined by the feedback controller. As indicated by the equation, the controller just sets 
+			<code>interruptTime</code> to be equal to 
+			<code>sysDelay</code>. However 
+			<code>sysDelay</code> is an independent variable not determined by controller feedback. Thus when the controller has satisifed the equation of time, the result is to make the 
 			<code>interruptTime</code> median equal to 
 			<code>sysDelay</code> (
-			<code>±1</code>) so that ultimately it is the value of 
+			<code>±1</code>) so that it is the value of 
 			<code>sysDelay</code> that determines the value of 
 			<code>interruptTime</code>. Consequently, if 
 			<code>sysDelay</code> is accurately the median of interrupt delay times over the last minute then 
@@ -467,5 +476,6 @@ fudge 127.127.1.0 refid "GPS" stratum 0
 			<code>/etc/ntp.conf</code> or the 
 			<code>ntp.conf(5)</code> man page.
 		</p>
+		<h1 id="testing">Testing</h1>
 	</body>
 </html>
