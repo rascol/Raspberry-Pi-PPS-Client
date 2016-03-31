@@ -30,6 +30,14 @@ all:
 	
 	cp ./README.md ./pkg/README.md
 	cp ./README.html ./pkg/README.html
+	cp ./figures/frequency-vars.png ./pkg/frequency-vars.png
+	cp ./figures/JitterBurst.png ./pkg/JitterBurst.png
+	cp ./figures/offset-distrib.png ./pkg/offset-distrib.png
+	cp ./figures/pps-offsets-stress.png ./pkg/pps-offsets-stress.png
+	cp ./figures/pps-offsets-to-300.png ./pkg/pps-offsets-to-300.png
+	cp ./figures/pps-offsets-to-720.png ./pkg/pps-offsets-to-720.png
+	cp ./figures/RPi_with_GPS.jpg ./pkg/RPi_with_GPS.jpg
+	
 	cp ./build/pps-client.conf ./pkg/pps-client.conf
 	cp ./build/pps-client.sh ./pkg/pps-client.sh
 	tar czf pkg.tar.gz ./pkg
