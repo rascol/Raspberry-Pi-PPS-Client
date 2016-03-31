@@ -40,6 +40,10 @@ int main(void){
 	char *end = strpbrk(pid, " \r\n");		// Get the space after the PID value
 	*end = '\0';							// Terminate PID value at the space
 
+	printf("Issuing the kill command:\n");
+	printf(cmd);
+	printf("\n");
+
 	system(cmd);							// Issue: "kill PID"
 
 	return 0;
