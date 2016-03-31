@@ -1,8 +1,0 @@
-#! /bin/sh
-
-# pps-client-stop v0.1.1
-# ps returns PID of pps-client as the first entry in a string.
-# sed then removes leading whitespace and then returns the first number.
-
-kill `ps -e | grep pps-client  | sed -e 's/^[ \t]*//' | sed 's/\([0-9]*\).*/\1/'`
-

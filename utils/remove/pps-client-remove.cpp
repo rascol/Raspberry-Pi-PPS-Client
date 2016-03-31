@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 
 	system("service pps-client stop");
 	system("chkconfig --del pps-client");
-	system("kill `ps -e | grep pps-client  | sed -e 's/^[ \t]*//' | sed 's/\([0-9]*\).*/\1/'`");					// In case not started as a service
+	system("pps-client-stop");					// In case not started as a service
 
 	printf("Removing /usr/sbin/pps-client\n");
 	system("rm /usr/sbin/pps-client");
