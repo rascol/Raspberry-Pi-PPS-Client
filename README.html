@@ -4,13 +4,15 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 	</head>
 	<body>
-		<h1 id="raspberry-pi-pps-client">Raspberry Pi PPS Client</h1>
-		<p>A fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi 2.</p><center><img src="./figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" style="width: 400px;"/></center>
+		<h1 id="raspberry-pi-pps-client">Raspberry Pi PPS Client</h1><center><img src="/images/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" style="width: 400px;"/></center>
 
-		<p>This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (PPS) source such as the PPS available from a GPS module. The pps-client daemon provides a synchronization precision of 1 micosecond and a timekeeping accuracy of 5 microseconds by design. </p><!-- START doctoc generated TOC please keep comment here to allow auto update -->
+		<p>The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi 2 that synchronizes the Raspberry Pi 2 system clock to a GPS time clock. </p><!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 		<ul>
+			<li>
+				<a href="#summary">Summary</a>
+			</li>
 			<li>
 				<a href="#hardware-requirements">Hardware Requirements</a>
 			</li>
@@ -51,11 +53,17 @@
 			<li>
 				<a href="#running-pps-client">Running pps-client</a>
 			</li>
-			<li>
-				<a href="#performance-summary">Performance Summary</a>
-			</li>
 		</ul><!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
+		<h1 id="summary">Summary</h1>
+		<hr/>
+		<p>The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 5 microseconds by design. The figures below illustrate this clearly. This data was captured over a 24 hour period from a Raspberry Pi running Raspian with a 
+			<a href="http://docs.emlid.com/Downloads/Real-time-Linux-RPi2/">3.18.9-rt kernel</a>. Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock (dark blue) superimposed on raw system time measurements (light blue) made over the same period. 
+		</p><center><img src="/images/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
+
+		<p>Figure 2 shows the system clock frequency set by the controller which held the Allan deviation of the frequency to less than 20 parts per billion in each minute over the same period. This corresponds to a time drift of less than 20 nanoseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsec per sec.) The controller adjusted the frequency offset against temperature changes to the value that kept the system clock synchronized to the PPS within a fraction of a microsecond.</p><center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
+
+		<p>The combination of time slew adjustments never exceeding 1 microsecond each second and time drift never exceeding 20 nanoseconds each second certifies a timekeeping precision of 1 microsecond over this 24 hour period. The claimed absolute accuracy limit of 5 microseconds is because of uncertainties in determining the precise value of the PPS interrupt delay and because allowance must be made for occasional time adjustments that could slightly exceed 1 microsecond (but didn't here). This is discussed in extravagant detail in the docs. In any case, the performance shown here can be considered to be worst case if Linux 4.1.y kernels are used because these have even better timekeeping performance than the 3.18.9-rt kernel from which this data was collected.</p>
 		<h1 id="hardware-requirements">Hardware Requirements</h1>
 		<hr/>
 		<ol>
@@ -78,7 +86,10 @@
 		<hr/>
 		<h2 id="the-raspian-os">The Raspian OS</h2>
 		<p>Version 3.18.9-rt5 and later versions of Linux kernel 4.1.y are supported. Initial development was done with the 
-			<a href="http://docs.emlid.com/Downloads/Real-time-Linux-RPi2/">EMLID Navio kernel</a> because it had real-time patches that were necessay for Linux 3.18.x. The stock 4.1.y kernel now provides equal or better timekeeping performance. 
+			<a href="http://docs.emlid.com/Downloads/Real-time-Linux-RPi2/">EMLID Navio kernel</a> because it had real-time patches that were necessary for Linux 3.18.x. The stock 4.1.y kernel now provides equal or better timekeeping performance.
+		</p>
+		<p>The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded into the installer. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file, 
+			<code>\etc\pps-client.conf</code>.
 		</p>
 		<h2 id="the-ntp-daemon">The NTP daemon</h2>
 		<p>NTP is provided out the box on Raspian. NTP sets the whole seconds of the initial date and time and SNTP maintains the date and time through DST and leap second changes.</p>
@@ -105,9 +116,11 @@
 		<h1 id="reinstalling">Reinstalling</h1>
 		<hr/>
 		<p>If you want to keep your current pps-client configuration file rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. For example, you could preserve it by doing something like,</p>
-		<p>$ sudo mv /ect/pps-client.conf /etc/pps-client.conf.orig</p>
+		<pre><code>$ sudo mv /ect/pps-client.conf /etc/pps-client.conf.orig
+</code></pre>
 		<p>and then, after installing pps-client,</p>
-		<p>$ sudo mv /etc/pps-client.conf.orig  /ect/pps-client.conf</p>
+		<pre><code>$ sudo mv /etc/pps-client.conf.orig  /ect/pps-client.conf
+</code></pre>
 		<h1 id="building-from-source">Building from Source</h1>
 		<hr/>
 		<p>Because pps-client contains a Linux kernel driver, building pps-client requires more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built on either a Linux workstation (preferred) or directly on the RPi (slower). In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi. </p>
@@ -126,7 +139,10 @@ $ cd ~/rpi
 		<p>On a workstation you will need the cross-compiler:</p>
 		<pre><code>$ git clone https://github.com/raspberrypi/tools
 </code></pre>
-		<p>That should create a "tools" folder in "rpi".</p>
+		<p>That should create a 
+			<code>tools</code> folder in 
+			<code>/rpi</code>.
+		</p>
 		<p>Download the current version of the kernel sources:</p>
 		<pre><code>$ git clone --depth=1 https://github.com/raspberrypi/linux
 </code></pre>
@@ -205,15 +221,15 @@ $ cd PPS-Client
 		<p>That installs pps-client as a daemon. To watch the controller acquire you can subsequently enter</p>
 		<pre><code>$ pps-client -v
 </code></pre>
-		<p>That runs a secondary copy of pps-client that just displays a status printout that the pps-client daemon continuously generates. When pps-client starts up you can expect to see something like the following in the status printout:</p><center><img src="./figures/StatusPrintoutOnStart.png" alt="Status Printout on Startup" style="width: 634px;"/></center>
+		<p>That runs a secondary copy of pps-client that just displays a status printout that the pps-client daemon continuously generates. When pps-client starts up you can expect to see something like the following in the status printout:</p><center><img src="/images/StatusPrintoutOnStart.png" alt="Status Printout on Startup" style="width: 634px;"/></center>
 
 		<p>The 
 			<code>jitter</code> value is showing the fractional second offset of the PPS signal according to the system clock. That value will decrease second by second as the controller locks to the PPS signal. After about 10 minutes the status printout will look like this:
-		</p><center><img src="./figures/StatusPrintoutAt10Min.png" alt="Status Printout after 10 Min" style="width: 634px;"/></center>
+		</p><center><img src="/images/StatusPrintoutAt10Min.png" alt="Status Printout after 10 Min" style="width: 634px;"/></center>
 
 		<p>The 
 			<code>jitter</code> is displaying small numbers. The time of the rising edge of the PPS signal is shown in the second column. The 
-			<code>clamp</code> value on the far right indicates that the maximum time correction applied to the system clock is being limited to one microsecond. The sysem clock is synchronized to the PPS signal to a precision of one microsecond.
+			<code>clamp</code> value on the far right indicates that the maximum time correction applied to the system clock is being limited to one microsecond. The system clock is synchronized to the PPS signal to a precision of one microsecond.
 		</p>
 		<p>It can take as long as 20 minutes for pps-client to fully acquire the first time it runs. This happens if the 
 			<code>jitter</code> shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces the 
@@ -223,7 +239,7 @@ $ cd PPS-Client
 		<p>The daemon will continue to run until you reboot the system or until you stop the daemon with</p>
 		<pre><code>$ sudo pps-client-stop
 </code></pre>
-		<p>To have the pps-client daemon be installed as a system service and loaded on system boot, from the RPi command line enter:</p>
+		<p>To have the pps-client daemon be installed as a system service and loaded on system boot, from an RPi terminal enter:</p>
 		<pre><code>$ sudo chkconfig --add pps-client
 </code></pre>
 		<p>If you have installed pps-client as a system service you should start it with </p>
@@ -235,22 +251,6 @@ $ cd PPS-Client
 		<p>The "
 			<code>pps-client -v</code>" command continues to work as described above.
 		</p>
-		<h1 id="performance-summary">Performance Summary</h1>
-		<hr/>
-		<p>Figure 1 is a distribution of the corrections (dark blue) made by pps-client to the system time of an RPi 2 over a 24 hour period and continuously accumulated in the file 
-			<code>/var/local/error-distrib</code> when 
-			<code>error-distrib=enable</code> was set in the pps-client configuration file, 
-			<code>/etc/pps-client.conf</code>. These time corrections are superimposed on jitter values (light blue) accumulated over the same period and stored in the file, 
-			<code>/var/local/jitter-distrib</code>, with 
-			<code>jitter-distrib=enable</code> set in the config. 
-		</p>
-		<p>Jitter is the variation in the PPS delay reported to the controller by its kernel driver every second. After being cleaned up by the pps-client controller, second-by-second corrections to the time never exceeded one microsecond in any second over this particular 24 hour period. This establishes that the system time was being maintained with a precision of 1 microsecond over this 24 hour period. Also, taking into account other system offsets and uncertainties, absolute time accuracy was within 5 microseconds.</p><center><img src="./figures/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
-
-		<p>Figure 2 shows the frequency offset of the system clock over the same 24 hour period. Frequency offset is the value, in parts per million of the uncorrected clock frequency, to which the system clock is adjusted in order to keep it continuously synchronized to the PPS signal. In the pps-client controller, it is the frequency offset that keeps the clock continuously synchronized to within 1 microsecond of the PPS rising edge. Also plotted is the Allan deviation of 1 minute samples in each 5 minute interval. This figure is a graph of data continuously accumulated in a 24 hour circular buffer and written to 
-			<code>/var/local/frequency-vars</code> at five minute intervals when 
-			<code>frequency-vars=enable</code> was set in the pps-client configuration file.
-		</p>
-		<p>The frequency offset was compensating for ambient temperature and temperature changes caused by processor activity. Because the frequency offset is set by the pps-client controller, the frequency offset has noise that is introduced by jitter. But as the figure shows, the frequency noise indicated by the Allan deviation will only rarely exceed 20 parts per billion of the system clock oscillator frequency. That would result in a time drift rarely exceeding about 1.2 microseconds per minute. Consequently, not only was the system time error within 1 microsecond at the PPS edge but it was also within 1 microsecond at all times between PPS edges.</p><center><img src="./figures/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
-
+		<p>If your have questions, we have answers. Be sure to check out the docs.</p>
 	</body>
 </html>
