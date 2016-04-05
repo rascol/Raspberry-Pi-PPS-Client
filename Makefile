@@ -8,40 +8,38 @@ all:
 	cd ./driver && $(MAKE) all
 	cp ./driver/pps-client.ko ./pkg/pps-client.ko
 	
-	mv ./utils/install-head ./
+	mv ./installer/install-head ./
 	cd ./install-head && $(MAKE) all
-	mv ./install-head ./utils
-	cp ./utils/install-head/pps-client-install-hd ./utils/pps-client-install-hd
+	mv ./install-head ./installer
+	cp ./installer/install-head/pps-client-install-hd ./installer/pps-client-install-hd
 	
-	mv ./utils/stop ./
+	mv ./installer/stop ./
 	cd ./stop && $(MAKE) all
-	mv ./stop ./utils
-	cp ./utils/stop/pps-client-stop ./pkg/pps-client-stop
+	mv ./stop ./installer
+	cp ./installer/stop/pps-client-stop ./pkg/pps-client-stop
 	
-	mv ./utils/remove ./
+	mv ./installer/remove ./
 	cd ./remove && $(MAKE) all
-	mv ./remove ./utils
-	cp ./utils/remove/pps-client-remove ./pkg/pps-client-remove
+	mv ./remove ./installer
+	cp ./installer/remove/pps-client-remove ./pkg/pps-client-remove
 	
-	mv ./utils/make-install ./
+	mv ./installer/make-install ./
 	cd ./make-install && $(MAKE) all
-	mv ./make-install ./utils
-	cp ./utils/make-install/pps-client-make-install ./utils/pps-client-make-install
+	mv ./make-install ./installer
+	cp ./installer/make-install/pps-client-make-install ./installer/pps-client-make-install
 	
 	cp ./README.md ./pkg/README.md
 	cp ./README.html ./pkg/README.html
-	cp ./figures/frequency-vars.png ./pkg/frequency-vars.png
-	cp ./figures/JitterBurst.png ./pkg/JitterBurst.png
-	cp ./figures/offset-distrib.png ./pkg/offset-distrib.png
-	cp ./figures/pps-offsets-stress.png ./pkg/pps-offsets-stress.png
-	cp ./figures/pps-offsets-to-300.png ./pkg/pps-offsets-to-300.png
-	cp ./figures/pps-offsets-to-720.png ./pkg/pps-offsets-to-720.png
 	cp ./figures/RPi_with_GPS.jpg ./pkg/RPi_with_GPS.jpg
+	cp ./figures/frequency-vars.png ./pkg/frequency-vars.png
+	cp ./figures/offset-distrib.png ./pkg/offset-distrib.png
+	cp ./figures/StatusPrintoutAt10Min.png ./pkg/StatusPrintoutAt10Min.png
+	cp ./figures/StatusPrintoutOnStart.png ./pkg/StatusPrintoutOnStart.png
 	
 	cp ./build/pps-client.conf ./pkg/pps-client.conf
 	cp ./build/pps-client.sh ./pkg/pps-client.sh
 	tar czf pkg.tar.gz ./pkg
-	./utils/pps-client-make-install $(KERNELVERS)
+	./installer/pps-client-make-install $(KERNELVERS)
 	rm pkg.tar.gz
 	rm -rf ./pkg
 
@@ -51,22 +49,22 @@ clean:
 	cd ./build && $(MAKE) clean
 	cd ./driver && $(MAKE) clean
 	
-	mv ./utils/install-head ./
+	mv ./installer/install-head ./
 	cd ./install-head && $(MAKE) clean
-	mv ./install-head ./utils
+	mv ./install-head ./installer
 	
-	mv ./utils/stop ./
+	mv ./installer/stop ./
 	cd ./stop && $(MAKE) clean
-	mv ./stop ./utils
+	mv ./stop ./installer
 	
-	mv ./utils/remove ./
+	mv ./installer/remove ./
 	cd ./remove && $(MAKE) clean
-	mv ./remove ./utils
+	mv ./remove ./installer
 	
-	mv ./utils/make-install ./
+	mv ./installer/make-install ./
 	cd ./make-install && $(MAKE) clean
-	mv ./make-install ./utils
+	mv ./make-install ./installer
 	
-	rm ./utils/pps-client-install-hd
-	rm ./utils/pps-client-make-install
+	rm ./installer/pps-client-install-hd
+	rm ./installer/pps-client-make-install
 		

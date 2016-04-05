@@ -30,9 +30,9 @@ int main(int argc, char *argv[]){
 	strcpy(installName, "pps-client-");
 	strcat(installName, vers);					// Form filename pps-client-x.y.z
 
-	int fd_hd = open("./utils/pps-client-install-hd", O_RDONLY);	// Open the install head
+	int fd_hd = open("./installer/pps-client-install-hd", O_RDONLY);	// Open the install head
 	if (fd_hd == -1){
-		printf("File not found: ./utils/pps-client-install-hd\n");
+		printf("File not found: ./installer/pps-client-install-hd\n");
 		return 1;
 	}
 
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]){
 	close(fd_hd);
 
 	if (rd_hd != sz_hd){
-		printf("Error reading ./utils/pps-client-install-hd\n");
+		printf("Error reading ./installer/pps-client-install-hd\n");
 		close(fd_tar);
 		delete fbuf;
 		return 1;

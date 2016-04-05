@@ -5,9 +5,9 @@
 	</head>
 	<body>
 		<h1 id="raspberry-pi-pps-client">Raspberry Pi PPS Client</h1>
-		<p>A fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi 2.</p><center><img src="./figures/RPi_with_GPS.jpg" alt="Drawing" style="width: 400px;"/></center>
+		<p>A fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi 2.</p><center><img src="./figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" style="width: 400px;"/></center>
 
-		<p>This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (PPS) source such as the PPS available from a GPS module with a precision of 1 micosecond and a timekeeping accuracy of 5 microseconds by design. </p><!-- START doctoc generated TOC please keep comment here to allow auto update -->
+		<p>This daemon synchronizes the Raspberry Pi 2 system clock to a Pulse-Per-Second (PPS) source such as the PPS available from a GPS module. The pps-client daemon provides a synchronization precision of 1 micosecond and a timekeeping accuracy of 5 microseconds by design. </p><!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 		<ul>
@@ -17,6 +17,9 @@
 			<li>
 				<a href="#software-requirements">Software Requirements</a>
 				<ul>
+					<li>
+						<a href="#the-raspian-os">The Raspian OS</a>
+					</li>
 					<li>
 						<a href="#the-ntp-daemon">The NTP daemon</a>
 					</li>
@@ -38,58 +41,18 @@
 				<a href="#building-from-source">Building from Source</a>
 				<ul>
 					<li>
-						<a href="#building-the-rpi-kernel-on-a-linux-workstation">Building the RPi Kernel on a Linux Workstation</a>
+						<a href="#building-on-a-linux-workstation">Building on a Linux Workstation</a>
 					</li>
 					<li>
-						<a href="#building-the-rpi-kernel-on-the-rpi">Building the RPi Kernel on the RPi</a>
-					</li>
-					<li>
-						<a href="#building-pps-client">Building pps-client</a>
+						<a href="#building-on-the-rpi">Building on the RPi</a>
 					</li>
 				</ul>
 			</li>
 			<li>
-				<a href="#operation">Operation</a>
+				<a href="#running-pps-client">Running pps-client</a>
 			</li>
 			<li>
-				<a href="#performance">Performance</a>
-			</li>
-			<li>
-				<a href="#achieving-high-timekeeping-accuracy">Achieving High Timekeeping Accuracy</a>
-			</li>
-			<li>
-				<a href="#controller-software-details">Controller Software Details</a>
-				<ul>
-					<li>
-						<a href="#the-feedback-controller">The Feedback Controller</a>
-					</li>
-					<li>
-						<a href="#the-feedforward-compensator">The Feedforward Compensator</a>
-					</li>
-					<li>
-						<a href="#controller-behavior-on-startup">Controller Behavior on Startup</a>
-					</li>
-					<li>
-						<a href="#performance-under-stress">Performance Under Stress</a>
-					</li>
-				</ul>
-			</li>
-			<li>
-				<a href="#error-handling">Error Handling</a>
-			</li>
-			<li>
-				<a href="#uses">Uses</a>
-				<ul>
-					<li>
-						<a href="#time-synchronizing-clusters-of-computers">Time Synchronizing Clusters of Computers</a>
-					</li>
-					<li>
-						<a href="#using-the-raspberry-pi-as-a-stratum-1-ntp-server">Using the Raspberry Pi as a Stratum 1 NTP Server</a>
-					</li>
-				</ul>
-			</li>
-			<li>
-				<a href="#testing">Testing</a>
+				<a href="#performance-summary">Performance Summary</a>
 			</li>
 		</ul><!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -141,14 +104,13 @@
 		<p>Uninstalling isn't necessary if you are installing over an older version of pps-client.</p>
 		<h1 id="reinstalling">Reinstalling</h1>
 		<hr/>
-		<p>If you want to keep your current pps-client configuration file rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. Something like,</p>
+		<p>If you want to keep your current pps-client configuration file rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. For example, you could preserve it by doing something like,</p>
 		<p>$ sudo mv /ect/pps-client.conf /etc/pps-client.conf.orig</p>
 		<p>and then, after installing pps-client,</p>
 		<p>$ sudo mv /etc/pps-client.conf.orig  /ect/pps-client.conf</p>
-		<p>will preserve your current configuration.</p>
 		<h1 id="building-from-source">Building from Source</h1>
 		<hr/>
-		<p>Because pps-client contains a Linux kernel driver, building pps-client involves more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built on either a Linux workstation (preferred) or directly on the RPi (slower). In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi. </p>
+		<p>Because pps-client contains a Linux kernel driver, building pps-client requires more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built on either a Linux workstation (preferred) or directly on the RPi (slower). In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi. </p>
 		<p>The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. If you are unable to match your kernel version to the source found 
 			<a href="https://github.com/raspberrypi/linux">here</a> instructions for doing a complete kernel install can be found 
 			<a href="https://www.raspberrypi.org/documentation/linux/kernel/building.md">here</a>. Otherwise follow the steps below.
@@ -235,7 +197,7 @@ $ cd PPS-Client
 		<pre><code>$ sudo ./pps-client-4.1.20-v7+
 </code></pre>
 		<p>That completes the pps-client installation.</p>
-		<h1 id="operation">Operation</h1>
+		<h1 id="running-pps-client">Running pps-client</h1>
 		<hr/>
 		<p>The pps-client requires that a PPS hardware signal is available from a GPS module. Once the GPS is connected and the PPS output is present on GPIO 4 you can do a quick try-out with,</p>
 		<pre><code>$ sudo pps-client
@@ -243,8 +205,19 @@ $ cd PPS-Client
 		<p>That installs pps-client as a daemon. To watch the controller acquire you can subsequently enter</p>
 		<pre><code>$ pps-client -v
 </code></pre>
-		<p>That runs a secondary copy of pps-client that does nothing more than display the tracking parameters that the pps-client daemon saves to a temporary file. See the notes at the top of the 
-			<code>pps-client.cpp</code> source file for a description of these parameters. It may take as long as 10 to 20 minutes for pps-client to fully acquire the first time it runs. This happens if the jitter value shown in the tracking display is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces this value. That happens because system functions that pps-client calls internally prevent changes of more than about 500 microseconds in each second.
+		<p>That runs a secondary copy of pps-client that just displays a status printout that the pps-client daemon continuously generates. When pps-client starts up you can expect to see something like the following in the status printout:</p><center><img src="./figures/StatusPrintoutOnStart.png" alt="Status Printout on Startup" style="width: 634px;"/></center>
+
+		<p>The 
+			<code>jitter</code> value is showing the fractional second offset of the PPS signal according to the system clock. That value will decrease second by second as the controller locks to the PPS signal. After about 10 minutes the status printout will look like this:
+		</p><center><img src="./figures/StatusPrintoutAt10Min.png" alt="Status Printout after 10 Min" style="width: 634px;"/></center>
+
+		<p>The 
+			<code>jitter</code> is displaying small numbers. The time of the rising edge of the PPS signal is shown in the second column. The 
+			<code>clamp</code> value on the far right indicates that the maximum time correction applied to the system clock is being limited to one microsecond. The sysem clock is synchronized to the PPS signal to a precision of one microsecond.
+		</p>
+		<p>It can take as long as 20 minutes for pps-client to fully acquire the first time it runs. This happens if the 
+			<code>jitter</code> shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces the 
+			<code>jitter</code> offset. That happens because system functions that pps-client calls internally prevent time changes of more than about 500 microseconds in each second.
 		</p>
 		<p>To stop the display type ctrl-c.</p>
 		<p>The daemon will continue to run until you reboot the system or until you stop the daemon with</p>
@@ -259,223 +232,25 @@ $ cd PPS-Client
 		<p>and you should stop it with</p>
 		<pre><code>$ sudo service pps-client stop
 </code></pre>
-		<p>The 
-			<code>pps-client -v</code> command continues to work as described above.
+		<p>The "
+			<code>pps-client -v</code>" command continues to work as described above.
 		</p>
-		<h1 id="performance">Performance</h1>
+		<h1 id="performance-summary">Performance Summary</h1>
 		<hr/>
 		<p>Figure 1 is a distribution of the corrections (dark blue) made by pps-client to the system time of an RPi 2 over a 24 hour period and continuously accumulated in the file 
 			<code>/var/local/error-distrib</code> when 
-			<code>error-distrib=enable</code> was set in the pps-client configuration file. These time corrections are superimposed on jitter values (light blue) accumulated over the same period and stored in the file, 
+			<code>error-distrib=enable</code> was set in the pps-client configuration file, 
+			<code>/etc/pps-client.conf</code>. These time corrections are superimposed on jitter values (light blue) accumulated over the same period and stored in the file, 
 			<code>/var/local/jitter-distrib</code>, with 
 			<code>jitter-distrib=enable</code> set in the config. 
 		</p>
-		<p>Jitter is the variation in the PPS delay reported to the controller by its kernel driver. After being cleaned up by the pps-client controller, corrections to the time never exceeded one microsecond in any second over this particular 24 hour period. This establishes that the system time is being maintained with a precision of 1 microsecond over this 24 hour period. Also, taking into account other system offsets and uncertainties, absolute time accuracy is within 5 microseconds.</p>
-		<p>
-			<img alt="Offset Distribution" title="" border="0" src="./figures/offset-distrib.png"/>
-		</p>
+		<p>Jitter is the variation in the PPS delay reported to the controller by its kernel driver every second. After being cleaned up by the pps-client controller, second-by-second corrections to the time never exceeded one microsecond in any second over this particular 24 hour period. This establishes that the system time was being maintained with a precision of 1 microsecond over this 24 hour period. Also, taking into account other system offsets and uncertainties, absolute time accuracy was within 5 microseconds.</p><center><img src="./figures/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
+
 		<p>Figure 2 shows the frequency offset of the system clock over the same 24 hour period. Frequency offset is the value, in parts per million of the uncorrected clock frequency, to which the system clock is adjusted in order to keep it continuously synchronized to the PPS signal. In the pps-client controller, it is the frequency offset that keeps the clock continuously synchronized to within 1 microsecond of the PPS rising edge. Also plotted is the Allan deviation of 1 minute samples in each 5 minute interval. This figure is a graph of data continuously accumulated in a 24 hour circular buffer and written to 
 			<code>/var/local/frequency-vars</code> at five minute intervals when 
 			<code>frequency-vars=enable</code> was set in the pps-client configuration file.
 		</p>
-		<p>The frequency offset is compensating for ambient temperature and temperature changes caused by processor activity. Because the frequency offset is set by the pps-client controller, the frequency offset has noise that is introduced by jitter. But as the figure shows, the frequency noise indicated by the Allan deviation will only rarely exceed 20 parts per billion of the system clock oscillator frequency. That would result in a time drift rarely exceeding about 1.2 microseconds per minute. Consequently, not only is the system time error within 1 microsecond at the PPS edge but it is also within 1 microsecond at all times between PPS edges.</p>
-		<p>
-			<img alt="Frequency Offset" title="" border="0" src="./figures/frequency-vars.png"/>
-		</p>
-		<h1 id="achieving-high-timekeeping-accuracy">Achieving High Timekeeping Accuracy</h1>
-		<hr/>
-		<p>The pps-client is implemented as a 
-			<a href="https://en.wikipedia.org/wiki/PID_controller">proportional-integral (PI) controller</a> (a.k.a. a Type 2 Servo) with proportional and integral feedback provided each second but with the value of the integral feedback adjusted once per minute. The PI controller model provides a view of time synchronization as a linear feedback system in which gain coefficients can be adjusted to provide a good compromise among stability, transient response and amount of noise introduced by the error signal. 
-		</p>
-		<p>The error signal is the time difference between the one-second interval provided by a PPS signal and the length of the second reported by the system clock. The noise of concern is the second-to-second variation in time reported by the system because of the corresponding variation of system delay in responding to the PPS interrupt. This variable component of the delay, referred to as jitter, is primarily a consequence of the interrupt contending for processor attention with dozens of other randomly occurring system processes all going on at the same time. But jitter can also be present in the PPS signal generating the interrupt.</p>
-		<p>Because the error signal has jitter and is being used to control synchronization, the jitter component has the effect of a false error signal that causes the time and frequency synchronization to fluctuate as the controller attempts to follow the jitter. The conventional approach to reducing jitter is to low-pass or median filter the error signal. But filtering has the serious disadvantage that reduction of the jitter must be traded off against time delay introduced by the filter. Additional time delay inevitably degrades control performance. The pps-client program uses a much better technique that introduces no delay. To reduce the jitter, the time values returned by the system are passed through a hard limiter that clips extreme values before applying them as time corrections.</p>
-		<p>In fact, the individual time corrections constitute jitter added to a very small time correction. Consequently, each individual correction is mostly random noise and thus is wrong by nearly the amount it deviates from zero. Because of that, the limiting employed in this system clips the maximum time corrections when the controller has fully stabilized to the resolution of the time reported by the system which is 1 microsecond.</p>
-		<p>It might seem that such extreme limiting would remove the desired error signal along with the noise. But that doesn't happen because the true time error is a slowly varying quasi-stationary (DC) level. Limiting only squashes the dynamic (AC) component of the error signal (To see exactly what limiting does see Figures 3, 4, and 5 and the relevant discussion). The DC component remains. If the jitter were not limited, the controller would make the sum of the positive and negative jitter zero. That would be undesirable even after filtering because the noise has significant components in time periods that extend to well beyond one minute. Filtering would remove noise only for time intervals within the cut-off region of the filter. Longer period noise would remain. </p>
-		<p>On the other hand, instead of zeroing the sum of negative and positive jitter and thereby allowing the difference to be introduced as noise, once the controller has acquired, hard limiting causes the controller to make the number of positive and negative excursions to be equal around zero. That happens because the clipped positive and negative amplitudes are identical (1 microsecond). Thus, making the sum zero makes the count equal. As a result, the varying magnitude of the jitter around the control point is ignored and the reported time delay of the PPS rising edge adjusts to its median value: the delay value at which there were as many shorter as longer reported delays over the previous minute.</p>
-		<p>The only (almost insignificant) disadvantage of hard limiting is that it reduces the amount of time correction that can be applied each each second. But that limitation is easily circumvented by allowing the hard limit level to track the amount of required time correction. This insures that the hard limit level does not prevent larger time corrections when they are necessary.</p>
-		<p>As described, hard limiting removes the error that would be introduced by the magnitude of jitter around the control point. However noise that is outside the control region of the controller, that is, noise with a period appreciably longer than one minute would remain. The time delay corresponding to PPS interrupt latency contains noise of that kind which appears as a slow variation in the latency which tends to increase with processor activity. This latency is compensated in pps-client by a variable called 
-			<code>sysDelay</code>. The 
-			<code>sysDelay</code> value directly determines the control point of the controller because the time of the rollover of the second is determined as the reported time of the interrupt minus the value of 
-			<code>sysDelay</code>.
-		</p>
-		<p>In order to characterize 
-			<code>sysDelay</code>, measurements of interrupt latency were made by timing the triggering of the hardware interrupt from a GPIO pin tied across to the GPIO pin that requested the interrupt. Those measurements revealed that interrupt latency has three distinct components: (1) a constant component corresponding to the minimum time required to process the interrupt interrupt request, (2) a uniform random component and (3) an intermittently occurring random component characterized by short bursts of long duration PPS interrupt delay that usually subside within a few seconds.
-		</p>
-		<p>The constant and uniform random components of interrupt latency are removed from pps-client by incorporating the interrupt latency measurement into the RPi hardware. The pps-client driver that records the reception time of a PPS interrupt also has the ability to measure the initiation and reception times of a test interrupt triggered across a pair of GPIO pins. The time difference in those is used to determine the PPS interrupt latency for a particular RPi 2 and Linux kernel. The median of the latency measurement then becomes the applied 
-			<code>sysDelay</code> value. This nearly cancels the median of the actual delay from the PPS rising edge generated by the hard limiting in the controller.
-		</p>
-		<p>Removing jitter bursts, however, requires a different technique. A typical jitter burst is evident in the pps-client tracking display shown below which shows low jitter values except during the burst occurring in the four lines in the center. </p>
-		<p>
-			<img alt="Jitter Burst" title="" border="0" src="./figures/JitterBurst.png"/>
-		</p>
-		<p>Jitter bursts vary in rate of occurrence and duration and are the result of sporadic activity in the processes currently running on the system. But since they are easily identified by the amount of delay, they can be removed by suspending controller time and frequency updates as long as delay duration exceeds a time value that distinguishes between random noise and a jitter burst. This is the technique used to remove burst noise in the controller. The frequency stability provided by the controller makes it possible to suspend updates for several seconds, without a measurable effect, while waiting for a jitter burst to subside.</p>
-		<h1 id="controller-software-details">Controller Software Details</h1>
-		<hr/>
-		<p>The discussion below summarizes the source code in 
-			<code>pps-client.cpp</code> found in the 
-			<code>build</code> folder of the project. Comments in the source file expand on what is discussed here. Identifiers displayed in text script below correspond to those in the source file.
-		</p>
-		<h2 id="the-feedback-controller">The Feedback Controller</h2>
-		<p>The pps-client controller algorithm processes timestamps of interrupts from a hardware GPIO pin triggered by the rising edges of a PPS signal. These PPS timestamps are recorded by a kernel driver, 
-			<code>pps-client.ko</code>, that was specifically designed to record the timestamps as closely as possible to when the processor responded to the PPS interrupts. This is important because the time at which the system responded to the interrupt minus the time at which it actually toggled the input pin is the interrupt delay that must be compensated by 
-			<code>sysDelay</code> and this delay should be as short as possible in order to reduce the uncertainty of the delay value.
-		</p>
-		<p>The 
-			<code>makeTimeCorrection()</code> routine is the central controller routine and it waits in the timer loop, 
-			<code>waitForPPS()</code> inside the 
-			<code>readPPS_SetTime()</code> routine, until a PPS timestamp becomes available. At that instant the timestamp is passed into 
-			<code>makeTimeCorrection()</code> where it becomes available as the variable 
-			<code>interruptTime</code> which is converted to the controller error variable as,
-		</p>
-		<pre><code>	rawError = interruptTime - sysDelay
-</code></pre>
-		<p>Each 
-			<code>rawError</code> is a time correction corrupted by jitter. Thus the value of 
-			<code>rawError</code> generated each second can be significantly different from the required time correction. To extract the time correction, 
-			<code>rawError</code> is passed into the 
-			<code>removeNoise()</code> routine which first determines (when 
-			<code>rawError</code> is sufficiently small) is it burst noise? in which case further processing in the current second is skipped. If it's not burst noise, the average time slew, 
-			<code>avgSlew</code> is updated by 
-			<code>rawError</code>. The 
-			<code>avgSlew</code> value along with the average time correction up to the current second, 
-			<code>avgCorrection</code>, determines the current hard limit value that will be applied in the final noise removal routine, 
-			<code>clampJitter()</code>. The result from 
-			<code>clampJitter()</code> is returned from 
-			<code>removeNoise()</code> as 
-			<code>zeroError</code> which is then modifed by the proportional gain value and then sign reversed to generate a 
-			<code>timeCorrection</code> for the current second.
-		</p>
-		<p>The sign reversal of 
-			<code>timeCorrection</code> is necessary in order to provide a proportional control step that subtracts the time correction from the current time slew, making a time that is too large smaller and vice versa. That happens by passing 
-			<code>timeCorrection</code> to the system 
-			<code>adjtimex()</code> routine which slews the time by exactly that value unless the magnitude is greater than about 500 usec, in which case the slew adjustment is restricted to 500 usec by 
-			<code>adjtimex()</code>. This is usually what happens when pps-client starts. After several minutes of 500 usec steps, 
-			<code>timeCorrection</code> will be in a range to allow the integral control step to begin.
-		</p>
-		<p>But before the integral control step can begin, an average of the second-by-second time corrections over the previous minute must be available for the integral. That average is constructed in the 
-			<code>getAverageCorrection()</code> routine which sequences the time corrections through a circular buffer 
-			<code>correctionFifo</code> and simultaneously generates a rolling sum in 
-			<code>correctionAccum</code> which is scaled to form a rolling average of time corrections that is returned as 
-			<code>avgCorrection</code> by 
-			<code>getAverageCorrection()</code> each second. At feedback convergence, the rolling sum of 
-			<em>unit</em> 
-			<code>timeCorrection</code> values makes 
-			<code>avgCorrection</code> correspond to the 
-			<em>median</em> of 
-			<code>timeCorrection</code> values. 
-		</p>
-		<p>At the end of each minute the integral control step in the 
-			<code>makeAverageIntegral()</code> routine sums 
-			<code>avgCorrection</code> into one of 10 accumulators 
-			<code>integral[i]</code> each of which accumulates a separate integral that is offset by one second from the others. At the end of the minute those are averaged into 
-			<code>avgIntegral</code>.
-		</p>
-		<p>At the end of the minute (actually after 60 time corrections have been averaged as determined by 
-			<code>integralIsReady()</code>), 
-			<code>avgIntegral</code> is returned from 
-			<code>getIntegral()</code> and multiplied by 
-			<code>integralGain</code> to create 
-			<code>freqOffset</code> which, after additional scaling (
-			<code>ADJTIMEX_SCALE</code>) that is required by 
-			<code>adjtimex()</code>, is passed to 
-			<code>adjtimex()</code> to provide the integral control. 
-		</p>
-		<p>No sign reversal is required on the integral in order to generate 
-			<code>freqOffset</code>. That can be deduced as follows: Once the controller fully acquires and is providing a 
-			<code>zeroError</code> with jitter removed, this variable can be considered to be the time difference between the PPS period and the local clock period as measured by the local clock. So when 
-			<code>zeroError</code> is positive that implys that the PPS period is longer than the local clock period. Consequently, the local clock frequency is higher than the PPS frequency which implies that 
-			<code>freqOffset</code> must be negative in order to reduce the local clock frequency to match the PPS frequency. However 
-			<code>freqOffset</code> is derived from averaging sign reversed 
-			<code>zeroError</code> and so is negative when 
-			<code>zeroError</code> is positive. QED.
-		</p>
-		<h2 id="the-feedforward-compensator">The Feedforward Compensator</h2>
-		<p>The specific purpose of the feedback controller is to adjust the system time second by second to satisfy the "local equation of time":</p>
-		<pre><code>	0 = interruptTime - sysDelay
-</code></pre>
-		<p>It does that by setting the local clock so that the difference between 
-			<code>interruptTime</code> and 
-			<code>sysDelay</code> is zero. With all times in microseconds, what the controller actually succeeds in doing each second is this:
-		</p>
-		<pre><code>	0 ± 1 = interruptTime - sysDelay
-</code></pre>
-		<p>Although 
-			<code>interruptTime</code> is the median of the times at which the system responded to the rising edge of the PPS interrupt, the value of 
-			<code>interruptTime</code> can't be independently determined by the feedback controller. As indicated by the equation, the controller just sets 
-			<code>interruptTime</code> to be equal to 
-			<code>sysDelay</code>. However 
-			<code>sysDelay</code> is an independent variable not determined by controller feedback. Thus when the controller has satisifed the equation of time, the result is to make the 
-			<code>interruptTime</code> median equal to 
-			<code>sysDelay</code> (
-			<code>±1</code>) so that it is the value of 
-			<code>sysDelay</code> that determines the value of 
-			<code>interruptTime</code>. Consequently, if 
-			<code>sysDelay</code> is accurately the median of interrupt delay times over the last minute then 
-			<code>interruptTime</code> will be the correct median of times of PPS interrupt recognition on the local clock.  When that occurs local system time is in accurate agreement with the GPS time provided by the PPS.
-		</p>
-		<p>To achieve that the 
-			<code>sysDelay</code> value is determined from time measurements of a calibration interrupt made every second immediately following the PPS interrupt (with the exception that measurements are suspended during a jitter burst from the PPS interrupt). These time measurements are requested from the 
-			<code>pps-client.ko</code> kernel driver in the 
-			<code>getInterruptDelay()</code> routine. That routine calculates 
-			<code>intrptDelay</code> from the time measurements and calls 
-			<code>getDelayMedian()</code> with that value. The 
-			<code>getDelayMedian()</code> routine generates 
-			<code>delayMedian</code>, an estimate of the median of the 
-			<code>intrptDelay</code> value, that is then assigned to 
-			<code>sysDelay</code>.
-		</p>
-		<h2 id="controller-behavior-on-startup">Controller Behavior on Startup</h2>
-		<p>Figure 3 shows the behavior of the controller when it is first turned on. The figure shows frequency offset and corresponding time corrections recorded to 
-			<code>/etc/local/pps-offsets</code> when 
-			<code>pps-offsets=enable</code> was set in the config file. During the first 120 seconds (not shown in the figure), the controller made time corrections to get the time offset into a reasonable range but made no frequency corrections. Frequency offset correction was enabled at sequence number (second) 120. Over the next 600 seconds the pps-client controller adjusted the frequency offset to bring the system clock frequency into sync with the PPS. But how is it actually doing that?
-		</p>
-		<p>
-			<img alt="Offsets to 720 sec" title="" border="0" src="./figures/pps-offsets-to-720.png"/>
-		</p>
-		<p>The expanded view of the same data over the first 300 seconds in Figure 4 shows in more detail what is happening. In general, proportional feedback is correcting the time by the (gain-scaled and limited) time error measured each second. The integral feedback calculated each minute is of the average accumulated time corrections each second in the previous minute. As the integral is formed the result is that the frequency offset moves each minute towards its synchronization value. It should be clear that in any minute where the system clock frequency is not perfectly in sync with the PPS, the average length of the second will be either longer or shorter than one second. For example, if the average length of the second differed by 1 microsecond from the true length of the second, that would indicate that the system clock was in error by 1 part per million, in which case an adustment of the frequency offset by 1 ppm might be expected. </p>
-		<p>
-			<img alt="Offsets to 300 sec" title="" border="0" src="./figures/pps-offsets-to-300.png"/>
-		</p>
-		<p>Now notice that, in the minute between sequence number 120 and 180, there is a clearly visible positive bias in the time correction values. Averaging those time corrections (adding them and dividing by 60), gets a 3.22 microsecond average bias indicating that the system clock is in error by 3.22 parts per million over that minute. However, in the next minute (between 180 and 240), the frequency offset is changed by only about 1.8 ppm. In other words, frequency offset change is only about 0.55 of the amount needed to do a full frequency correction and, moreover, it is easily verified that same fractional correction is made in every succeeding minute. </p>
-		<p>The 0.55 fractional adjustment is the damping ratio fixed by the integral gain of the PI controller. 
-			<a href="https://en.wikipedia.org/wiki/Time_constant">Time Constant</a> That damping value has been chosen to keep the loop stable and, in fact, to set it below the maximum acquire rate provided by a ratio of 1 which corresponds to the full frequency correction.
-		</p>
-		<p>But why not apply the full frequency correction each second? The reason is that the correction is always made too late. It would have been correct for the minute in which it was measured but by the time it has been measured it can only be an estimate for the next minute. If the estimate is in the proper direction but is even slightly too large then the estimation error will be integrated along with the estimate and will become progressively larger in each succeeding minute until the result is an oscillation of the frequency around its stable value. The design decision is that, considering noise and other system uncertainties, it is better to have the controller acquire more slowly with a lower damping value than to risk oscillation with a higher value.</p>
-		<p>Once the controller has acquired, it continues to average the time errors that occurred over the past minute and to apply the scaled integral of the average as the frequency correction for the next minute. So theoretically the controller never acquires. Rather it is constantly chasing the value to be acquired with a low estimate of that value. This seems to argue for a 
-			<a href="https://en.wikipedia.org/wiki/Zeno&apos;s_paradoxes">Zeno's paradox</a>. In practice, however, the difference between the estimate and the target value soon drops below the noise so that any practical measurement would indicate that the controller had, indeed, acquired.
-		</p>
-		<p>The startup transient in Figure 3 is the largest adjustment in frequency the controller ever needs to make and in order to make that adjustment relatively large time corrections are necessary. Once the control loop has acquired however, by design, the time corrections will exceed 1 microsecond only when the controller must make larger than expected frequency offset corrections. In that case, the controller will simply adjust to larger corrections by raising its hard limit level. </p>
-		<h2 id="performance-under-stress">Performance Under Stress</h2>
-		<p>To get some idea of what the worst case corrections might be, Figure 5 demonstrates how the pps-client control loop responds to stress. In this case a full processor load (100% usage on all four cores) was suddenly applied at sequence number 1900. The loading raised the processor temperature causing a total shift in frequency offset of about 1.7 ppm from onset to a stable value near sequence number 2500. The time corrections increased to 2 microseconds only in the region of steepest ascent. Since the transients caused by extreme load changes occur infrequently, it is likely that a time correction more than 1 microsecond would only occasionally occur in normal operation. Moreover it is unlikely that a precision time measurement would be required simultaneously with the onset of full processor load.</p>
-		<p>
-			<img alt="Offsets to stress" title="" border="0" src="./figures/pps-offsets-stress.png"/>
-		</p>
-		<h1 id="error-handling">Error Handling</h1>
-		<hr/>
-		<p>All trapped errors are reported to the log file 
-			<code>/var/log/pps-client.log</code>. In addition to the usual suspects, pps-client also reports interrupt dropouts. Also because sustained dropouts may indicate a fault with the PPS source, there is a provision to allow hardware enunciation of PPS dropouts. Setting the configuration option 
-			<code>alert-pps-lost=enable</code> will cause RPi GPIO header pin 15 to go to a logic HIGH on loss of the PPS interrupt and to return to a logic LOW when the interrupt resumes.
-		</p>
-		<h1 id="uses">Uses</h1>
-		<hr/>
-		<p>This project is the reference design for a general technique that provides high precision timekeeping. It was implemented on an arm processor that is computationally relatively limited. That fact should emphasize that the same kind of software solution can be employed on typical application processors that have substantially better performance. On Linux systems, the userland code can be used with little or no change on most processors. The kernel driver code is unique to each kind of processor but is simple code that could easily be rewritten.</p>
-		<p>The one microsecond limit on time precision (and corresponding accuracy limit of a few microseconds) is a consequence of the precision to which the system clock can be read by software routines that are available for specific architectures (On the RPi, for example, 
-			<code>gettimeofday()</code> is avalable but 
-			<code>clock_gettime()</code> is not). That seems to be the only limitation. On architectures where the clock can be read to nanosecond precision it should be possible to synchronize time to the practical limit of accuracy of the GPS PPS which is on the order of 100 nanoseconds.
-		</p>
-		<h2 id="time-synchronizing-clusters-of-computers">Time Synchronizing Clusters of Computers</h2>
-		<p>Although the goal of high accuracy computer timekeeping, evident from even a cursory search on the internet, has been around since at least the inception of the Network Time Protocol, general support for high precision timekeeping over the internet is still not available. However GPS is avalable everywhere and in conjunction with a daemon like pps-client can be used for that purpose now. While it might seem that GPS reception is limited to locations with or near open sky, in fact commercially available GPS repeaters are available that can bring GPS reception indoors with local coverage up to 30 meters.</p>
-		<h2 id="using-the-raspberry-pi-as-a-stratum-1-ntp-server">Using the Raspberry Pi as a Stratum 1 NTP Server</h2>
-		<p>A Rasperry Pi 2 server synchronized to a GPS PPS source with pps-client can be used as an NTP Stratum 1 time server by adding the following lines to the server list in local /etc/ntp.conf (e.g. 
-			<code>sudo nano /etc/ntp.conf</code>):
-		</p>
-		<pre><code>server 127.127.1.0 prefer true
-fudge 127.127.1.0 refid "GPS" stratum 0
-</code></pre>
-		<p>The address of this Raspberry Pi can then be added to the server lists of other computers on the same network using an appropriate "server" or "peer" format as described in 
-			<code>/etc/ntp.conf</code> or the 
-			<code>ntp.conf(5)</code> man page.
-		</p>
-		<h1 id="testing">Testing</h1>
+		<p>The frequency offset was compensating for ambient temperature and temperature changes caused by processor activity. Because the frequency offset is set by the pps-client controller, the frequency offset has noise that is introduced by jitter. But as the figure shows, the frequency noise indicated by the Allan deviation will only rarely exceed 20 parts per billion of the system clock oscillator frequency. That would result in a time drift rarely exceeding about 1.2 microseconds per minute. Consequently, not only was the system time error within 1 microsecond at the PPS edge but it was also within 1 microsecond at all times between PPS edges.</p><center><img src="./figures/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
+
 	</body>
 </html>
