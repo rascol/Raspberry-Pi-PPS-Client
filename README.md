@@ -18,8 +18,8 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 - [Uninstalling](#uninstalling)
 - [Reinstalling](#reinstalling)
 - [Building from Source](#building-from-source)
-  - [Building on a Linux Workstation](#building-on-a-linux-workstation)
   - [Building on the RPi](#building-on-the-rpi)
+  - [Building on a Linux Workstation](#building-on-a-linux-workstation)
 - [Running pps-client](#running-pps-client)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -98,7 +98,7 @@ $ sudo mv /etc/pps-client.conf.orig  /ect/pps-client.conf
 ```
 # Building from Source
 ---
-Because pps-client contains a Linux kernel driver, building pps-client requires more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built on either a Linux workstation (preferred) or directly on the RPi (slower). In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi. 
+Because pps-client contains a Linux kernel driver, building pps-client requires more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built directly on the RPi or on a Linux workstation with a cross-compiler. Building on the RPi is slower but if you get a clean build you know the code will run. Not so straight forward on a cross-compiler. It can build clean but still not run on the RPi. Then what do you do? In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi.
 
 The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. If you are unable to match your kernel version to the source found [here](https://github.com/raspberrypi/linux) instructions for doing a complete kernel install can be found [here](https://www.raspberrypi.org/documentation/linux/kernel/building.md). Otherwise follow the steps below.
 
@@ -106,8 +106,50 @@ If you need git:
 ```
 $ sudo apt-get install git
 ```
+## Building on the RPi
+
+You might want to create a folder to hold the kernel and pps-client project. For example,
+```
+$ mkdir ~/rpi
+$ cd ~/rpi
+```
+Download the current version of the kernel sources:
+```
+$ git clone --depth=1 https://github.com/raspberrypi/linux
+```
+Get missing dependencies:
+```
+$ sudo apt-get install bc
+```
+Configure the kernel:
+```
+$ cd linux
+$ KERNEL=kernel7
+$ make bcm2709_defconfig
+```
+Compile the kernel (takes about half an hour):
+```
+$ make -j4 zImage
+```
+That will provide the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:
+```
+$ cd ..
+$ git clone --depth=1 https://github.com/rascol/PPS-Client
+$ cd PPS-Client
+```
+Now (assuming that the kernel source version is 4.1.20) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
+```
+$ make KERNELDIR=~/rpi/linux KERNELVERS=4.1.20-v7+
+```
+That will build the installer, `pps-client-4.1.20-v7+`. Run it on the RPi as root:
+```
+$ sudo ./pps-client-4.1.20-v7+
+```
+That completes the pps-client installation.
 
 ## Building on a Linux Workstation
+
+This is decidedly for the experienced. We've had problems with the cross-compiler where it looked like everything was fine but the code didn't run on the RPi. Very hard to debug. On the other hand, it can be much easier to get code though the compile stage on a workstation.
 
 You might want to create a folder to hold the kernel and tools. For example,
 ```
@@ -151,47 +193,6 @@ Now (assuming that the kernel source version is 4.1.20) make the pps-client proj
 $ make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=~/rpi/linux KERNELVERS=4.1.20-v7+
 ```
 That will build the installer, `pps-client-4.1.20-v7+`. Copy this to the RPi. Run it on the RPi as root:
-```
-$ sudo ./pps-client-4.1.20-v7+
-```
-That completes the pps-client installation.
-
-## Building on the RPi
-
-You might want to create a folder to hold the kernel and pps-client project. For example,
-```
-$ mkdir ~/rpi
-$ cd ~/rpi
-```
-Download the current version of the kernel sources:
-```
-$ git clone --depth=1 https://github.com/raspberrypi/linux
-```
-Get missing dependencies:
-```
-$ sudo apt-get install bc
-```
-Configure the kernel:
-```
-$ cd linux
-$ KERNEL=kernel7
-$ make bcm2709_defconfig
-```
-Compile the kernel (takes about half an hour):
-```
-$ make -j4 zImage
-```
-That will provide the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:
-```
-$ cd ..
-$ git clone --depth=1 https://github.com/rascol/PPS-Client
-$ cd PPS-Client
-```
-Now (assuming that the kernel source version is 4.1.20) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
-```
-$ make KERNELDIR=~/rpi/linux KERNELVERS=4.1.20-v7+
-```
-That will build the installer, `pps-client-4.1.20-v7+`. Run it on the RPi as root:
 ```
 $ sudo ./pps-client-4.1.20-v7+
 ```

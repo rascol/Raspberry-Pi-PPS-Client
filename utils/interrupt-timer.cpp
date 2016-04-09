@@ -14,10 +14,7 @@
 #include <time.h>
 #include <sched.h>
 
-struct globalVars {
-	char strbuf[200];
-
-} g;
+char strbuf[200];
 
 /**
  * Reads the major number assigned to interrupt-timer
@@ -85,9 +82,9 @@ char *copyMajorTo(char *majorPos){
  */
 int driver_load(char *gpio){
 
-	memset(g.strbuf, 0, 200 * sizeof(char));
+	memset(strbuf, 0, 200 * sizeof(char));
 
-	char *insmod = g.strbuf;
+	char *insmod = strbuf;
 	strcpy(insmod, "/sbin/insmod /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko gpio_num=");
 	strcat(insmod, gpio);
 
@@ -95,7 +92,7 @@ int driver_load(char *gpio){
 
 	system(insmod);									// Issue the insmod command
 
-	char *mknod = g.strbuf;
+	char *mknod = strbuf;
 	strcpy(mknod, "mknod /dev/interrupt-timer c ");
 	char *major = copyMajorTo(mknod + strlen(mknod));
 	if (major == NULL){								// No major found! insmod failed.
@@ -132,13 +129,13 @@ int getInterruptDelay(int *delay){
 		printf("Error: pps-client is not running.\n");
 		return -1;
 	}
-	read(delay_fd, g.strbuf, 50);
-	g.strbuf[50] = '\0';
+	read(delay_fd, strbuf, 50);
+	strbuf[50] = '\0';
 	close(delay_fd);
 
-	char *end = strchr(g.strbuf, '#');
+	char *end = strchr(strbuf, '#');
 	end[0] = '\0';
-	sscanf(g.strbuf, "%d", delay);
+	sscanf(strbuf, "%d", delay);
 	return 0;
 }
 
@@ -206,31 +203,36 @@ start:
 		return 1;
 	}
 
-	read(intrpt_fd, (void *)tm, 2 * sizeof(int));
+	int dvrv = read(intrpt_fd, (void *)tm, 2 * sizeof(int));
 	close(intrpt_fd);
 
-	int rv = getInterruptDelay(&delay);
-	if (rv == -1){
-		return 1;
+	if (dvrv > 0){
+		int rv = getInterruptDelay(&delay);
+		if (rv == -1){
+			return 1;
+		}
+
+		tm[1] -= delay;
+		if (tm[1] < 0){
+			tm[1] = 1000000 + tm[1];
+			tm[0] -= 1;
+		}
+
+		if (outFormat == 0){			// Print in date-time format
+			const char *timefmt = "%F %H:%M:%S";
+			char timeStr[30];
+
+			strftime(timeStr, 30, timefmt, localtime((const time_t*)(&tm[0])));
+
+			printf("%s.%06d\n", timeStr, tm[1]);
+		}
+		else {							// Print as seconds
+			double time = (double)tm[0] + 1e-6 * tm[1];
+			printf("%lf\n", time);
+		}
 	}
-
-	tm[1] -= delay;
-	if (tm[1] < 0){
-		tm[1] = 1000000 + tm[1];
-		tm[0] -= 1;
-	}
-
-	if (outFormat == 0){			// Print in date-time format
-		const char *timefmt = "%F %H:%M:%S";
-		char timeStr[30];
-
-		strftime(timeStr, 30, timefmt, localtime((const time_t*)(&tm[0])));
-
-		printf("%s.%06d\n", timeStr, tm[1]);
-	}
-	else {							// Print as seconds
-		double time = (double)tm[0] + 1e-6 * tm[1];
-		printf("%lf\n", time);
+	else {
+		printf("No interrupt: Driver timeout at 10 seconds.\n");
 	}
 
 	return 0;
