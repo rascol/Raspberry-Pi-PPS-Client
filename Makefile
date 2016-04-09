@@ -1,6 +1,7 @@
 
 all:
 	mkdir pkg
+	mkdir tmp
 	
 	cd ./build && $(MAKE) all
 	cp ./build/pps-client ./pkg/pps-client
@@ -8,25 +9,33 @@ all:
 	cd ./driver && $(MAKE) all
 	cp ./driver/pps-client.ko ./pkg/pps-client.ko
 	
-	mv ./installer/install-head ./
-	cd ./install-head && $(MAKE) all
-	mv ./install-head ./installer
-	cp ./installer/install-head/pps-client-install-hd ./installer/pps-client-install-hd
+	cp -r ./installer/install-head/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/pps-client-install-hd ./installer/pps-client-install-hd
+	find ./tmp -type f -delete
 	
-	mv ./installer/stop ./
-	cd ./stop && $(MAKE) all
-	mv ./stop ./installer
-	cp ./installer/stop/pps-client-stop ./pkg/pps-client-stop
+	cp -r ./installer/stop/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/pps-client-stop ./pkg/pps-client-stop
+	find ./tmp -type f -delete
 	
-	mv ./installer/remove ./
-	cd ./remove && $(MAKE) all
-	mv ./remove ./installer
-	cp ./installer/remove/pps-client-remove ./pkg/pps-client-remove
+	cp -r ./installer/remove/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/pps-client-remove ./pkg/pps-client-remove
+	find ./tmp -type f -delete
 	
-	mv ./installer/make-install ./
-	cd ./make-install && $(MAKE) all
-	mv ./make-install ./installer
-	cp ./installer/make-install/pps-client-make-install ./installer/pps-client-make-install
+	cp -r ./installer/make-install/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/pps-client-make-install ./installer/pps-client-make-install
+	find ./tmp -type f -delete
+	
+	cd ./utils && $(MAKE) all
+	cp ./utils/interrupt-timer ./pkg/interrupt-timer
+	
+	cp -r ./utils/driver/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/interrupt-timer.ko ./pkg/interrupt-timer.ko
+	find ./tmp -type f -delete
 	
 	cp ./README.md ./pkg/README.md
 	cp ./README.html ./pkg/README.html
@@ -41,30 +50,19 @@ all:
 	tar czf pkg.tar.gz ./pkg
 	./installer/pps-client-make-install $(KERNELVERS)
 	rm pkg.tar.gz
-	rm -rf ./pkg
+	
+	rm -rf ./tmp
+#	rm -rf ./pkg
 
 clean:
 	rm -rf ./pkg
+	rm -rf ./tmp
 	
 	cd ./build && $(MAKE) clean
 	cd ./driver && $(MAKE) clean
-	
-	mv ./installer/install-head ./
-	cd ./install-head && $(MAKE) clean
-	mv ./install-head ./installer
-	
-	mv ./installer/stop ./
-	cd ./stop && $(MAKE) clean
-	mv ./stop ./installer
-	
-	mv ./installer/remove ./
-	cd ./remove && $(MAKE) clean
-	mv ./remove ./installer
-	
-	mv ./installer/make-install ./
-	cd ./make-install && $(MAKE) clean
-	mv ./make-install ./installer
-	
+	cd ./utils && $(MAKE) clean
+		
 	rm ./installer/pps-client-install-hd
 	rm ./installer/pps-client-make-install
+	
 		

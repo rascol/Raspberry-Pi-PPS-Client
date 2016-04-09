@@ -220,6 +220,17 @@ The `jitter` is displaying small numbers. The time of the rising edge of the PPS
 
 It can take as long as 20 minutes for pps-client to fully acquire the first time it runs. This happens if the `jitter` shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces the `jitter` offset. That happens because system functions that pps-client calls internally prevent time changes of more than about 500 microseconds in each second.
 
+Here is a complete list parameters shown in the status printout:
+
+ * First two columns - date and time of the rising edge of the PPS signal.
+ * Third column - the total number of PPS interrupts received since pps-client was started.
+ * jitter - the time deviation in microseconds recorded at the reception of the PPS interrupt.
+ * freqOffset - the frequency offset of the system clock in parts per million of the system clock frequency.
+ * avgCorrection - the time corrections (in microseconds) averaged over the previous minute.
+ * clamp - the hard limit (in microsecs) applied to the raw time error to convert it to a time correction.
+
+Every sixth line, interrupt delay parameters are also shown. About every 17 minutes, an SNTP time query will be made and the results of that will be shown, but will have no effect unless a time update is required.
+
 To stop the display type ctrl-c.
 
 The daemon will continue to run until you reboot the system or until you stop the daemon with

@@ -139,11 +139,11 @@ int main(int argc, char *argv[]){
 	system("chgrp root /etc/init.d/pps-client");
 
 	char *cmd = (char *)fbuf;
+
+	printf("Moving pps-client.ko to /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko\n");
 	strcpy(cmd, "mv ./pkg/pps-client.ko /lib/modules/");
 	strcat(cmd, version);
 	strcat(cmd, "/kernel/drivers/misc/pps-client.ko");
-
-	printf("Moving pps-client.ko to /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko\n");
 	system(cmd);
 
 	printf("Moving pps-client.conf to /etc/pps-client.conf\n");
@@ -155,6 +155,16 @@ int main(int argc, char *argv[]){
 	printf("Moving pps-client-stop to /usr/sbin/pps-client-stop\n");
 	system("mv ./pkg/pps-client-stop /usr/sbin/pps-client-stop");
 	system("chmod +x /usr/sbin/pps-client-stop");
+
+	printf("Moving interrupt-timer to /usr/sbin/interrupt-timer\n");
+	system("mv ./pkg/interrupt-timer /usr/sbin/interrupt-timer");
+	system("chmod +x /usr/sbin/interrupt-timer");
+
+	printf("Moving interrupt-timer.ko to /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko\n");
+	strcpy(cmd, "mv ./pkg/interrupt-timer.ko /lib/modules/");
+	strcat(cmd, version);
+	strcat(cmd, "/kernel/drivers/misc/interrupt-timer.ko");
+	system(cmd);
 
 	printf("Moving README.md to /usr/share/doc/pps-client/README.md\n");
 	system("mkdir /usr/share/doc/pps-client");
