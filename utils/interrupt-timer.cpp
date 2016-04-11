@@ -1,8 +1,23 @@
 /*
  * interrupt-timer.cpp
  *
- *  Created on: Apr 7, 2016
- *      Author: ray
+ * Created on: Apr 7, 2016
+ * Copyright (C) 2016  Raymond S. Connell
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #include <stdio.h>
@@ -15,13 +30,14 @@
 #include <sched.h>
 
 char strbuf[200];
+const char *version = "interrupt-timer v0.1.0";
 
 /**
  * Reads the major number assigned to interrupt-timer
  * from "/proc/devices" as a string which is
  * returned in the majorPos char pointer. This
  * value is used to load the hardware driver that
- * interrupt-timer requires to load PPS interrupt times.
+ * interrupt-timer requires.
  */
 char *copyMajorTo(char *majorPos){
 
@@ -73,7 +89,6 @@ char *copyMajorTo(char *majorPos){
 	delete fbuf;
 	return majorPos;
 }
-
 
 /**
  * Loads the hardware driver required by interrupt-timer which
@@ -145,18 +160,16 @@ int main(int argc, char *argv[]){
 	int tm[2];
 	int delay;
 
-	uid_t uid = geteuid();
-	if (uid != 0){
-		printf("Requires superuser privileges. Please sudo this command.\n");
-		return 1;
-	}
-
 	if (argc > 1){
 		if (strcmp(argv[1], "load-driver") == 0){
+			if (geteuid() != 0){
+				printf("Requires superuser privileges. Please sudo this command.\n");
+				return 0;
+			}
 			if (argv[2] == NULL){
 				printf("GPIO number is a required second arg.\n");
 				printf("Could not load driver.\n");
-				return 1;
+				return 0;
 			}
 			if (driver_load(argv[2]) == -1){
 				printf("Could not load interrupt-timer driver. Exiting.\n");
@@ -167,6 +180,10 @@ int main(int argc, char *argv[]){
 			return 0;
 		}
 		if (strcmp(argv[1], "unload-driver") == 0){
+			if (geteuid() != 0){
+				printf("Requires superuser privileges. Please sudo this command.\n");
+				return 0;
+			}
 			printf("interrupt-timer: driver unloaded\n");
 			driver_unload();
 			return 0;
@@ -183,16 +200,26 @@ int main(int argc, char *argv[]){
 		printf("  interrupt-timer load-driver <gpio-number>\n");
 		printf("  interrupt-timer unload-driver\n");
 		printf("After loading the driver, calling interrupt-timer\n");
-		printf("causes it to wait for an interrupt and then output\n");
-		printf("the date-time it arrived. The following command\n");
+		printf("causes it to wait for interrupts then output the\n");
+		printf("date-time when one occurs. The following command\n");
 		printf("args modify the format of the date-time output:\n\n");
 		printf("  -s Outputs seconds since the epoch.\n");
 		printf("  -d Outputs in date format (default).\n");
+		printf("The program will exit on ctrl-c or when no\n");
+		printf("interrupts are received within 10 seconds.\n");
 
 		return 0;
 	}
 
 start:
+	if (geteuid() != 0){
+		printf("Requires superuser privileges. Please sudo this command.\n");
+		return 0;
+	}
+
+	printf(version);
+	printf("\n");
+
 	struct sched_param param;						// Process must be run as
 	param.sched_priority = 98;						// root to change priority.
 	sched_setscheduler(0, SCHED_FIFO, &param);		// Else, this has no effect.
@@ -203,37 +230,39 @@ start:
 		return 1;
 	}
 
-	int dvrv = read(intrpt_fd, (void *)tm, 2 * sizeof(int));
+	for (;;){
+		int dvrv = read(intrpt_fd, (void *)tm, 2 * sizeof(int));
+		if (dvrv > 0){
+			int rv = getInterruptDelay(&delay);
+			if (rv == -1){
+				return 1;
+			}
+
+			tm[1] -= delay;
+			if (tm[1] < 0){
+				tm[1] = 1000000 + tm[1];
+				tm[0] -= 1;
+			}
+
+			if (outFormat == 0){			// Print in date-time format
+				const char *timefmt = "%F %H:%M:%S";
+				char timeStr[30];
+
+				strftime(timeStr, 30, timefmt, localtime((const time_t*)(&tm[0])));
+
+				printf("%s.%06d\n", timeStr, tm[1]);
+			}
+			else {							// Print as seconds
+				double time = (double)tm[0] + 1e-6 * tm[1];
+				printf("%lf\n", time);
+			}
+		}
+		else {
+			printf("No interrupt: Driver timeout at 10 seconds.\n");
+			break;
+		}
+	}
 	close(intrpt_fd);
-
-	if (dvrv > 0){
-		int rv = getInterruptDelay(&delay);
-		if (rv == -1){
-			return 1;
-		}
-
-		tm[1] -= delay;
-		if (tm[1] < 0){
-			tm[1] = 1000000 + tm[1];
-			tm[0] -= 1;
-		}
-
-		if (outFormat == 0){			// Print in date-time format
-			const char *timefmt = "%F %H:%M:%S";
-			char timeStr[30];
-
-			strftime(timeStr, 30, timefmt, localtime((const time_t*)(&tm[0])));
-
-			printf("%s.%06d\n", timeStr, tm[1]);
-		}
-		else {							// Print as seconds
-			double time = (double)tm[0] + 1e-6 * tm[1];
-			printf("%lf\n", time);
-		}
-	}
-	else {
-		printf("No interrupt: Driver timeout at 10 seconds.\n");
-	}
 
 	return 0;
 }

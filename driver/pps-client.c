@@ -1,11 +1,27 @@
 /*
  * pps-client.c
  *
- * Copyright (C) 2015 Raymond Connell
+ * Copyright (C) 2016  Raymond S. Connell
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Derived from code from the book "Linux Device Drivers" by
  * Alessandro Rubini and Jonathan Corbet, published by O'Reilly
  * & Associates.
+ *
+ * Notes:
  *
  * Compile on Raspberry Pi 2 to create pps-client.ko. On
  * installation pps-client.ko must be copied to
@@ -76,6 +92,8 @@
 
 /* The text below will appear in output from 'cat /proc/interrupt' */
 #define INTERRUPT_NAME "pps-client"
+
+const char *version = "pps-client-driver v0.1.0";
 
 static int major = 0;							/* dynamic by default */
 module_param(major, int, 0);					/* but can be specified at load time */

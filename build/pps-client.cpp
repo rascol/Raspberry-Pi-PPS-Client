@@ -4,7 +4,7 @@
  *
  * Created on: Nov 17, 2015
  *
- * Copyright (C) 2015  Raymond S. Connell
+ * Copyright (C) 2016  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@
 const char *version = "0.3.0";
 
 /**
- * Declares the global variables.
+ * Declares the global variables defined in pps-client.h.
  */
 struct ppsClientGlobalVars g;
 

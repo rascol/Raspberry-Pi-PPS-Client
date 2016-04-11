@@ -1,8 +1,22 @@
 /*
  * interrupt-timer.c
  *
- *  Created on: Apr 8, 2016
- *      Author: ray
+ * Created on: Apr 8, 2016
+ * Copyright (C) 2016  Raymond S. Connell
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #include <linux/module.h>
@@ -30,6 +44,8 @@
 
 /* The text below will appear in output from 'cat /proc/interrupt' */
 #define INTERRUPT_NAME "interrupt-timer"
+
+const char *version = "interrupt-timer-driver v0.1.0";
 
 static int major = 0;							/* dynamic by default */
 module_param(major, int, 0);					/* but can be specified at load time */
@@ -253,7 +269,7 @@ int timer_init(void)
 	int result;
 
 	struct timespec value;
-	value.tv_sec = 10;
+	value.tv_sec = 300;				/* Wait for 5 minutes for an interrupt. */
 	value.tv_nsec = 0;
 
 	j_delay = timespec_to_jiffies(&value);
