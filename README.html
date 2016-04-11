@@ -43,10 +43,10 @@
 				<a href="#building-from-source">Building from Source</a>
 				<ul>
 					<li>
-						<a href="#building-on-a-linux-workstation">Building on a Linux Workstation</a>
+						<a href="#building-on-the-rpi">Building on the RPi</a>
 					</li>
 					<li>
-						<a href="#building-on-the-rpi">Building on the RPi</a>
+						<a href="#building-on-a-linux-workstation">Building on a Linux Workstation</a>
 					</li>
 				</ul>
 			</li>
@@ -63,7 +63,7 @@
 
 		<p>Figure 2 shows the system clock frequency set by the controller which held the Allan deviation of the frequency to less than 20 parts per billion in each minute over the same period. This corresponds to a time drift of less than 20 nanoseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsec per sec.) The controller adjusted the frequency offset against temperature changes to the value that kept the system clock synchronized to the PPS within a fraction of a microsecond.</p><center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
 
-		<p>The combination of time slew adjustments never exceeding 1 microsecond each second and time drift never exceeding 20 nanoseconds each second certifies a timekeeping precision of 1 microsecond over this 24 hour period. The claimed absolute accuracy limit of 5 microseconds is because of uncertainties in determining the precise value of the PPS interrupt delay and because allowance must be made for occasional time adjustments that could slightly exceed 1 microsecond (but didn't here). This is discussed in extravagant detail in the docs. In any case, the performance shown here can be considered to be worst case if Linux 4.1.y kernels are used because these have even better timekeeping performance than the 3.18.9-rt kernel from which this data was collected.</p>
+		<p>The combination of time slew adjustments never needing to exceed 1 microsecond each second and time drift never exceeding 20 nanoseconds each second certifies a timekeeping precision of 1 microsecond over this 24 hour period. The claimed absolute accuracy limit of 5 microseconds is because of uncertainties in determining the precise value of the PPS interrupt delay and because allowance must be made for occasional time adjustments that could slightly exceed 1 microsecond (but didn't here). This is discussed in extravagant detail in the docs. In any case, the performance shown here can be considered to be worst case if Linux 4.1.y kernels are used because these have even better timekeeping performance than the 3.18.9-rt kernel from which this data was collected.</p>
 		<h1 id="hardware-requirements">Hardware Requirements</h1>
 		<hr/>
 		<ol>
@@ -123,7 +123,7 @@
 </code></pre>
 		<h1 id="building-from-source">Building from Source</h1>
 		<hr/>
-		<p>Because pps-client contains a Linux kernel driver, building pps-client requires more than just compiling it. A compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client which can be built on either a Linux workstation (preferred) or directly on the RPi (slower). In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi. </p>
+		<p>Because pps-client contains a Linux kernel driver, building pps-client requires that a compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client. The pps-client project can be built directly on the RPi or on a Linux workstation with a cross-compiler. Building on the RPi is slower but more reliable. In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi.</p>
 		<p>The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. If you are unable to match your kernel version to the source found 
 			<a href="https://github.com/raspberrypi/linux">here</a> instructions for doing a complete kernel install can be found 
 			<a href="https://www.raspberrypi.org/documentation/linux/kernel/building.md">here</a>. Otherwise follow the steps below.
@@ -131,7 +131,43 @@
 		<p>If you need git:</p>
 		<pre><code>$ sudo apt-get install git
 </code></pre>
+		<h2 id="building-on-the-rpi">Building on the RPi</h2>
+		<p>You might want to create a folder to hold the kernel and pps-client project. For example,</p>
+		<pre><code>$ mkdir ~/rpi
+$ cd ~/rpi
+</code></pre>
+		<p>Download the current version of the kernel sources:</p>
+		<pre><code>$ git clone --depth=1 https://github.com/raspberrypi/linux
+</code></pre>
+		<p>Get missing dependencies:</p>
+		<pre><code>$ sudo apt-get install bc
+</code></pre>
+		<p>Configure the kernel:</p>
+		<pre><code>$ cd linux
+$ KERNEL=kernel7
+$ make bcm2709_defconfig
+</code></pre>
+		<p>Compile the kernel (takes about half an hour):</p>
+		<pre><code>$ make -j4 zImage
+</code></pre>
+		<p>That will provide the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:</p>
+		<pre><code>$ cd ..
+$ git clone --depth=1 https://github.com/rascol/PPS-Client
+$ cd PPS-Client
+</code></pre>
+		<p>Now (assuming that the kernel source version is 4.1.20) make the pps-client project. The 
+			<code>KERNELDIR</code> argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
+		</p>
+		<pre><code>$ make KERNELDIR=~/rpi/linux KERNELVERS=4.1.20-v7+
+</code></pre>
+		<p>That will build the installer, 
+			<code>pps-client-4.1.20-v7+</code>. Run it on the RPi as root:
+		</p>
+		<pre><code>$ sudo ./pps-client-4.1.20-v7+
+</code></pre>
+		<p>That completes the pps-client installation.</p>
 		<h2 id="building-on-a-linux-workstation">Building on a Linux Workstation</h2>
+		<p>This is decidedly for the experienced. We've had problems with the cross-compiler where it looked like everything was fine but the code didn't run on the RPi. Very hard to debug. On the other hand, it can be much easier to get code though the compile stage on a workstation.</p>
 		<p>You might want to create a folder to hold the kernel and tools. For example,</p>
 		<pre><code>$ mkdir ~/rpi
 $ cd ~/rpi
@@ -178,41 +214,6 @@ $ cd PPS-Client
 		<pre><code>$ sudo ./pps-client-4.1.20-v7+
 </code></pre>
 		<p>That completes the pps-client installation.</p>
-		<h2 id="building-on-the-rpi">Building on the RPi</h2>
-		<p>You might want to create a folder to hold the kernel and pps-client project. For example,</p>
-		<pre><code>$ mkdir ~/rpi
-$ cd ~/rpi
-</code></pre>
-		<p>Download the current version of the kernel sources:</p>
-		<pre><code>$ git clone --depth=1 https://github.com/raspberrypi/linux
-</code></pre>
-		<p>Get missing dependencies:</p>
-		<pre><code>$ sudo apt-get install bc
-</code></pre>
-		<p>Configure the kernel:</p>
-		<pre><code>$ cd linux
-$ KERNEL=kernel7
-$ make bcm2709_defconfig
-</code></pre>
-		<p>Compile the kernel (takes about half an hour):</p>
-		<pre><code>$ make -j4 zImage
-</code></pre>
-		<p>That will provide the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:</p>
-		<pre><code>$ cd ..
-$ git clone --depth=1 https://github.com/rascol/PPS-Client
-$ cd PPS-Client
-</code></pre>
-		<p>Now (assuming that the kernel source version is 4.1.20) make the pps-client project. The 
-			<code>KERNELDIR</code> argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
-		</p>
-		<pre><code>$ make KERNELDIR=~/rpi/linux KERNELVERS=4.1.20-v7+
-</code></pre>
-		<p>That will build the installer, 
-			<code>pps-client-4.1.20-v7+</code>. Run it on the RPi as root:
-		</p>
-		<pre><code>$ sudo ./pps-client-4.1.20-v7+
-</code></pre>
-		<p>That completes the pps-client installation.</p>
 		<h1 id="running-pps-client">Running pps-client</h1>
 		<hr/>
 		<p>The pps-client requires that a PPS hardware signal is available from a GPS module. Once the GPS is connected and the PPS output is present on GPIO 4 you can do a quick try-out with,</p>
@@ -235,6 +236,16 @@ $ cd PPS-Client
 			<code>jitter</code> shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces the 
 			<code>jitter</code> offset. That happens because system functions that pps-client calls internally prevent time changes of more than about 500 microseconds in each second.
 		</p>
+		<p>Here is a complete list parameters shown in the status printout:</p>
+		<ul>
+			<li>First two columns - date and time of the rising edge of the PPS signal.</li>
+			<li>Third column - the total number of PPS interrupts received since pps-client was started.</li>
+			<li>jitter - the time deviation in microseconds recorded at the reception of the PPS interrupt.</li>
+			<li>freqOffset - the frequency offset of the system clock in parts per million of the system clock frequency.</li>
+			<li>avgCorrection - the time corrections (in microseconds) averaged over the previous minute.</li>
+			<li>clamp - the hard limit (in microsecs) applied to the raw time error to convert it to a time correction.</li>
+		</ul>
+		<p>Every sixth line, interrupt delay parameters are also shown. About every 17 minutes, an SNTP time query will be made and the results of that will be shown, but will have no effect unless a time update is required.</p>
 		<p>To stop the display type ctrl-c.</p>
 		<p>The daemon will continue to run until you reboot the system or until you stop the daemon with</p>
 		<pre><code>$ sudo pps-client-stop
