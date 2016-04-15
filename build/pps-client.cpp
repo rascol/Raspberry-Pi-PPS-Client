@@ -575,8 +575,8 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 
 	int interruptTime = getFractionalSeconds(pps_t);
 
-	int rawError = interruptTime - g.sysDelay;			// References the controller to g.sysDelay which sets the time
-														// of the PPS rising edge to zero at the start of the second.
+	int rawError = interruptTime - g.sysDelay - HIDDEN_DELAY;	// References the controller to g.sysDelay which sets the time
+																// of the PPS rising edge to zero at the start of the second.
 	int zeroError = removeNoise(rawError);
 
 	if (g.isBurstNoise){								// Skip a jitter burst.
@@ -704,7 +704,7 @@ void buildInterruptDistrib(int intrptDelay){
  * delay that is used to estimate the most frequent
  * value of interrupt delay for the purpose of
  * removing burst noise from the interrupt delay
- * easurement.
+ * measurement.
  */
 void getMostFrequentDelay(int intrptDelay){
 	int len = INTRPT_DISTRIB_LEN - 1;
@@ -759,7 +759,7 @@ void buildSysDelayDistrib(int sysDelay){
  * g.delayMedian, of the calibration interrupt delay,
  * intrptDelay ignoring jitter bursts.
  *
- * g.delayMedian is rounded to determine the current
+ * g.delayMedian was rounded to determine the current
  * value of g.sysDelay which is the control point for
  * the controller. By servoing to that value, pps-client
  * sets the time of the PPS rising edge.

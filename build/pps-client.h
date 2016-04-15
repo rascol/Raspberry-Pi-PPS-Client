@@ -63,6 +63,7 @@
 #define PER_NUM_INTEGRALS (1.0 / (double)NUM_AVERAGES)
 
 #define ADJTIMEX_SCALE 65536.0						// Frequency scaling required by adjtimex().
+#define HIDDEN_DELAY 2								// Delay remaining after accounting for measurable latency.
 #define INTERRUPT_LATENCY 10						// Average interrupt latency in microseconds also accounting
 													// for the average increase in latency with processor activity
 #define INTERRUPT_LOST 15							// Number of consequtive lost interrupts at which warning starts
@@ -134,7 +135,6 @@ struct timeCheckParams {
  */
 struct ppsClientGlobalVars {
 	bool isVerbose;
-//	int pps_fd;
 
 	int intrptDelay;
 	int	sysDelay;
