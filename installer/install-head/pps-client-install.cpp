@@ -179,6 +179,16 @@ int main(int argc, char *argv[]){
 	strcat(cmd, "/kernel/drivers/misc/interrupt-timer.ko");
 	system(cmd);
 
+	printf("Moving pulse-generator to /usr/sbin/pulse-generator\n");
+	system("mv ./pkg/pulse-generator /usr/sbin/pulse-generator");
+	system("chmod +x /usr/sbin/pulse-generator");
+
+	printf("Moving pulse-generator.ko to /lib/modules/`uname -r`/kernel/drivers/misc/pulse-generator.ko\n");
+	strcpy(cmd, "mv ./pkg/pulse-generator.ko /lib/modules/");
+	strcat(cmd, version);
+	strcat(cmd, "/kernel/drivers/misc/pulse-generator.ko");
+	system(cmd);
+
 	printf("Moving README.md to /usr/share/doc/pps-client/README.md\n");
 	system("mkdir /usr/share/doc/pps-client");
 	system("mv ./pkg/README.md /usr/share/doc/pps-client/README.md");

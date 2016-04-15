@@ -29,12 +29,32 @@ all:
 	cp ./tmp/pps-client-make-install ./installer/pps-client-make-install
 	find ./tmp -type f -delete
 	
-	cd ./utils && $(MAKE) all
-	cp ./utils/interrupt-timer ./pkg/interrupt-timer
+#	cd ./utils && $(MAKE) all
+#	cp ./utils/interrupt-timer ./pkg/interrupt-timer
 	
-	cp -r ./utils/driver/. ./tmp
+#	cp -r ./utils/driver/. ./tmp
+#	cd ./tmp && $(MAKE) all
+#	cp ./tmp/interrupt-timer.ko ./pkg/interrupt-timer.ko
+#	find ./tmp -type f -delete
+	
+	cp -r ./utils/interrupt-timer/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/interrupt-timer ./pkg/interrupt-timer
+	find ./tmp -type f -delete
+
+	cp -r ./utils/interrupt-timer/driver/. ./tmp		
 	cd ./tmp && $(MAKE) all
 	cp ./tmp/interrupt-timer.ko ./pkg/interrupt-timer.ko
+	find ./tmp -type f -delete
+	
+	cp -r ./utils/pulse-generator/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/pulse-generator ./pkg/pulse-generator
+	find ./tmp -type f -delete
+
+	cp -r ./utils/pulse-generator/driver/. ./tmp		
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/pulse-generator.ko ./pkg/pulse-generator.ko
 	find ./tmp -type f -delete
 	
 	cp ./README.md ./pkg/README.md

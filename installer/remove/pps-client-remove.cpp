@@ -56,6 +56,12 @@ int main(int argc, char *argv[])
 	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko\n");
 	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko");
 
+	printf("Removing /usr/sbin/pulse-generator\n");
+	system("rm /usr/sbin/pulse-generator");
+
+	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/pulse-generator.ko\n");
+	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/pulse-generator.ko");
+
 	printf("Removing /var/log/pps-client.log\n");
 	system("rm /var/log/pps-client.log");
 
