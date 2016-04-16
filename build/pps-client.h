@@ -72,8 +72,8 @@
 #define CHECK_TIME 1024								// Interval between internet time checks
 
 #define LONGBURST 6									// Reporting length for long bursts
-#define BURST_LEVEL 7								// Jitter value at which a burst begins
-#define INTRPT_BURST_LEVEL 5						// Same but for a calibration interrupt
+#define BURST_LEVEL 4								// Jitter value at which a burst begins (7)
+#define INTRPT_BURST_LEVEL 4						// Same but for a calibration interrupt (5)
 #define BURST_MAX 30								// Maximum microseconds to suppress a burst of positive jitter
 
 #define SLEW_LEN 10
