@@ -300,7 +300,7 @@ int outputSingeEventTime(int tm[]){
 	char *lines[len];
 	double probDistrib[len];
 
-	lines[0] = strtok(filebuf, "\r\n\0");
+	lines[0] = strtok(g.filebuf, "\r\n\0");
 	for (int i = 1; i < len; i++){
 		lines[i] = strtok(NULL, "\r\n\0");
 	}
