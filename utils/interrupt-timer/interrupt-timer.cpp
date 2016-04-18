@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <sched.h>
+#include <math.h>
 
 #define INTRPT_DISTRIB_LEN 61
 #define SECS_PER_DAY 86400
@@ -293,7 +294,7 @@ int outputSingeEventTime(int tm[]){
 	int len = INTRPT_DISTRIB_LEN;
 	double tmp;
 
-	read(fd, (void *)filebuf, sz);
+	read(fd, (void *)g.filebuf, sz);
 	close(fd);
 
 	char *lines[len];
@@ -341,7 +342,7 @@ int outputSingeEventTime(int tm[]){
 		}
 	}
 
-	int lowVal = tm[1] - (hiEdx - maxIdx);
+	int lowVal = tm[1] - (hiIdx - maxIdx);
 	int hiVal = tm[1] + (maxIdx - lowIdx);
 
 	double mean = 0.5 * (double)(lowVal + hiVal);
@@ -376,7 +377,6 @@ int outputSingeEventTime(int tm[]){
 
 int outputRepeatingEventTime(int tm[]){
 	char timeStr[50];
-	struct timespec ts2;
 
 	int v = readVerify();
 	if (v == ON_TIME){
@@ -518,6 +518,8 @@ start:
 		printf("interrupt-timer: Driver is not loaded. Exiting.\n");
 		return 1;
 	}
+
+	struct timespec ts2;
 
 	for (;;){
 		int dvrv = read(intrpt_fd, (void *)tm, 2 * sizeof(int));
