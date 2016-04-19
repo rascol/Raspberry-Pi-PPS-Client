@@ -849,8 +849,8 @@ void getInterruptDelay(int pps_fd){
 
 	rv = read(pps_fd, (void *)g.tm, 6 * sizeof(int));
 	if (rv > 0){
-
-		g.intrptDelay = g.tm[5] - g.tm[3]  + OUT_DELAY;
+												// Timed delay will be slightly too long. This corrects it.
+		g.intrptDelay = g.tm[5] - g.tm[3]  - OUT_DELAY;
 
 		buildInterruptDistrib(g.intrptDelay);
 
