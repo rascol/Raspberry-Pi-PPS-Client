@@ -756,7 +756,7 @@ void buildSysDelayDistrib(int sysDelay){
 
 /**
  * When CALIBRATE is enabled, computes the median,
- * g.delayMedian, of the calibration interrupt delay,
+ * g.delayMedian, of the calibration generated
  * intrptDelay ignoring jitter bursts.
  *
  * g.delayMedian was rounded to determine the current
@@ -849,8 +849,9 @@ void getInterruptDelay(int pps_fd){
 
 	rv = read(pps_fd, (void *)g.tm, 6 * sizeof(int));
 	if (rv > 0){
-												// Timed delay will be slightly too long. This corrects it.
-		g.intrptDelay = g.tm[5] - g.tm[3]  - OUT_DELAY;
+														// The delay interval will measure too long
+		g.intrptDelay = g.tm[5] - g.tm[3]  - OUT_DELAY; // because there is a delay in the driver
+														// to an output pin. This corrects it.
 
 		buildInterruptDistrib(g.intrptDelay);
 
@@ -859,7 +860,7 @@ void getInterruptDelay(int pps_fd){
 
 		buildSysDelayDistrib(g.sysDelay);
 
-		if (g.activeCount % CALIBRATE_DISPLAY == 0){
+		if (g.activeCount % SHOW_INTRPT_DATA_INTVL == 0){
 			sprintf(g.msgbuf, "Interrupt delay: %d usec, Delay median: %lf usec  sysDelay: %d usec\n",
 					g.intrptDelay, g.delayMedian, g.sysDelay);
 			bufferStatusMsg(g.msgbuf);
