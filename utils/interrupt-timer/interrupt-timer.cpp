@@ -37,7 +37,6 @@
 #define DELAYED 1
 #define SENTINEL 2
 #define FILE_NOT_FOUND -1
-#define HIDDEN_DELAY 1
 #define FILEBUF_SZ 5000
 #define STRBUF_SZ 200
 
@@ -57,7 +56,8 @@ struct interruptTimerGlobalVars {
 
 	int lastIntrptFileno;
 
-	double probability;
+	int lowTol;
+	int hiTol;
 } g;
 
 const char *interrupt_distrib_file = "/var/local/intrpt-distrib-forming";
@@ -203,7 +203,7 @@ void writeDistribution(int distrib[], int len, int scaleZero, int epochInterval,
  * a new file.
  */
 void writeInterruptDistribFile(void){
-	int scaleZero = -(g.scaleCenter - (INTRPT_DISTRIB_LEN - 1) / 2);
+	int scaleZero = -(g.scaleCenter - (INTRPT_DISTRIB_LEN - 1) / 3);
 	writeDistribution(g.interruptDistrib, INTRPT_DISTRIB_LEN, scaleZero, 1,
 			&g.lastIntrptFileno, interrupt_distrib_file, last_intrpt_distrib_file);
 }
@@ -278,8 +278,7 @@ int readVerify(void){
 	return val;
 }
 
-int outputSingeEventTime(int tm[]){
-	char timeStr[50];
+int calcTolerance(double probability){
 
 	int fd = open(last_intrpt_distrib_file, O_RDONLY);
 	if (fd == -1){
@@ -300,22 +299,24 @@ int outputSingeEventTime(int tm[]){
 	char *lines[len];
 	double probDistrib[len];
 
-	lines[0] = strtok(g.filebuf, "\r\n\0");
+	lines[0] = strtok(g.filebuf, "\r\n\0");				// Separate the lines
 	for (int i = 1; i < len; i++){
 		lines[i] = strtok(NULL, "\r\n\0");
 	}
 
-	double sum = 0.0;
+	double sum = 0.0;									// Get the array values
 	for (int i = 0; i < len; i++){
 		sscanf(lines[i], "%lf %lf", &tmp, probDistrib + i);
 		sum += probDistrib[i];
 	}
-	double norm = 1.0 / sum;
+
+	double norm = 1.0 / sum;							// Normalize to get prob density
+
 	for (int i = 0; i < len; i++){
 		probDistrib[i] *= norm;
 	}
 
-	int lowIdx, maxIdx = 0, hiIdx;
+	int lowIdx = 0, maxIdx = 0, hiIdx = 0;
 	double maxVal = 0.0;
 	for (int i = 0; i < len; i++){
 		if (probDistrib[i] > maxVal){
@@ -323,7 +324,8 @@ int outputSingeEventTime(int tm[]){
 			maxIdx = i;
 		}
 	}
-	double tailProb = 0.5 * (1.0 - g.probability);
+
+	double tailProb = 0.5 * (1.0 - probability);
 
 	double tailSum = 0.0;
 	for (int i = 0; i < len; i++){
@@ -333,6 +335,7 @@ int outputSingeEventTime(int tm[]){
 			break;
 		}
 	}
+
 	tailSum = 0.0;
 	for (int i = len - 1; i >= 0; i--){
 		tailSum += probDistrib[i];
@@ -342,34 +345,22 @@ int outputSingeEventTime(int tm[]){
 		}
 	}
 
-	int lowVal = tm[1] - (hiIdx - maxIdx);
-	int hiVal = tm[1] + (maxIdx - lowIdx);
+	g.lowTol = hiIdx - maxIdx;
+	g.hiTol = maxIdx - lowIdx;
 
-	double mean = 0.5 * (double)(lowVal + hiVal);
-	int meanVal = (int)round(mean);
+	return 0;
+}
 
-	if (meanVal > 1000000){
-		tm[1] = meanVal - 1000000;
-		tm[0] += 1;
-	}
-	else if (meanVal < 0){
-		tm[1] = 1000000 + meanVal;
-		tm[0] -= 1;
-	}
-	else {
-		tm[1] = meanVal;
-	}
-
-	double tol = (double)hiVal - meanVal;
-	int tolerance = (int)round(tol);
+int outputSingeEventTime(int tm[]){
+	char timeStr[50];
 
 	if (g.outFormat == 0){						// Print in date-time format
 		strftime(timeStr, 50, timefmt, localtime((const time_t*)(&tm[0])));
-		printf("%s.%06d +/- 0.%06d\n", timeStr, tm[1], tolerance);
+		printf("%s.%06d +0.%06d -0.%06d\n", timeStr, tm[1], g.hiTol, g.lowTol);
 	}
 	else {										// Print as seconds
 		double time = (double)tm[0] + 1e-6 * tm[1];
-		printf("%lf +/- 0.%06d\n", time, tolerance);
+		printf("%lf +0.%06d -0.%06d\n", time, g.hiTol, g.lowTol);
 	}
 
 	return 0;
@@ -411,6 +402,11 @@ int main(int argc, char *argv[]){
 	int sysDelay;
 	bool singleEvent = false;
 	bool argRecognized = false;
+	double probability = 0.0;
+
+	struct sched_param param;								// Process must be run as
+	param.sched_priority = 99;								// root to change priority.
+	sched_setscheduler(0, SCHED_FIFO, &param);				// Else, this has no effect.
 
 	if (argc > 1){
 		if (strcmp(argv[1], "load-driver") == 0){
@@ -442,6 +438,7 @@ int main(int argc, char *argv[]){
 		}
 
 		for (int i = 1; i < argc; i++){
+
 			if (strcmp(argv[i], "-s") == 0){
 				g.outFormat = 1;
 				argRecognized = true;
@@ -455,14 +452,15 @@ int main(int argc, char *argv[]){
 					printf("event is within the tolerance that will be estimated.\n");
 					return 0;
 				}
-				scanf(argv[2], "%lf", &g.probability);
-				if (g.probability == 0){
+				sscanf(argv[i+1], "%lf", &probability);
+				if (probability == 0){
 					printf("A positive non-zero probability is required\n");
 					return 0;
 				}
-				if (g.probability > 0.999){
-					g.probability = 0.999;
+				if (probability > 0.999){
+					probability = 0.999;
 				}
+
 				singleEvent = true;
 				argRecognized = true;
 				continue;
@@ -502,16 +500,17 @@ start:
 		return 0;
 	}
 
+	memset(&g, 0, sizeof(struct interruptTimerGlobalVars));
+	if (singleEvent){
+		if (calcTolerance(probability) == -1){
+			return 0;
+		}
+	}
+
 	remove(pulse_verify_file);
 
 	printf(version);
 	printf("\n");
-
-	memset(&g, 0, sizeof(struct interruptTimerGlobalVars));
-
-	struct sched_param param;								// Process must be run as
-	param.sched_priority = 99;								// root to change priority.
-	sched_setscheduler(0, SCHED_FIFO, &param);				// Else, this has no effect.
 
 	int intrpt_fd = open("/dev/interrupt-timer", O_RDONLY); // Open the interrupt-timer device driver.
 	if (intrpt_fd == -1){
@@ -528,7 +527,7 @@ start:
 			if (rv == -1){
 				return 1;
 			}
-			tm[1] -= (sysDelay + HIDDEN_DELAY);				// time microseconds corrected for system interrupt sysDelay
+			tm[1] -= sysDelay;								// time microseconds corrected for system interrupt sysDelay
 			if (tm[1] < 0){									// If negative after correction, fix the time.
 				tm[1] = 1000000 + tm[1];
 				tm[0] -= 1;

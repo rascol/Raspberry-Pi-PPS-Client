@@ -45,7 +45,7 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.3.0";
+const char *version = "0.3.1";
 
 /**
  * Declares the global variables defined in pps-client.h.
@@ -575,8 +575,8 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 
 	int interruptTime = getFractionalSeconds(pps_t);
 
-	int rawError = interruptTime - g.sysDelay - HIDDEN_DELAY;	// References the controller to g.sysDelay which sets the time
-																// of the PPS rising edge to zero at the start of the second.
+	int rawError = interruptTime - g.sysDelay;			// References the controller to g.sysDelay which sets the time
+														// of the PPS rising edge to zero at the start of the second.
 	int zeroError = removeNoise(rawError);
 
 	if (g.isBurstNoise){								// Skip a jitter burst.
@@ -850,7 +850,7 @@ void getInterruptDelay(int pps_fd){
 	rv = read(pps_fd, (void *)g.tm, 6 * sizeof(int));
 	if (rv > 0){
 
-		g.intrptDelay = g.tm[5] - g.tm[3];
+		g.intrptDelay = g.tm[5] - g.tm[3]  + OUT_DELAY;
 
 		buildInterruptDistrib(g.intrptDelay);
 
