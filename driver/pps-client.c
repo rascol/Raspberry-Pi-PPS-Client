@@ -275,19 +275,19 @@ ssize_t pps_i_read (struct file *filp, char __user *buf, size_t count, loff_t *f
 /**
  * Provides three functions:
  *   1. Writing an integer with a value of 1 to __user *buf
- *   records the time of the write to pps_buffer[2]-[3], sets
- *   GPIO 17 (high) and disables pps_irq1. This allows pps_irq2
- *   to be used alternately with pps_irq1. f_pos should be
- *   provided with a value of sizeof(int).
+ *   records the time of the write to pps_buffer[2]-[3],
+ *   disables pps_irq1 then sets GPIO 17 (high). This allows
+ *   pps_irq2 to be used alternately with pps_irq1. count
+ *   should be provided with a value of sizeof(int).
  *
  *   2. Writing an integer with a value of 0 to __user *buf
- *   enables pps_irq1 and resets GPIO 17 (low). f_pos should
+ *   enables pps_irq1 and resets GPIO 17 (low). count should
  *   be provided with a value of sizeof(int).
  *
  *   3. Writing a pair of integers where the first is greater
  *   than 1 to __user *buf causes the second integer to be used
  *   as an offset in seconds to the system time and this offset
- *   is applied immediately. f_pos should be provided with a
+ *   is applied immediately. count should be provided with a
  *   value of 2 * sizeof(int).
  */
 ssize_t pps_i_write (struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)

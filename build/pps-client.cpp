@@ -45,7 +45,7 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.3.1";
+const char *version = "0.3.2";
 
 /**
  * Declares the global variables defined in pps-client.h.
@@ -850,8 +850,8 @@ void getInterruptDelay(int pps_fd){
 	rv = read(pps_fd, (void *)g.tm, 6 * sizeof(int));
 	if (rv > 0){
 														// The delay interval will measure too long
-		g.intrptDelay = g.tm[5] - g.tm[3]  - OUT_DELAY; // because there is a delay in the driver
-														// to an output pin. This corrects it.
+		g.intrptDelay = g.tm[5] - g.tm[3]  - OUT_DELAY; // because there is a small delay in the driver
+														// to an output pin. OUT_DELAY corrects it.
 
 		buildInterruptDistrib(g.intrptDelay);
 
@@ -861,8 +861,8 @@ void getInterruptDelay(int pps_fd){
 		buildSysDelayDistrib(g.sysDelay);
 
 		if (g.activeCount % SHOW_INTRPT_DATA_INTVL == 0){
-			sprintf(g.msgbuf, "Interrupt delay: %d usec, Delay median: %lf usec  sysDelay: %d usec\n",
-					g.intrptDelay, g.delayMedian, g.sysDelay);
+			sprintf(g.msgbuf, "Interrupt delay: %d usec, Delay median: %lf usec  sysDelay: %d usec mostFreqentDelay: %d usec\n",
+					g.intrptDelay, g.delayMedian, g.sysDelay, g.mostFreqentDelay);
 			bufferStatusMsg(g.msgbuf);
 		}
 	}

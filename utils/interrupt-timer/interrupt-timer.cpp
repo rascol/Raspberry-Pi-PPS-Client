@@ -35,7 +35,7 @@
 #define SECS_PER_MIN 60
 #define ON_TIME 0
 #define DELAYED 1
-#define SENTINEL 2
+#define NONE 2
 #define FILE_NOT_FOUND -1
 #define FILEBUF_SZ 5000
 #define STRBUF_SZ 200
@@ -247,7 +247,7 @@ void buildInterruptDistrib(int intrptDelay){
 }
 
 /**
- * Read the sysDelay value recorded by
+ * Reads the sysDelay value recorded by
  * pps-client.
  */
 int getSysDelay(int *sysDelay){
@@ -267,6 +267,12 @@ int getSysDelay(int *sysDelay){
 	return 0;
 }
 
+/**
+ * Reads and returns the pulse verify value
+ * saved by pulse-generator that announces
+ * the status of the generated pulse:
+ * ON_TIME, DELAYED or NONE.
+ */
 int readVerify(void){
 	int val;
 	int fd = open(pulse_verify_file, O_RDONLY);
@@ -278,6 +284,12 @@ int readVerify(void){
 	return val;
 }
 
+/**
+ * Calculates the tolerance on an interrupt
+ * event at the given probability from a
+ * saved distribution of previous interrupt
+ * events at constant delay.
+ */
 int calcTolerance(double probability){
 
 	int fd = open(last_intrpt_distrib_file, O_RDONLY);
@@ -351,6 +363,13 @@ int calcTolerance(double probability){
 	return 0;
 }
 
+/**
+ * Outputs the captured event time in date
+ * format or as seconds since the Unix epoch
+ * date Jan 1, 1970 and outputs the tolerance
+ * on the event time the corresponds to the
+ * probability requested on program startup.
+ */
 int outputSingeEventTime(int tm[]){
 	char timeStr[50];
 
@@ -366,6 +385,12 @@ int outputSingeEventTime(int tm[]){
 	return 0;
 }
 
+/**
+ * Outputs the captured event time in date
+ * format or as seconds since the Unix epoch
+ * date Jan 1, 1970 and saves a distribution
+ * of the fractional part of the second.
+ */
 int outputRepeatingEventTime(int tm[]){
 	char timeStr[50];
 
@@ -376,8 +401,8 @@ int outputRepeatingEventTime(int tm[]){
 	else if (v == DELAYED){
 		printf("interrupt-timer: Skipping delayed pulse from pulse-generator.\n");
 	}
-	else if (v == SENTINEL){
-		printf("interrupt-timer: Bad read on verify. Read too late.\n");
+	else if (v == NONE){
+		printf("interrupt-timer: No valid was pulse delivered.\n");
 	}
 	else if (v == FILE_NOT_FOUND){
 		printf("interrupt-timer Error: Verify file not found.\n");
