@@ -56,15 +56,17 @@ struct interruptTimerGlobalVars {
 
 	int lastIntrptFileno;
 
-	int lowTol;
-	int hiTol;
+	int lowTol[5];
+	int hiTol[5];
+
+	bool showAllTols;
 } g;
 
 const char *interrupt_distrib_file = "/var/local/intrpt-distrib-forming";
 const char *last_intrpt_distrib_file = "/var/local/intrpt-distrib";
 const char *pulse_verify_file = "/mnt/pi/PulseVerify";
 
-const char *version = "interrupt-timer v0.1.0";
+const char *version = "interrupt-timer v0.2.0";
 const char *timefmt = "%F %H:%M:%S";
 
 /**
@@ -290,7 +292,7 @@ int readVerify(void){
  * saved distribution of previous interrupt
  * events at constant delay.
  */
-int calcTolerance(double probability){
+int calcTolerance(double probability, int idx){
 
 	int fd = open(last_intrpt_distrib_file, O_RDONLY);
 	if (fd == -1){
@@ -357,8 +359,8 @@ int calcTolerance(double probability){
 		}
 	}
 
-	g.lowTol = hiIdx - maxIdx;
-	g.hiTol = maxIdx - lowIdx;
+	g.lowTol[idx] = hiIdx - maxIdx;
+	g.hiTol[idx] = maxIdx - lowIdx;
 
 	return 0;
 }
@@ -370,16 +372,16 @@ int calcTolerance(double probability){
  * on the event time the corresponds to the
  * probability requested on program startup.
  */
-int outputSingeEventTime(int tm[]){
+int outputSingeEventTime(int tm[], double prob, int idx){
 	char timeStr[50];
 
 	if (g.outFormat == 0){						// Print in date-time format
 		strftime(timeStr, 50, timefmt, localtime((const time_t*)(&tm[0])));
-		printf("%s.%06d +0.%06d -0.%06d\n", timeStr, tm[1], g.hiTol, g.lowTol);
+		printf("%s.%06d +0.%06d -0.%06d with probability %lf\n", timeStr, tm[1], g.hiTol[idx], g.lowTol[idx], prob);
 	}
 	else {										// Print as seconds
 		double time = (double)tm[0] + 1e-6 * tm[1];
-		printf("%lf +0.%06d -0.%06d\n", time, g.hiTol, g.lowTol);
+		printf("%lf +0.%06d -0.%06d with probability %lf\n", time, g.hiTol[idx], g.lowTol[idx], prob);
 	}
 
 	return 0;
@@ -428,6 +430,7 @@ int main(int argc, char *argv[]){
 	bool singleEvent = false;
 	bool argRecognized = false;
 	double probability = 0.0;
+	double probs[] = {0.9, 0.95, 0.99, 0.995, 0.999};
 
 	struct sched_param param;								// Process must be run as
 	param.sched_priority = 99;								// root to change priority.
@@ -473,9 +476,8 @@ int main(int argc, char *argv[]){
 
 				char *num = strpbrk(argv[i+1], "0123456789.");
 				if (num == NULL){
-					printf("-p must be followed by the probability that the timed\n");
-					printf("event is within the tolerance that will be estimated.\n");
-					return 0;
+					g.showAllTols = true;
+					continue;
 				}
 				sscanf(argv[i+1], "%lf", &probability);
 				if (probability == 0){
@@ -498,7 +500,6 @@ int main(int argc, char *argv[]){
 
 		printf("Usage:\n");
 		printf("  sudo interrupt-timer load-driver <gpio-number>\n");
-		printf("  sudo interrupt-timer unload-driver\n");
 		printf("where gpio-number is the GPIO of the pin on which\n");
 		printf("the interrupt will be captured.\n");
 		printf("After loading the driver, calling interrupt-timer\n");
@@ -507,14 +508,18 @@ int main(int argc, char *argv[]){
 		printf("arg modifies the format of the date-time output:\n\n");
 		printf("  -s Outputs seconds since the epoch.\n");
 		printf("otherwise outputs in date format (default).\n\n");
-		printf("The program will exit on ctrl-c or when no\n");
-		printf("interrupts are received within 5 minutes.\n");
 		printf("Specifying a probability causes interrupt-timer to\n");
-		printf("function as a single event timer that outputs both\n");
-		printf("an event time and an estimated tolerance on that time:\n");
-		printf("  -p <probability>\n");
-		printf("where that is the probability (<= 0.999) that the time is within\n");
-		printf("the estimated tolerance.\n\n");
+		printf("function as a single event timer that outputs both an\n");
+		printf("event time and an estimated tolerance on that time:\n");
+		printf("  -p [probability]\n");
+		printf("where that is the probability (<= 0.999) that the\n");
+		printf("time is within the estimated tolerance. If a value\n");
+		printf("is not given, a range of tolerances and probabilites\n");
+		printf("are generated.\n");
+		printf("The program will exit on ctrl-c or when no interrupts\n");
+		printf("are received within 5 minutes. When done, unload the \n");
+		printf("driver with,\n");
+		printf("  sudo interrupt-timer unload-driver\n");
 
 		return 0;
 	}
@@ -527,8 +532,17 @@ start:
 
 	memset(&g, 0, sizeof(struct interruptTimerGlobalVars));
 	if (singleEvent){
-		if (calcTolerance(probability) == -1){
-			return 0;
+		if (! g.showAllTols){
+			if (calcTolerance(probability, 0) == -1){
+				return 0;
+			}
+		}
+		else {
+			for (int i = 0; i < 5; i++){
+				if (calcTolerance(probs[i], i) == -1){
+					return 0;
+				}
+			}
 		}
 	}
 
@@ -570,9 +584,19 @@ start:
 				}
 			}
 			else {
-				rv = outputSingeEventTime(tm);
-				if (rv == -1){
-					return 1;
+				if (! g.showAllTols){
+					rv = outputSingeEventTime(tm, probability, 0);
+					if (rv == -1){
+						return 1;
+					}
+				}
+				else {
+					for (int i = 0; i < 5; i++){
+						rv = outputSingeEventTime(tm, probs[i], i);
+						if (rv == -1){
+							return 1;
+						}
+					}
 				}
 			}
 		}
