@@ -56,8 +56,7 @@ struct interruptTimerGlobalVars {
 
 	int lastIntrptFileno;
 
-	int lowTol[5];
-	int hiTol[5];
+	int tolerance[5];
 
 	bool showAllTols;
 } g;
@@ -307,13 +306,13 @@ int calcTolerance(double probability, int idx){
 	int len = INTRPT_DISTRIB_LEN;
 	double tmp;
 
-	read(fd, (void *)g.filebuf, sz);
+	read(fd, (void *)g.filebuf, sz);					// Read the sample distrib into g.filebuf
 	close(fd);
 
 	char *lines[len];
 	double probDistrib[len];
 
-	lines[0] = strtok(g.filebuf, "\r\n\0");				// Separate the lines
+	lines[0] = strtok(g.filebuf, "\r\n\0");				// Separate the file lines
 	for (int i = 1; i < len; i++){
 		lines[i] = strtok(NULL, "\r\n\0");
 	}
@@ -324,14 +323,34 @@ int calcTolerance(double probability, int idx){
 		sum += probDistrib[i];
 	}
 
-	double norm = 1.0 / sum;							// Normalize to get prob density
+	double norm = 1.0 / sum;							// Normalize to get a prob density
 
 	for (int i = 0; i < len; i++){
 		probDistrib[i] *= norm;
 	}
 
-	int lowIdx = 0, maxIdx = 0, hiIdx = 0;
+	double tailProb = 1.0 - probability;
+	double accumProb = 0.0;
+	double minProb = 1.0;
+	int minIdx = 0;
+
+	while (accumProb < tailProb){						// Zero the probs whose sum is less than tailProb
+		for (int i = 0; i < len; i++){					// in ascending order of probability.
+			if (probDistrib[i] != 0.0 && probDistrib[i] < minProb){
+				minProb = probDistrib[i];
+				minIdx = i;
+			}
+		}
+		accumProb += probDistrib[minIdx];
+		if (accumProb < tailProb){
+			probDistrib[minIdx] = 0.0;
+		}
+		minProb = 1.0;
+	}
+
+	int lowIdx = 0, maxIdx = 0, hiIdx = len - 1;
 	double maxVal = 0.0;
+
 	for (int i = 0; i < len; i++){
 		if (probDistrib[i] > maxVal){
 			maxVal = probDistrib[i];
@@ -339,28 +358,26 @@ int calcTolerance(double probability, int idx){
 		}
 	}
 
-	double tailProb = 0.5 * (1.0 - probability);
-
-	double tailSum = 0.0;
-	for (int i = 0; i < len; i++){
-		tailSum += probDistrib[i];
-		if (tailSum > tailProb){
+	for (int i = 0; i < len; i++){						// Get the low side of the prob range as the
+		if (probDistrib[i] > 0.0){						// index preceeding the first non-zero prob.
 			lowIdx = i - 1;
 			break;
 		}
 	}
-
-	tailSum = 0.0;
-	for (int i = len - 1; i >= 0; i--){
-		tailSum += probDistrib[i];
-		if (tailSum > tailProb){
+	for (int i = len - 1; i >= 0; i--){					// Get the high side of the prob range as the
+		if (probDistrib[i] > 0.0){						// index following the last non-zero prob.
 			hiIdx = i + 1;
 			break;
 		}
 	}
 
-	g.lowTol[idx] = hiIdx - maxIdx;
-	g.hiTol[idx] = maxIdx - lowIdx;
+	int hiTol = hiIdx - maxIdx;
+	int lowTol = maxIdx - lowIdx;
+
+	g.tolerance[idx] = hiTol;							// Publish as a symmetric tolerance
+	if (lowTol > hiTol){
+		g.tolerance[idx] = lowTol;
+	}
 
 	return 0;
 }
@@ -377,11 +394,11 @@ int outputSingeEventTime(int tm[], double prob, int idx){
 
 	if (g.outFormat == 0){						// Print in date-time format
 		strftime(timeStr, 50, timefmt, localtime((const time_t*)(&tm[0])));
-		printf("%s.%06d +0.%06d -0.%06d with probability %lf\n", timeStr, tm[1], g.hiTol[idx], g.lowTol[idx], prob);
+		printf("%s.%06d ±0.%06d with probability %lg\n", timeStr, tm[1], g.tolerance[idx], prob);
 	}
 	else {										// Print as seconds
 		double time = (double)tm[0] + 1e-6 * tm[1];
-		printf("%lf +0.%06d -0.%06d with probability %lf\n", time, g.hiTol[idx], g.lowTol[idx], prob);
+		printf("%lf ±0.%06d with probability %lg\n", time, g.tolerance[idx], prob);
 	}
 
 	return 0;
@@ -427,8 +444,10 @@ int main(int argc, char *argv[]){
 
 	int tm[2];
 	int sysDelay;
+	int outFormat = 0;
 	bool singleEvent = false;
 	bool argRecognized = false;
+	bool showAllTols = false;
 	double probability = 0.0;
 	double probs[] = {0.9, 0.95, 0.99, 0.995, 0.999};
 
@@ -468,24 +487,23 @@ int main(int argc, char *argv[]){
 		for (int i = 1; i < argc; i++){
 
 			if (strcmp(argv[i], "-s") == 0){
-				g.outFormat = 1;
+				outFormat = 1;
 				argRecognized = true;
 				continue;
 			}
 			if (strcmp(argv[i], "-p") == 0){
 
-				char *num = strpbrk(argv[i+1], "0123456789.");
-				if (num == NULL){
-					g.showAllTols = true;
-					continue;
+				if (i == argc - 1){
+					showAllTols = true;
 				}
-				sscanf(argv[i+1], "%lf", &probability);
-				if (probability == 0){
-					printf("A positive non-zero probability is required\n");
-					return 0;
-				}
-				if (probability > 0.999){
-					probability = 0.999;
+				else {
+					sscanf(argv[i+1], "%lf", &probability);
+					if (probability == 0){
+						showAllTols = true;
+					}
+					if (probability > 0.999){
+						probability = 0.999;
+					}
 				}
 
 				singleEvent = true;
@@ -501,11 +519,11 @@ int main(int argc, char *argv[]){
 		printf("Usage:\n");
 		printf("  sudo interrupt-timer load-driver <gpio-number>\n");
 		printf("where gpio-number is the GPIO of the pin on which\n");
-		printf("the interrupt will be captured.\n");
+		printf("the interrupt will be captured.\n\n");
 		printf("After loading the driver, calling interrupt-timer\n");
 		printf("causes it to wait for interrupts then output the\n");
 		printf("date-time when each occurs. The following command\n");
-		printf("arg modifies the format of the date-time output:\n\n");
+		printf("arg modifies the format of the date-time output:\n");
 		printf("  -s Outputs seconds since the epoch.\n");
 		printf("otherwise outputs in date format (default).\n\n");
 		printf("Specifying a probability causes interrupt-timer to\n");
@@ -513,9 +531,9 @@ int main(int argc, char *argv[]){
 		printf("event time and an estimated tolerance on that time:\n");
 		printf("  -p [probability]\n");
 		printf("where that is the probability (<= 0.999) that the\n");
-		printf("time is within the estimated tolerance. If a value\n");
-		printf("is not given, a range of tolerances and probabilites\n");
-		printf("are generated.\n");
+		printf("time is within the estimated tolerance. If the value\n");
+		printf("is zero or not provided, a range of tolerances and\n");
+		printf("probabilites is generated.\n\n");
 		printf("The program will exit on ctrl-c or when no interrupts\n");
 		printf("are received within 5 minutes. When done, unload the \n");
 		printf("driver with,\n");
@@ -531,6 +549,9 @@ start:
 	}
 
 	memset(&g, 0, sizeof(struct interruptTimerGlobalVars));
+	g.showAllTols = showAllTols;
+	g.outFormat = outFormat;
+
 	if (singleEvent){
 		if (! g.showAllTols){
 			if (calcTolerance(probability, 0) == -1){
@@ -597,6 +618,7 @@ start:
 							return 1;
 						}
 					}
+					printf("\n");
 				}
 			}
 		}

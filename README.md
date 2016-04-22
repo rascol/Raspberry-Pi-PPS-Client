@@ -149,7 +149,7 @@ That completes the pps-client installation.
 
 ## Building on a Linux Workstation
 
-This is decidedly for the experienced. We've had problems with the cross-compiler where it looked like everything was fine but the code didn't run on the RPi. Very hard to debug. On the other hand, it can be much easier to get code though the compile stage on a workstation.
+This is decidedly for the adventurous. We've had problems with the cross-compiler where it looked like everything was fine but the code didn't run on the RPi. Very hard to debug. On the other hand, it can be much easier to get code though the compile stage on a workstation.
 
 You might want to create a folder to hold the kernel and tools. For example,
 ```
@@ -221,7 +221,7 @@ The `jitter` is displaying small numbers. The time of the rising edge of the PPS
 
 It can take as long as 20 minutes for pps-client to fully acquire the first time it runs. This happens if the `jitter` shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces the `jitter` offset. That happens because system functions that pps-client calls internally prevent time changes of more than about 500 microseconds in each second.
 
-Here is a complete list parameters shown in the status printout:
+These are the parameters shown in the status printout:
 
  * First two columns - date and time of the rising edge of the PPS signal.
  * Third column - the total number of PPS interrupts received since pps-client was started.
