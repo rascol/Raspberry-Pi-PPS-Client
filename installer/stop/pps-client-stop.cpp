@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+const char *pidFilename = "/var/run/pps-client.pid";
+
 int main(void){
 	char cmd[500];
 
@@ -50,12 +52,14 @@ int main(void){
 	}
 
 	if (strstr(cmd, "pps-client-") != NULL){	// This is not pps-client.
+		remove(pidFilename);
 		printf("pps-client is not running.\n");	// It's pps-client-stop or
 		return 0;								// pps-client-remove.
 	}
 
 	char *pid = strpbrk(cmd, "0123456789");		// Locate the PID value
 	if (pid == NULL){
+		remove(pidFilename);
 		printf("pps-client is not running.\n");
 		return 0;
 	}

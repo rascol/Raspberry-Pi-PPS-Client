@@ -62,10 +62,10 @@
 #define NUM_AVERAGES 10
 #define PER_NUM_INTEGRALS (1.0 / (double)NUM_AVERAGES)
 
+#define CREEP_FACTOR 0.219							// Creepage factor in sysDelay median estimation.
 #define ADJTIMEX_SCALE 65536.0						// Frequency scaling required by adjtimex().
 #define OUT_DELAY 1									// Delay writing to output from driver.
-#define CONST_DIFF 2
-#define INTERRUPT_LATENCY 10						// Average interrupt latency in microseconds also accounting
+#define INTERRUPT_LATENCY 16						// Average interrupt latency in microseconds also accounting
 													// for the average increase in latency with processor activity
 #define INTERRUPT_LOST 15							// Number of consequtive lost interrupts at which warning starts
 
@@ -73,10 +73,9 @@
 #define CHECK_TIME 1024								// Interval between internet time checks
 
 #define LONGBURST 6									// Reporting length for long bursts
-#define BURST_LEVEL 4								// Jitter value at which a burst begins (7)
-#define INTRPT_BURST_LEVEL 4						// Same but for a calibration interrupt (5)
 #define BURST_MAX 30								// Maximum microseconds to suppress a burst of positive jitter
-
+#define BURST_FACTOR 0.354							// Adjusts g.burstLevel to track g.sysDelay
+#define BURST_LEVEL_MIN 4							// The minimum level at which interrupt delays are burst noise.
 #define SLEW_LEN 10
 #define SLEW_MAX 65
 
@@ -164,6 +163,9 @@ struct ppsClientGlobalVars {
 	int jitter;
 	int jitterCount;
 	int jitterDistrib[JITTER_DISTRIB_LEN];
+
+	int burstLevel;
+	int delayCreep;
 
 	bool isBurstNoise;
 	int burstLen;

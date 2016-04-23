@@ -45,12 +45,27 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.3.2";
+const char *version = "0.3.3";
 
 /**
  * Declares the global variables defined in pps-client.h.
  */
 struct ppsClientGlobalVars g;
+
+/**
+ * Sets g.burstLevel and g.delayCreep to be proportional
+ * to g.sysDelay.
+ *
+ * g.delayCreep corrects for over-estimation of sysDelay
+ * caused by burst noise.
+ */
+void setDelayTrackers(void){
+	g.burstLevel = (int)round((double)g.sysDelay * BURST_FACTOR) + 1;
+	if (g.burstLevel < BURST_LEVEL_MIN){
+		g.burstLevel = BURST_LEVEL_MIN;
+	}
+	g.delayCreep = (int)round((double)g.sysDelay * CREEP_FACTOR);
+}
 
 /**
  * Sets global variables to initial values at
@@ -74,6 +89,8 @@ void initialize(bool verbose){
 	g.t3.modes = ADJ_FREQUENCY;			// Initialize system clock
 	g.t3.freq = 0;						// frequency offset to zero.
 	adjtimex(&g.t3);
+
+	setDelayTrackers();
 }
 
 /**
@@ -156,7 +173,7 @@ void setHardLimit(double avgCorrection){
 /**
  * Removes jitter burst noise by returning "true"
  * as long as the jitter value remains beyond a
- * threshold (BURST_LEVEL). Is not active unless
+ * threshold (g.burstLevel). Is not active unless
  * g.hardLimit is at HARD_LIMIT_4 or below.
  *
  * Although pps-client also uses hard limiting to
@@ -178,7 +195,7 @@ void setHardLimit(double avgCorrection){
 bool detectBurstNoise(int zeroError){
 	bool isBurstNoise = false;
 
-	if (g.hardLimit <= HARD_LIMIT_4 && zeroError >= BURST_LEVEL){
+	if (g.hardLimit <= HARD_LIMIT_4 && zeroError >= g.burstLevel){
 		if (g.burstLen < BURST_MAX) {
 			g.longburstArray[g.burstLen] = zeroError;  // Record jitter values for longbursts
 			g.burstLen += 1;
@@ -391,6 +408,7 @@ bool integralIsReady(void){
 	bool isReady = false;
 
 	if (g.correctionFifo_idx == 0){
+		setDelayTrackers();
 		isReady = true;
 	}
 
@@ -728,6 +746,13 @@ void getMostFrequentDelay(int intrptDelay){
 			}
 			g.mostFreqentDelay = idxOfMost;
 
+			if (g.interruptCount == SECS_PER_MINUTE){		// Re-initialize g.delayMedian after 60 delay samples
+
+				printf("g.delayMedian adjusted to g.mostFreqentDelay .......................................\n");
+
+				g.delayMedian = g.mostFreqentDelay;			// to speed up g.sysDelay acquisition.
+			}												// This is about 1 minute after g.hardLimit == 1.
+
 			for (int i = 0; i < len; i++){
 				g.peakDelayDistrib[i] *= INTRPT_MOST_DECAY_RATE;
 			}
@@ -771,8 +796,8 @@ void getDelayMedian(int intrptDelay){
 	int diff = 0;
 
 	if ((intrptDelay - g.mostFreqentDelay)
-			>= INTRPT_BURST_LEVEL){ 			// If intrptDelay is a jitter burst
-		return;									// ignore the intrptDelay value.
+			>= g.burstLevel){ 						// If intrptDelay is a jitter burst
+		return;										// ignore the intrptDelay value.
 	}
 
 	diff = intrptDelay - g.sysDelay;
