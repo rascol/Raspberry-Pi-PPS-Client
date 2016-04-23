@@ -747,9 +747,6 @@ void getMostFrequentDelay(int intrptDelay){
 			g.mostFreqentDelay = idxOfMost;
 
 			if (g.interruptCount == SECS_PER_MINUTE){		// Re-initialize g.delayMedian after 60 delay samples
-
-				printf("g.delayMedian adjusted to g.mostFreqentDelay .......................................\n");
-
 				g.delayMedian = g.mostFreqentDelay;			// to speed up g.sysDelay acquisition.
 			}												// This is about 1 minute after g.hardLimit == 1.
 
