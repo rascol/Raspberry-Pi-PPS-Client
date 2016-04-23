@@ -271,38 +271,23 @@ pid_t getChildPID(void){
 }
 
 /**
- * Uses a system call to ps to see if pps-client is running. If
- * a PID for pps exists returns "true". Else returns "false".
+ * Uses a system call to pidof to see if pps-client is running.
+ * If a PID for pps exists returns "true". Else returns "false".
  */
 bool ppsIsRunning(void){
 	struct stat stat_buf;
-	const char *filename = "/run/shm/ps-msg";
+	const char *filename = "/run/shm/pps-msg";
 
-	system("ps -C pps-client > /run/shm/ps-msg");
-	int fd = open_logerr(filename, O_RDONLY);
-	if (fd == -1){
+	system("pidof pps-client > /run/shm/pps-msg");
+	int rv = stat(filename, &stat_buf);
+	if (rv == -1){
 		return false;
 	}
-
-	fstat(fd, &stat_buf);
-	int sz = stat_buf.st_size;
-
-	char *fbuf = new char[sz+1];
-	if (read_logerr(fd, fbuf, sz, filename) == -1){
-		close(fd);
-		delete fbuf;
-		return false;
-	}
-	close(fd);
 	remove(filename);
-	fbuf[sz] = '\0';
-	char *psz = strpbrk(fbuf, "0123456789");
-	if (psz != NULL){
-		delete fbuf;
-		return true;
+	if (stat_buf.st_size == 0){
+		return false;
 	}
-	delete fbuf;
-	return false;
+	return true;
 }
 
 /**
@@ -1218,22 +1203,6 @@ void INThandler(int sig){
 	g.exit_loop = true;
 }
 
-bool isRunning(void){
-	struct stat stat_buf;
-	const char *filename = "/run/shm/ps-msg";
-
-	system("pidof pps-client > /run/shm/pps-msg");
-	int rv = stat(filename, &stat_buf);
-	if (rv == -1){
-		return false;
-	}
-	remove(filename);
-	if (stat_buf.st_size == 0){
-		return false;
-	}
-	return true;
-}
-
 /**
  * Checks if program is running. If not, returns false.
  * If running, prints a message to that effect and if
@@ -1241,18 +1210,16 @@ bool isRunning(void){
  * params of the running program to the terminal.
  */
 bool programIsRunning(bool verbose){
-	struct stat stat_buf;
-
 	int pfd = open(pidFilename, O_RDONLY);			// No error handling on this!
 	if (pfd > 0){									// If file exists, pps-client has a pid file in memory.
 		close(pfd);
 													// But it still might not be running.
-		if (! isRunning()){							// If not running,
+		if (! ppsIsRunning()){						// If not running,
 			remove(pidFilename);					// remove the zombie pidFilename.
 			return false;
 		}
 
-		signal(SIGINT, INThandler);					// Set handler to enable cleanup on exiting with ctrl-c.
+		signal(SIGINT, INThandler);					// Set handler to enable exiting with ctrl-c.
 
 		printf("pps-client v%s is running.\n", version);
 
