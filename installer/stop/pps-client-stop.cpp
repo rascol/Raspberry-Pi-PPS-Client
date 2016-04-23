@@ -26,6 +26,14 @@
 
 const char *pidFilename = "/var/run/pps-client.pid";
 
+void ifExistsRemove(const char *filename){
+	int fd = open(filename, O_RDONLY);
+	if (fd > 0){
+		close(fd);
+		remove(filename);
+	}
+}
+
 int main(void){
 	char cmd[500];
 
@@ -52,14 +60,14 @@ int main(void){
 	}
 
 	if (strstr(cmd, "pps-client-") != NULL){	// This is not pps-client.
-		remove(pidFilename);
+		ifExistsRemove(pidFilename);
 		printf("pps-client is not running.\n");	// It's pps-client-stop or
 		return 0;								// pps-client-remove.
 	}
 
 	char *pid = strpbrk(cmd, "0123456789");		// Locate the PID value
 	if (pid == NULL){
-		remove(pidFilename);
+		ifExistsRemove(pidFilename);
 		printf("pps-client is not running.\n");
 		return 0;
 	}
