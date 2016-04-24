@@ -35,7 +35,7 @@
 #define DELAYED 1
 #define SENTINEL 2
 
-const char *version = "pulse-generator v0.1.0";
+const char *version = "pulse-generator v0.1.1";
 
 struct pulseGeneratorGlobalVars {
 	char strbuf[200];
@@ -304,16 +304,16 @@ start:
 		return 1;
 	}
 
-	pulseStart1 = g.pulseTime1 - 75;
+	pulseStart1 = g.pulseTime1 - 125;
 	if (pulseStart1 < 0){
 		pulseStart1 = 1000000 + pulseStart1;
 	}
 
 	if (g.pulseTime2 > g.pulseTime1){
-		pulseStart2 = -(1000000 - g.pulseTime2) - 75;
+		pulseStart2 = -(1000000 - g.pulseTime2) - 125;
 	}
-														// Set up a one-second delay loop that stays in synch by
-			    										// continuously re-timing to pulseStart1 value
+														// Set up a one-second delay loop that stays in synch
+			    										// by continuously re-timing to pulseStart1 value.
 	gettimeofday(&tv1, NULL);
 	ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);
 

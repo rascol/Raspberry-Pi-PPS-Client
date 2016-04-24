@@ -61,8 +61,8 @@ struct interruptTimerGlobalVars {
 	bool showAllTols;
 } g;
 
-const char *interrupt_distrib_file = "/var/local/intrpt-distrib-forming";
-const char *last_intrpt_distrib_file = "/var/local/intrpt-distrib";
+const char *timer_distrib_file = "/var/local/timer-distrib-forming";
+const char *last_timer_distrib_file = "/var/local/timer-distrib";
 const char *pulse_verify_file = "/mnt/pi/PulseVerify";
 
 const char *version = "interrupt-timer v0.2.0";
@@ -206,7 +206,7 @@ void writeDistribution(int distrib[], int len, int scaleZero, int epochInterval,
 void writeInterruptDistribFile(void){
 	int scaleZero = -(g.scaleCenter - (INTRPT_DISTRIB_LEN - 1) / 3);
 	writeDistribution(g.interruptDistrib, INTRPT_DISTRIB_LEN, scaleZero, 1,
-			&g.lastIntrptFileno, interrupt_distrib_file, last_intrpt_distrib_file);
+			&g.lastIntrptFileno, timer_distrib_file, last_timer_distrib_file);
 }
 
 /**
@@ -293,10 +293,10 @@ int readVerify(void){
  */
 int calcTolerance(double probability, int idx){
 
-	int fd = open(last_intrpt_distrib_file, O_RDONLY);
+	int fd = open(last_timer_distrib_file, O_RDONLY);
 	if (fd == -1){
 		strcpy(g.strbuf, "File not found: ");
-		strcat(g.strbuf, last_intrpt_distrib_file);
+		strcat(g.strbuf, last_timer_distrib_file);
 		strcat(g.strbuf, "\n");
 		printf(g.strbuf);
 		return -1;
