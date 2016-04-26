@@ -64,7 +64,8 @@ void setDelayTrackers(void){
 	if (g.burstLevel < BURST_LEVEL_MIN){
 		g.burstLevel = BURST_LEVEL_MIN;
 	}
-	g.delayCreep = (int)round((double)g.sysDelay * CREEP_FACTOR);
+//	g.delayCreep = (int)round((double)g.sysDelay * CREEP_FACTOR);
+	g.delayCreep = 0;
 }
 
 /**
@@ -593,7 +594,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 
 	int interruptTime = getFractionalSeconds(pps_t);
 
-	int rawError = interruptTime - g.sysDelay;			// References the controller to g.sysDelay which sets the time
+	int rawError = interruptTime - (g.sysDelay + FUDGE);		// References the controller to g.sysDelay which sets the time
 														// of the PPS rising edge to zero at the start of the second.
 	int zeroError = removeNoise(rawError);
 

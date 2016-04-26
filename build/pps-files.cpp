@@ -741,7 +741,8 @@ void processFiles(char *configVals[], char *pbuf, int sz){
  */
 void writeSysDelay(void){
 	memset(g.strbuf, 0, STRBUF_SZ);
-	sprintf(g.strbuf, "%d#%d\n", g.sysDelay - g.delayCreep, g.seq_num);
+//	sprintf(g.strbuf, "%d#%d\n", g.sysDelay - g.delayCreep, g.seq_num);
+	sprintf(g.strbuf, "%d#%d\n", g.sysDelay + FUDGE, g.seq_num);
 	remove(sysDelay_file);
 	int pfd = open_logerr(sysDelay_file, O_CREAT | O_WRONLY);
 	if (pfd == -1){

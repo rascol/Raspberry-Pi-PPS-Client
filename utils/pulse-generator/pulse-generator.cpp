@@ -31,9 +31,11 @@
 #include <fcntl.h>
 
 #define USECS_PER_SEC 1000000
-#define ON_TIME 0
+#define ON_TIME 3
 #define DELAYED 1
-#define SENTINEL 2
+#define NONE 2
+#define GPIO_A 0
+#define GPIO_B 1
 
 const char *version = "pulse-generator v0.1.1";
 
@@ -41,9 +43,10 @@ struct pulseGeneratorGlobalVars {
 	char strbuf[200];
 	int pulseTime1;
 	int pulseTime2;
+	bool badRead;
 } g;
 
-const char *pulse_verify_file = "./PulseVerify";
+const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
 
 
 /**
@@ -181,12 +184,19 @@ struct timespec setSyncDelay(int timeAt, int fracSec){
 }
 
 void writeVerifyVal(int i){
-	int fd = open(pulse_verify_file, O_CREAT | O_WRONLY | O_TRUNC | O_SYNC, S_IRUSR | S_IWUSR | S_IROTH);
-	write(fd, &i, sizeof(int));
+	int fd = open(pulse_verify_file, O_CREAT | O_WRONLY | O_TRUNC);
+	fchmod(fd, 644);
+	sprintf(g.strbuf, "%d", i);
+	write(fd, g.strbuf, strlen(g.strbuf)+1);
 	close(fd);
 }
 
 void writePulseStatus(int readData[], int pulseTime){
+	if (g.badRead){
+		writeVerifyVal(NONE);
+		return;
+	}
+
 	int pulseEnd = readData[1];
 	if (pulseEnd > pulseTime){
 		writeVerifyVal(DELAYED);
@@ -208,13 +218,12 @@ int main(int argc, char *argv[]){
 
 	struct timeval tv1;
 	struct timespec ts2;
-	int pulseEnd1, pulseEnd2;
+	int pulseEnd1 = 0, pulseEnd2 = 0;
 
 	memset(&g, 0, sizeof(struct pulseGeneratorGlobalVars));
 	g.pulseTime1 = -1;
 	g.pulseTime2 = -1;
-
-	int seq_num = 0;
+	g.badRead = false;
 
 	if (argc > 1){
 		if (strcmp(argv[1], "load-driver") == 0){
@@ -286,6 +295,9 @@ int main(int argc, char *argv[]){
 	}
 
 start:
+	char timeStr[100];
+	const char *timefmt = "%F %H:%M:%S";
+
 	if (geteuid() != 0){
 		printf("Requires superuser privileges. Please sudo this command.\n");
 		return 1;
@@ -294,63 +306,66 @@ start:
 	printf(version);
 	printf("\n");
 
-	struct sched_param param;						// Process must be run as
-	param.sched_priority = 99;						// root to change priority.
-	sched_setscheduler(0, SCHED_FIFO, &param);		// Else, this has no effect.
+	struct sched_param param;							// Process must be run as
+	param.sched_priority = 99;							// root to change priority.
+	sched_setscheduler(0, SCHED_FIFO, &param);			// Else, this has no effect.
 
-	int fd = open("/dev/pulse-generator", O_RDWR);	// Open the pulse-generator device driver.
+	int fd = open("/dev/pulse-generator", O_RDWR);		// Open the pulse-generator device driver.
 	if (fd == -1){
 		printf("pulse-generator: Driver is not loaded. Exiting.\n");
 		return 1;
 	}
 
 	pulseStart1 = g.pulseTime1 - 125;
-	if (pulseStart1 < 0){
-		pulseStart1 = 1000000 + pulseStart1;
-	}
 
 	if (g.pulseTime2 > g.pulseTime1){
-		pulseStart2 = -(1000000 - g.pulseTime2) - 125;
+		pulseStart2 = g.pulseTime2 - 125;
 	}
-														// Set up a one-second delay loop that stays in synch
-			    										// by continuously re-timing to pulseStart1 value.
-	gettimeofday(&tv1, NULL);
-	ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);
 
-	char timeStr[100];
-	const char *timefmt = "%F %H:%M:%S";
+	gettimeofday(&tv1, NULL);
+	ts2 = setSyncDelay(10000, tv1.tv_usec);				// Read the pps-assert value at 10 msec into the second
 
 	for (;;){
-		nanosleep(&ts2, NULL);							// Sleep until ready to generate a pulse
+		nanosleep(&ts2, NULL);
 
-		writeData[0] = 0;
+		gettimeofday(&tv1, NULL);
+		ts2.tv_nsec = (pulseStart1 - tv1.tv_usec) * 1000;
+		ts2.tv_sec = 0;
+		nanosleep(&ts2, NULL);							// Sleep to pulseStart1
+
+		writeData[0] = GPIO_A;							// Write to the first GPIO outuput
 		writeData[1] = g.pulseTime1;
+		write(fd, writeData, 2 * sizeof(int));			// Request a write at g.pulseTime1.
 
-		write(fd, writeData, 2 * sizeof(int));			// Write the pulse data for g.pulseTime1
-
-		if (read(fd, readData, 2 * sizeof(int)) < 0){
+		if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time of the write
 			printf("pulse-gemerator: Bad read from driver\n");
-			continue;
+			g.badRead = true;
+		}
+		else {
+			pulseEnd1 = readData[1];
 		}
 
-		pulseEnd1 = readData[1];
+		if (g.pulseTime2 > g.pulseTime1){				// If true, generate a second pulse.
 
-		if (g.pulseTime2 > g.pulseTime1){
 			gettimeofday(&tv1, NULL);
-			ts2 = setSyncDelay(pulseStart2, tv1.tv_usec);
-			nanosleep(&ts2, NULL);						// Sleep until ready to generate a pulse
+			ts2.tv_nsec = (pulseStart2 - tv1.tv_usec) * 1000;
+			ts2.tv_sec = 0;
+			nanosleep(&ts2, NULL);						// Sleep to pulseStart2
 
-			writeData[0] = 1;
+			gettimeofday(&tv1, NULL);
+
+			writeData[0] = GPIO_B;						// Write to the second GPIO output
 			writeData[1] = g.pulseTime2;
+			write(fd, writeData, 2 * sizeof(int));		// Request a write at pulseTime2.
 
-			write(fd, writeData, 2 * sizeof(int));		// Write the pulse data for g.pulseTime2
-
-			if (read(fd, readData, 2 * sizeof(int)) < 0){
+			if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time of the write.
 				printf("pulse-gemerator: Bad read from driver\n");
-				continue;
+				g.badRead = true;
+			}
+			else {
+				pulseEnd2 = readData[1];
 			}
 
-			pulseEnd2 = readData[1];
 			writePulseStatus(readData, g.pulseTime2);
 
 			strftime(timeStr, 100, timefmt, localtime((const time_t*)(&(readData[0]))));
@@ -363,19 +378,13 @@ start:
 			printf("%s %d\n", timeStr, pulseEnd1);
 		}
 
-		ts2.tv_sec = 0;									// Allow time for interrupt-timer to read verify file.
-		ts2.tv_nsec = 200000;
-		nanosleep(&ts2, NULL);
-
-		writeVerifyVal(SENTINEL);
+		g.badRead = false;
 
 		gettimeofday(&tv1, NULL);
-		ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);
-
-		seq_num += 1;
+		ts2 = setSyncDelay(10000, tv1.tv_usec);			// Read the pps-assert value at 10 msec into the second
 	}
 
-	close(fd);
+	close(fd);											// Close the pulse-generator device driver.
 
 	return 0;
 }

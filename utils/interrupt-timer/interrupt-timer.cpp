@@ -33,7 +33,7 @@
 #define INTRPT_DISTRIB_LEN 61
 #define SECS_PER_DAY 86400
 #define SECS_PER_MIN 60
-#define ON_TIME 0
+#define ON_TIME 3
 #define DELAYED 1
 #define NONE 2
 #define FILE_NOT_FOUND -1
@@ -63,7 +63,7 @@ struct interruptTimerGlobalVars {
 
 const char *timer_distrib_file = "/var/local/timer-distrib-forming";
 const char *last_timer_distrib_file = "/var/local/timer-distrib";
-const char *pulse_verify_file = "/mnt/pi/PulseVerify";
+const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
 
 const char *version = "interrupt-timer v0.2.0";
 const char *timefmt = "%F %H:%M:%S";
@@ -276,11 +276,14 @@ int getSysDelay(int *sysDelay){
  */
 int readVerify(void){
 	int val;
+
 	int fd = open(pulse_verify_file, O_RDONLY);
 	if (fd == -1){
 		return fd;
 	}
-	read(fd, &val, sizeof(int));
+
+	read(fd, g.strbuf, 10);
+	sscanf(g.strbuf, "%d", &val);
 	close(fd);
 	return val;
 }
@@ -421,7 +424,7 @@ int outputRepeatingEventTime(int tm[]){
 		printf("interrupt-timer: Skipping delayed pulse from pulse-generator.\n");
 	}
 	else if (v == NONE){
-		printf("interrupt-timer: No valid was pulse delivered.\n");
+		printf("interrupt-timer: Skipping pulse not verified.\n");
 	}
 	else if (v == FILE_NOT_FOUND){
 		printf("interrupt-timer Error: Verify file not found.\n");
@@ -567,7 +570,7 @@ start:
 		}
 	}
 
-	remove(pulse_verify_file);
+//	remove(pulse_verify_file);
 
 	printf(version);
 	printf("\n");
