@@ -57,15 +57,14 @@
 #define INV_DELAY_SAMPLES_PER_MIN (1.0 / (double)SECS_PER_MINUTE)
 #define FREQDIFF_INTRVL 5
 #define INTRPT_MOST_DECAY_RATE 0.975
-#define FUDGE 4
 
 #define OFFSETFIFO_LEN 80
 #define NUM_AVERAGES 10
 #define PER_NUM_INTEGRALS (1.0 / (double)NUM_AVERAGES)
 
-#define CREEP_FACTOR 0.219							// Creepage factor in sysDelay median estimation.
+#define FUDGE 2
+
 #define ADJTIMEX_SCALE 65536.0						// Frequency scaling required by adjtimex().
-#define OUT_DELAY 1									// Delay writing to output from driver.
 #define INTERRUPT_LATENCY 16						// Average interrupt latency in microseconds also accounting
 													// for the average increase in latency with processor activity
 #define INTERRUPT_LOST 15							// Number of consequtive lost interrupts at which warning starts
@@ -166,7 +165,6 @@ struct ppsClientGlobalVars {
 	int jitterDistrib[JITTER_DISTRIB_LEN];
 
 	int burstLevel;
-	int delayCreep;
 
 	bool isBurstNoise;
 	int burstLen;

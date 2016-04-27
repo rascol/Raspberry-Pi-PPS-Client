@@ -53,19 +53,13 @@ const char *version = "0.3.3";
 struct ppsClientGlobalVars g;
 
 /**
- * Sets g.burstLevel and g.delayCreep to be proportional
- * to g.sysDelay.
- *
- * g.delayCreep corrects for over-estimation of sysDelay
- * caused by burst noise.
+ * Sets g.burstLevel to be proportional to g.sysDelay.
  */
 void setDelayTrackers(void){
 	g.burstLevel = (int)round((double)g.sysDelay * BURST_FACTOR) + 1;
 	if (g.burstLevel < BURST_LEVEL_MIN){
 		g.burstLevel = BURST_LEVEL_MIN;
 	}
-//	g.delayCreep = (int)round((double)g.sysDelay * CREEP_FACTOR);
-	g.delayCreep = 0;
 }
 
 /**
@@ -594,7 +588,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 
 	int interruptTime = getFractionalSeconds(pps_t);
 
-	int rawError = interruptTime - (g.sysDelay + FUDGE);		// References the controller to g.sysDelay which sets the time
+	int rawError = interruptTime - g.sysDelay;			// References the controller to g.sysDelay which sets the time
 														// of the PPS rising edge to zero at the start of the second.
 	int zeroError = removeNoise(rawError);
 
@@ -872,9 +866,8 @@ void getInterruptDelay(int pps_fd){
 
 	rv = read(pps_fd, (void *)g.tm, 6 * sizeof(int));
 	if (rv > 0){
-														// The delay interval will measure too long
-		g.intrptDelay = g.tm[5] - g.tm[3]  - OUT_DELAY; // because there is a small delay in the driver
-														// to an output pin. OUT_DELAY corrects it.
+
+		g.intrptDelay = g.tm[5] - g.tm[3];
 
 		buildInterruptDistrib(g.intrptDelay);
 
