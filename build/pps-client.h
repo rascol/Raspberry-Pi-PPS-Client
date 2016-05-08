@@ -37,7 +37,6 @@
 #include <poll.h>
 
 #define USECS_PER_SEC 1000000
-#define MINUTES_PER_DAY 1440
 #define SECS_PER_MINUTE 60
 #define SECS_PER_5_MIN 300
 #define SECS_PER_10_MIN 600
@@ -46,8 +45,6 @@
 #define NUM_5_MIN_INTERVALS 288
 #define FIVE_MINUTES 5
 #define PER_MINUTE (1.0 / (double)SECS_PER_MINUTE)
-#define PER_MINUTE_SQUARED (1.0 / (double)(SECS_PER_MINUTE * SECS_PER_MINUTE))
-#define PER_15_SECS (1.0 / 15.0)
 #define SETTLE_TIME (2 * SECS_PER_MINUTE + SECS_PER_10_MIN)
 #define INV_GAIN_1 1
 #define INV_GAIN_0 4
@@ -62,24 +59,25 @@
 #define NUM_AVERAGES 10
 #define PER_NUM_INTEGRALS (1.0 / (double)NUM_AVERAGES)
 
-#define FUDGE 2
-
 #define ADJTIMEX_SCALE 65536.0						// Frequency scaling required by adjtimex().
-#define INTERRUPT_LATENCY 16						// Average interrupt latency in microseconds also accounting
-													// for the average increase in latency with processor activity
+
+#define INTERRUPT_LATENCY 16						// Default interrupt latency in microseconds.
+
+#define RAW_ERROR_ZERO  15							// Index corresponding to rawError == 0 in getSecondSysDelayPeak().
+#define MIN_PEAK_RATIO 0.1							// Minimum ratio to detect a second peak in getSecondSysDelayPeak().
+#define MAX_VALLEY_RATIO 0.95						// Maximum ratio to detect a valley before the second peak in getSecondSysDelayPeak().
+#define RAW_ERROR_DECAY 0.99807						// Decay rate for rawError samples (6 hour half life)
+
 #define INTERRUPT_LOST 15							// Number of consequtive lost interrupts at which warning starts
 
 #define MAX_SERVERS 10								// Maximum number of SNTP time servers to use
-#define CHECK_TIME 1024								// Interval between internet time checks
+#define CHECK_TIME 1024								// Interval between internet time checks (about 17 minutes)
 
-#define LONGBURST 6									// Reporting length for long bursts
-#define BURST_MAX 30								// Maximum microseconds to suppress a burst of positive jitter
-#define BURST_FACTOR 0.354							// Adjusts g.burstLevel to track g.sysDelay
-#define BURST_LEVEL_MIN 4							// The minimum level at which interrupt delays are burst noise.
+#define MAX_SPIKES 30								// Maximum microseconds to suppress a burst of positive jitter
+#define NOISE_FACTOR 0.354							// Adjusts g.noiseLevel to track g.sysDelay
+#define NOISE_LEVEL_MIN 4							// The minimum level at which interrupt delays are delay spikes.
 #define SLEW_LEN 10
 #define SLEW_MAX 65
-
-#define NT 10										// Maximum number of SNTP server threads
 
 #define STRBUF_SZ 500
 #define LOGBUF_SZ 500
@@ -107,12 +105,10 @@
 #define FREQUENCY_VARS 4
 #define ALERT_PPS_LOST 8
 #define JITTER_DISTRIB 16
-#define BURST_DISTRIB 32
-#define SAVE_LONGBURST 64
-#define CALIBRATE 128
-#define INTERRUPT_DISTRIB 256
-#define SYSDELAY_DISTRIB 512
-#define EXIT_LOST_PPS 1024
+#define CALIBRATE 32
+#define INTERRUPT_DISTRIB 64
+#define SYSDELAY_DISTRIB 128
+#define EXIT_LOST_PPS 256
 
 /**
  * Struct for passing arguments to and from threads
@@ -139,6 +135,9 @@ struct ppsClientGlobalVars {
 	int intrptDelay;
 	int	sysDelay;
 
+	int sysDelayShift;
+	int delayShift;
+
 	int sysDelayDistrib[INTRPT_DISTRIB_LEN];
 
 	double delayMedian;
@@ -164,18 +163,19 @@ struct ppsClientGlobalVars {
 	int jitterCount;
 	int jitterDistrib[JITTER_DISTRIB_LEN];
 
-	int burstLevel;
+	double rawErrorDistrib[INTRPT_DISTRIB_LEN];
 
-	bool isBurstNoise;
-	int burstLen;
-	int burstLength[BURST_MAX];
-	int longBurst;
-	int longburstArray[BURST_MAX];
+	int noiseLevel;
+
+	bool isDelaySpike;
+	int nDelaySpikes;
 
 	unsigned int seq_num;
 	int seq_numRec[SECS_PER_10_MIN];
 
 	unsigned int activeCount;
+	unsigned int lastActiveCount;
+
 	int seconds;
 	int days;
 	int maxInterval;
@@ -212,9 +212,9 @@ struct ppsClientGlobalVars {
 	int interruptLossCount;
 	bool interruptReceived;
 	int interruptDistrib[INTRPT_DISTRIB_LEN];
+	int intrptDelayShift;
 
-	int interruptCount;
-	int mostFreqentDelay;
+	unsigned int intrptCount;
 	double peakDelayDistrib[INTRPT_DISTRIB_LEN];
 
 	int consensisTimeError;
@@ -232,6 +232,10 @@ struct ppsClientGlobalVars {
 	char msgbuf[MSGBUF_SZ];
 	char savebuf[MSGBUF_SZ];
 	char strbuf[STRBUF_SZ];
+
+	int nIntrptDelaySpikes;
+	bool medianIsSet;
+	unsigned int ppsCount;
 };
 
 void initialize(void);
@@ -250,7 +254,6 @@ void writeFrequencyVars(void);
 void writeTimestamp(double);
 void writeSysDelay(void);
 void bufferStateParams(void);
-void writeLongburstArray(void);
 int allocNTPServerList(timeCheckParams *);
 int disableNTP(void);
 int enableNTP(void);

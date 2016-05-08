@@ -63,7 +63,7 @@
 
 		<p>Figure 2 shows the system clock frequency set by the controller which held the Allan deviation of the frequency to less than 20 parts per billion in each minute over the same period. This corresponds to a time drift of less than 20 nanoseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsec per sec.) The controller adjusted the frequency offset against temperature changes to the value that kept the system clock synchronized to the PPS within a fraction of a microsecond.</p><center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
 
-		<p>The combination of time slew adjustments never needing to exceed 1 microsecond each second and time drift never exceeding 20 nanoseconds each second certifies a timekeeping precision of 1 microsecond over this 24 hour period. The claimed absolute accuracy limit of 5 microseconds is because of uncertainties in determining the precise value of the PPS interrupt delay and because allowance must be made for occasional time adjustments that could slightly exceed 1 microsecond (but didn't here). This is discussed in extravagant detail in the docs. In any case, the performance shown here can be considered to be worst case if Linux 4.1.y kernels are used because these have even better timekeeping performance than the 3.18.9-rt kernel from which this data was collected.</p>
+		<p>The combination of time slew adjustments never needing to exceed 1 microsecond each second and time drift never exceeding 20 nanoseconds each second certifies a timekeeping precision of 1 microsecond over this 24 hour period. The claimed absolute accuracy limit of 5 microseconds is because of uncertainties in determining the precise value of the PPS interrupt delay and because allowance must be made for occasional time adjustments that could slightly exceed 1 microsecond (but didn't here). This is discussed in detail in the docs. In any case, the performance shown here can be considered to be worst case if Linux 4.1.y kernels are used because these have even better timekeeping performance than the 3.18.9-rt kernel from which this data was collected.</p>
 		<h1 id="hardware-requirements">Hardware Requirements</h1>
 		<hr/>
 		<ol>
@@ -112,7 +112,6 @@
 		<p>Uninstall pps-client on the RPi with:</p>
 		<pre><code>$ sudo pps-client-remove
 </code></pre>
-		<p>Uninstalling isn't necessary if you are installing over an older version of pps-client.</p>
 		<h1 id="reinstalling">Reinstalling</h1>
 		<hr/>
 		<p>If you want to keep your current pps-client configuration file rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. For example, you could preserve it by doing something like,</p>
@@ -167,7 +166,7 @@ $ cd PPS-Client
 </code></pre>
 		<p>That completes the pps-client installation.</p>
 		<h2 id="building-on-a-linux-workstation">Building on a Linux Workstation</h2>
-		<p>This is decidedly for the experienced. We've had problems with the cross-compiler where it looked like everything was fine but the code didn't run on the RPi. Very hard to debug. On the other hand, it can be much easier to get code though the compile stage on a workstation.</p>
+		<p>This is decidedly for the adventurous. We've had problems with the cross-compiler where it looked like everything was fine but the code didn't run on the RPi. Very hard to debug. On the other hand, it can be much easier to get code though the compile stage on a workstation.</p>
 		<p>You might want to create a folder to hold the kernel and tools. For example,</p>
 		<pre><code>$ mkdir ~/rpi
 $ cd ~/rpi
@@ -236,7 +235,7 @@ $ cd PPS-Client
 			<code>jitter</code> shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount. In this case pps-client may restart several times as it slowly reduces the 
 			<code>jitter</code> offset. That happens because system functions that pps-client calls internally prevent time changes of more than about 500 microseconds in each second.
 		</p>
-		<p>Here is a complete list parameters shown in the status printout:</p>
+		<p>These are the parameters shown in the status printout:</p>
 		<ul>
 			<li>First two columns - date and time of the rising edge of the PPS signal.</li>
 			<li>Third column - the total number of PPS interrupts received since pps-client was started.</li>

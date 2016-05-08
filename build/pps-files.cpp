@@ -30,14 +30,11 @@ const char *offsets_file = "/var/local/pps-offsets";				// File storing time off
 const char *log_file = "/var/log/pps-client.log";					// File storing activity and errors.
 const char *old_log_file = "/var/log/pps-client.old.log";			// File storing activity and errors.
 const char *config_file = "/etc/pps-client.conf";					// The pps-client configuration file.
-const char *last_burst_distrib_file = "/var/local/burst-distrib";	// File storing distribution of jitter burst lengths
-const char *burst_distrib_file = "/var/local/burst-distrib-forming";// File storing distribution of jitter burst lengths
-const char *longburst_file = "/var/local/longbursts";
 const char *assert_file = "/run/shm/pps-assert";					// The timestamps of the time corrections each second
 const char *sysDelay_file = "/run/shm/pps-sysDelay";				// The current sysDelay value updated each second
 const char *last_intrpt_distrib_file = "/var/local/intrpt-distrib";	// File storing the completed distribution of offset corrections.
 const char *interrupt_distrib_file = "/var/local/intrpt-distrib-forming";// File storing an incompleted distribution of offset corrections.
-const char *displayParams_file = "/run/shm/display-params";
+const char *displayParams_file = "/run/shm/display-params";			// Temporary file storing params for the status display
 const char *sysDelay_distrib_file = "/var/local/sysDelay-distrib-forming";
 const char *last_sysDelay_distrib_file = "/var/local/sysDelay-distrib";
 const char *ntp_config_file = "/etc/ntp.conf";
@@ -66,8 +63,6 @@ const char *config_str[] = {
 		"frequency-vars",
 		"alert-pps-lost",
 		"jitter-distrib",
-		"burst-distrib",
-		"save-longburst",
 		"calibrate",
 		"interrupt-distrib",
 		"sysdelay-distrib",
@@ -504,48 +499,6 @@ void writeErrorDistribFile(void){
 }
 
 /**
- * Writes a distribution to disk approximately every 10 minutes
- * containing the lengths of jitter bursts recorded from the
- * PPS interrupt. The distribution is rolled over to a new file
- * every 24 hours.
- */
-void writeBurstDistribFile(void){
-	if (g.isAcquiring && g.seq_num % SECS_PER_10_MIN == 0){
-		int scaleZero = -1;
-		writeDistribution(g.burstLength, BURST_MAX, scaleZero, 1,
-				&f.lastBurstFileno, burst_distrib_file, last_burst_distrib_file);
-	}
-}
-
-/**
- * Records the jitter values in a long jitter burst to a file
- * each time a long burst occurs that is at least LONGBURST
- * in length.
- */
-void writeLongburstArray(void){
-	if (g.seq_num == 1){
-		remove(longburst_file);
-	}
-	if (g.longBurst > 0){
-		int fd = open_logerr(longburst_file, O_CREAT | O_WRONLY | O_APPEND);
-		if (fd == -1){
-			return;
-		}
-		char *sp = g.strbuf;
-		for (int i = 0; i < g.longBurst; i++){
-			sprintf(sp, "%d ", g.longburstArray[i]);
-			sp = g.strbuf + strlen(g.strbuf);
-		}
-		sprintf(sp - 1, "\n");
-
-		write(fd, g.strbuf, strlen(g.strbuf));
-		close(fd);
-
-		g.longBurst = 0;
-	}
-}
-
-/**
  * Writes the previously completed list of 10 minutes of recorded
  * time offsets and applied frequency offsets indexed by seq_num.
  */
@@ -695,14 +648,6 @@ void processFiles(char *configVals[], char *pbuf, int sz){
 		writeJitterDistribFile();
 	}
 
-	if (isEnabled(BURST_DISTRIB, configVals)){
-		writeBurstDistribFile();
-	}
-
-	if (isEnabled(SAVE_LONGBURST, configVals)){
-		writeLongburstArray();
-	}
-
 	if (isEnabled(CALIBRATE, configVals)){
 		g.doCalibration = true;
 	}
@@ -741,7 +686,7 @@ void processFiles(char *configVals[], char *pbuf, int sz){
  */
 void writeSysDelay(void){
 	memset(g.strbuf, 0, STRBUF_SZ);
-	sprintf(g.strbuf, "%d#%d\n", g.sysDelay - FUDGE, g.seq_num);
+	sprintf(g.strbuf, "%d#%d\n", g.sysDelay + g.sysDelayShift, g.seq_num);
 	remove(sysDelay_file);
 	int pfd = open_logerr(sysDelay_file, O_CREAT | O_WRONLY);
 	if (pfd == -1){
