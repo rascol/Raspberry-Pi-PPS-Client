@@ -59,25 +59,25 @@
 #define NUM_AVERAGES 10
 #define PER_NUM_INTEGRALS (1.0 / (double)NUM_AVERAGES)
 
-#define ADJTIMEX_SCALE 65536.0						// Frequency scaling required by adjtimex().
+#define ADJTIMEX_SCALE 65536.0			// Frequency scaling required by adjtimex().
 
-#define INTERRUPT_LATENCY 16						// Default interrupt latency in microseconds.
+#define INTERRUPT_LATENCY 16			// Default interrupt latency in microseconds.
 
-#define RAW_ERROR_ZERO  20							// Index corresponding to rawError == 0 in detectDelayPeak().
-#define MIN_PEAK_RATIO 0.1							// Minimum ratio to detect a second peak in detectDelayPeak().
-#define MAX_VALLEY_RATIO 0.95						// Maximum ratio to detect a valley before the second peak in detectDelayPeak().
-#define RAW_ERROR_DECAY 0.98851						// Decay rate for rawError samples (1 hour half life)
-#define MAX_PEAK_DELAY 7								// Look for a delay peak less than this value. If larger not a delay peak.
+#define RAW_ERROR_ZERO  20				// Index corresponding to rawError == 0 in detectDelayPeak().
+#define MIN_PEAK_RATIO 0.1				// Minimum ratio to detect a second peak in detectDelayPeak().
+#define MAX_VALLEY_RATIO 0.95			// Maximum ratio to detect a valley before the second peak in detectDelayPeak().
+#define RAW_ERROR_DECAY 0.98851			// Decay rate for rawError samples (1 hour half life)
+#define MAX_PEAK_DELAY 15				// Look for a delay peak less than this value. If larger not a delay peak.
 
-#define INTERRUPT_LOST 15							// Number of consequtive lost interrupts at which warning starts
+#define INTERRUPT_LOST 15				// Number of consequtive lost interrupts at which warning starts
 
-#define MAX_SERVERS 10								// Maximum number of SNTP time servers to use
-#define CHECK_TIME 1024								// Interval between internet time checks (about 17 minutes)
+#define MAX_SERVERS 10					// Maximum number of SNTP time servers to use
+#define CHECK_TIME 1024					// Interval between internet time checks (about 17 minutes)
 
-#define MAX_SPIKES 30								// Maximum microseconds to suppress a burst of positive jitter
+#define MAX_SPIKES 30					// Maximum microseconds to suppress a burst of positive jitter
 
-#define NOISE_FACTOR 0.354							// Adjusts g.noiseLevel to track g.sysDelay
-#define NOISE_LEVEL_MIN 4							// The minimum level at which interrupt delays are delay spikes.
+#define NOISE_FACTOR 0.354				// Adjusts g.noiseLevel to track g.sysDelay
+#define NOISE_LEVEL_MIN 4				// The minimum level at which interrupt delays are delay spikes.
 #define SLEW_LEN 10
 #define SLEW_MAX 65
 
@@ -147,6 +147,7 @@ struct ppsClientGlobalVars {
 
 	int sysDelayShift;
 	int delayShift;
+	int delayMin;
 
 	int pad1[100];
 
@@ -291,6 +292,7 @@ struct ppsClientGlobalVars {
 	int pad26[100];
 
 	int intrptDelayShift;
+	int intrptDelayMin;
 
 	unsigned int intrptCount;
 

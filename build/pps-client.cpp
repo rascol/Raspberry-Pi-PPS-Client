@@ -45,7 +45,7 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.4.0";
+const char *version = "0.4.1";
 
 /**
  * Declares the global variables defined in pps-client.h.
@@ -488,7 +488,8 @@ void setClockToNTPtime(int pps_fd){
  * MAX_PEAK_DIFF then the offset of the delay peak
  * is returned. Else returns 0.
  */
-void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count, int *delayShift, const char *caller){
+void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
+		int *delayShift, int* minLevelIdx, const char *caller){
 
 	int len = ERROR_DISTRIB_LEN - 1;
 
@@ -539,6 +540,7 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count, i
 						valMin / valPeak < MAX_VALLEY_RATIO &&		// if a valley is verified and
 						idxOfPeak - idxOfValley < MAX_PEAK_DELAY){	// the peak is not too far from valley
 					*delayShift = idxOfPeak;						// then set delayShift to the relative peak index.
+					*minLevelIdx = idxOfValley;
 				}
 				if (*delayShift == 0){
 					sprintf(g.msgbuf, "%s: No delay peak. ", caller);
@@ -578,10 +580,10 @@ int removeNoise(int rawError){
 
 	int zeroError;
 
-	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), "removeNoise()");
+	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), &(g.delayMin), "removeNoise()");
 
 	g.sysDelayShift = 0;
-	if (g.hardLimit == HARD_LIMIT_1 && rawError >= g.noiseLevel){
+	if (g.hardLimit == HARD_LIMIT_1 && rawError > g.delayMin){
 		g.sysDelayShift = g.delayShift;
 		rawError -= g.delayShift;
 	}
@@ -863,11 +865,11 @@ int removeIntrptNoise(int intrptError){
 
 	int zeroError;
 
-	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), &(g.intrptDelayShift), "removeIntrptNoise()");
+	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), &(g.intrptDelayShift), &(g.intrptDelayMin), "removeIntrptNoise()");
 
-	if (g.hardLimit <= HARD_LIMIT_4){
+	if (g.hardLimit == HARD_LIMIT_1 && intrptError > g.intrptDelayMin){
 
-		if (intrptError >= g.noiseLevel){
+		if (intrptError > g.intrptDelayMin){
 			intrptError -= g.intrptDelayShift;
 		}
 	}
