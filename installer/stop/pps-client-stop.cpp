@@ -25,12 +25,25 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+bool driverIsLoaded(void){
+	struct stat sbuf;
+	const char *filename = "/run/shm/pps-msg";
+
+	system("lsmod | grep pps_client > /run/shm/pps-msg");
+	int rv = stat(filename, &sbuf);
+	remove(filename);
+
+	if (rv == -1 || sbuf.st_size == 0){
+		return false;
+	}
+	return true;
+}
+
 int main(void){
 	char cmd[500];
 	char *end;
 	char buf[50];
 	int daemonPID = 0;
-	struct stat sbuf;
 
 	uid_t uid = geteuid();
 	if (uid != 0){
@@ -72,14 +85,17 @@ int main(void){
 
 	printf("Closing pps-client.\n");
 
-	sleep(3);				// Wait for pps-client to close
+	for (int i = 0; i < 15; i++){			// Wait for driver to unload
+		sleep(1);
+		if (! driverIsLoaded()){
+			return 0;
+		}
+	}
 end:
-	system("lsmod | grep pps_client > /run/shm/pps-msg");
-	int rv = stat(filename, &sbuf);
-	remove(filename);
-	if (rv == -1 || sbuf.st_size == 0){
+	if (! driverIsLoaded()){
 		return 0;
 	}
+
 	system("rm -f /dev/pps-client");
 	system("rmmod pps-client");
 
