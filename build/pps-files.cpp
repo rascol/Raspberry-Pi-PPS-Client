@@ -25,8 +25,7 @@ const char *last_distrib_file = "/var/local/error-distrib";			// File storing th
 const char *distrib_file = "/var/local/error-distrib-forming";		// File storing an incompleted distribution of offset corrections.
 const char *last_jitter_distrib_file = "/var/local/jitter-distrib";	// File storing the completed distribution of offset corrections.
 const char *jitter_distrib_file = "/var/local/jitter-distrib-forming";// File storing an incompleted distribution of offset corrections.
-const char *frequency_file = "/var/local/frequency-vars";			// File storing clock frequency offset and change at 5 minute intervals
-const char *offsets_file = "/var/local/pps-offsets";				// File storing time offset and freq offset second by second.
+//const char *offsets_file = "/var/local/pps-offsets";				// File storing time offset and freq offset second by second.
 const char *log_file = "/var/log/pps-client.log";					// File storing activity and errors.
 const char *old_log_file = "/var/log/pps-client.old.log";			// File storing activity and errors.
 const char *config_file = "/etc/pps-client.conf";					// The pps-client configuration file.
@@ -35,6 +34,7 @@ const char *sysDelay_file = "/run/shm/pps-sysDelay";				// The current sysDelay 
 const char *last_intrpt_distrib_file = "/var/local/intrpt-distrib";	// File storing the completed distribution of offset corrections.
 const char *interrupt_distrib_file = "/var/local/intrpt-distrib-forming";// File storing an incompleted distribution of offset corrections.
 const char *displayParams_file = "/run/shm/display-params";			// Temporary file storing params for the status display
+const char *arrayData_file = "/run/shm/save-data";
 const char *sysDelay_distrib_file = "/var/local/sysDelay-distrib-forming";
 const char *last_sysDelay_distrib_file = "/var/local/sysDelay-distrib";
 const char *ntp_config_file = "/etc/ntp.conf";
@@ -51,16 +51,12 @@ static struct filesLocalVars {
 	time_t modifyTime;
 	int lastJitterFileno;
 	int lastSysDelayFileno;
-	int lastBurstFileno;
 	int lastErrorFileno;
 	int lastIntrptFileno;
-	double freqAllanDev[NUM_5_MIN_INTERVALS];
 } f;
 
 const char *config_str[] = {
 		"error-distrib",
-		"pps-offsets",
-		"frequency-vars",
 		"alert-pps-lost",
 		"jitter-distrib",
 		"calibrate",
@@ -68,6 +64,14 @@ const char *config_str[] = {
 		"sysdelay-distrib",
 		"exit-lost-pps"
 };
+
+struct saveFileData arrayData[] = {
+	{"rawError", g.rawErrorDistrib, "/var/local/raw-error-distrib", ERROR_DISTRIB_LEN, 2, RAW_ERROR_ZERO},
+	{"intrptError", g.intrptErrorDistrib, "/var/local/intrpt-error-distrib", ERROR_DISTRIB_LEN, 2, RAW_ERROR_ZERO},
+	{"frequency-vars", NULL, "/var/local/frequency-vars", 0, 3, 0},
+	{"pps-offsets", NULL, "/var/local/pps-offsets", 0, 4, 0}
+};
+
 
 void couldNotOpenMsgTo(char *logbuf, const char *filename){
 	strcpy(logbuf, "ERROR: could not open \"");
@@ -270,16 +274,25 @@ pid_t getChildPID(void){
  * If a PID for pps exists returns "true". Else returns "false".
  */
 bool ppsIsRunning(void){
-	struct stat stat_buf;
+	char buf[50];
 	const char *filename = "/run/shm/pps-msg";
 
 	system("pidof pps-client > /run/shm/pps-msg");
-	int rv = stat(filename, &stat_buf);
-	if (rv == -1){
+
+	int fd = open(filename, O_RDONLY);
+	if (fd == -1){
 		return false;
 	}
+	memset(buf, 0, 50);
+	read(fd, buf, 50);
+
+	int callerPID = 0, daemonPID = 0;					// If running both of these exist
+	sscanf(buf, "%d %d\n", &callerPID, &daemonPID);
+
+	close(fd);
 	remove(filename);
-	if (stat_buf.st_size == 0){
+
+	if (daemonPID == 0){								// Otherwise only the first exists.
 		return false;
 	}
 	return true;
@@ -289,21 +302,14 @@ bool ppsIsRunning(void){
  * Creates a PID file for the pps-client daemon.
  */
 int createPIDfile(void){
+
 	int pfd = open_logerr(pidFilename, O_RDWR | O_CREAT | O_EXCL);
-	if (pfd == -1){									// Oops! pidFilename exists. pps-client might be running.
-
-		if (ppsIsRunning() == true){				// If running must exit.
-			sprintf(g.logbuf, "ERROR: pps-client is already running. Exiting.\n");
-			writeToLog(g.logbuf);
-			return -1;								// Already running.
-		}
-
-		remove(pidFilename);						// Not running so delete the old pidFilename
-		pfd = open_logerr(pidFilename, O_RDWR | O_CREAT | O_EXCL);		// and create a new one
-		if (pfd == -1){
-			return -1;
-		}
+	if (pfd == -1){
+		sprintf(g.logbuf, "Error: Could not create a PID file.\n");
+		writeToLog(g.logbuf);
+		return -1;
 	}
+
 	pid_t ppid = getpid();
 
 	sprintf(g.strbuf, "%d\n", ppid);
@@ -502,20 +508,20 @@ void writeErrorDistribFile(void){
  * Writes the previously completed list of 10 minutes of recorded
  * time offsets and applied frequency offsets indexed by seq_num.
  */
-void writeOffsets(void){
-
-	if (g.seq_num > SECS_PER_5_MIN && g.recIndex2 == 0){	// Write offsets every 10 minutes
-		remove(offsets_file);
-		int fd = open_logerr(offsets_file, O_CREAT | O_WRONLY | O_APPEND);
-		if (fd == -1){
-			return;
-		}
-		for (int i = 0; i < SECS_PER_10_MIN; i++){
-			sprintf(g.strbuf, "%d %d %lf\n", g.seq_numRec[i], g.offsetRec[i], g.freqOffsetRec2[i]);
-			write(fd, g.strbuf, strlen(g.strbuf));
-		}
-		close(fd);
+void writeOffsets(const char *filename){
+	int fd = open_logerr(filename, O_CREAT | O_WRONLY | O_TRUNC);
+	if (fd == -1){
+		return;
 	}
+	for (int i = 0; i < SECS_PER_10_MIN; i++){
+		int j = g.recIndex2 + i;
+		if (j >= SECS_PER_10_MIN){
+			j -= SECS_PER_10_MIN;
+		}
+		sprintf(g.strbuf, "%d %d %lf\n", g.seq_numRec[j], g.offsetRec[j], g.freqOffsetRec2[j]);
+		write(fd, g.strbuf, strlen(g.strbuf));
+	}
+	close(fd);
 }
 
 /**
@@ -523,47 +529,20 @@ void writeOffsets(void){
  * deviation in each 5 minute interval indexed by the timestamp
  * at each interval.
  */
-void writeFrequencyVars(void){
-	timeval t;
-
-	if (g.intervalCount >= g.maxInterval){
-		gettimeofday(&t, NULL);
-
-		double norm = 1.0 / (double)FREQDIFF_INTRVL;
-
-		double diffSum = 0.0;
-		for (int i = 0; i < FREQDIFF_INTRVL; i++){
-			diffSum += g.freqOffsetDiff[i] * g.freqOffsetDiff[i];
-		}
-		f.freqAllanDev[g.recIndex] = sqrt(diffSum * norm * 0.5);
-
-		g.timestampRec[g.recIndex] = t.tv_sec;
-
-		g.freqOffsetRec[g.recIndex] = g.freqOffsetSum * norm;
-
-		g.recIndex += 1;
-		if (g.recIndex == NUM_5_MIN_INTERVALS){
-			g.recIndex = 0;
-		}
-
-		remove(frequency_file);
-		int fd = open_logerr(frequency_file, O_CREAT | O_WRONLY | O_APPEND);
-		if (fd == -1){
-			return;
-		}
-		for (int i = 0; i < NUM_5_MIN_INTERVALS; i++){
-			int j = g.recIndex + i;
-			if (j >= NUM_5_MIN_INTERVALS){
-				j -= NUM_5_MIN_INTERVALS;
-			}
-			sprintf(g.strbuf, "%ld %lf %lf\n", g.timestampRec[j], g.freqOffsetRec[j], f.freqAllanDev[j]);
-			write(fd, g.strbuf, strlen(g.strbuf));
-		}
-		close(fd);
-
-		g.intervalCount = 0;
-		g.freqOffsetSum = 0.0;
+void writeFrequencyVars(const char *filename){
+	int fd = open_logerr(filename, O_CREAT | O_WRONLY | O_TRUNC);
+	if (fd == -1){
+		return;
 	}
+	for (int i = 0; i < NUM_5_MIN_INTERVALS; i++){
+		int j = g.recIndex + i;							// Read the circular buffers relative to g.recIndx.
+		if (j >= NUM_5_MIN_INTERVALS){
+			j -= NUM_5_MIN_INTERVALS;
+		}
+		sprintf(g.strbuf, "%ld %lf %lf\n", g.timestampRec[j], g.freqOffsetRec[j], g.freqAllanDev[j]);
+		write(fd, g.strbuf, strlen(g.strbuf));
+	}
+	close(fd);
 }
 
 /**
@@ -622,7 +601,87 @@ bool configHasValue(int config, char *configVals[], void *value){
 	return false;
 }
 
+/**
+ * Saves an array of doubles.
+ */
+bool saveDoubleArray(double distrib[], const char *filename, int len, int arrayZero){
 
+	int fd = open_logerr(filename, O_CREAT | O_WRONLY | O_TRUNC);
+	if (fd == -1){
+		return false;
+	}
+
+	int fileMaxLen = len * MAX_LINE_LEN * sizeof(char);
+	char *filebuf = new char[fileMaxLen];
+	int fileLen = 0;
+
+	filebuf[0] = '\0';
+	for (int i = 0; i < len; i++){
+		sprintf(g.strbuf, "%d %7.2lf\n", i - arrayZero, distrib[i]);
+		fileLen += strlen(g.strbuf);
+		strcat(filebuf, g.strbuf);
+	}
+
+	write(fd, filebuf, fileLen + 1);
+	fsync(fd);
+
+	delete filebuf;
+	close(fd);
+	return true;
+}
+
+/**
+ * Reads the data label and filename of an array to be written
+ * from a request passed from the command line. Then matches
+ * the dataLabel to the corresponding arrayData which is then
+ * passed to a routine that saves the array idendified by the
+ * data label.
+ */
+void processWriteRequest(){
+	struct stat buf;
+
+	int rv = stat(arrayData_file, &buf);
+	if (rv == -1){
+		return;
+	}
+
+	int fd = open(arrayData_file, O_RDONLY);
+	if (fd == -1){
+		return;
+	}
+
+	char dataLabel[25];
+	char filename[225];
+
+	filename[0] = '\0';
+	rv = read(fd, g.strbuf, STRBUF_SZ);
+	sscanf(g.strbuf, "%s %s", dataLabel, filename);
+
+	close(fd);
+	remove(arrayData_file);
+
+	int arrayLen = sizeof(arrayData) / sizeof(struct saveFileData);
+	for (int i = 0; i < arrayLen; i++){
+		if (strcmp(dataLabel, arrayData[i].label) == 0){
+			if (strlen(filename) == 0){
+				strcpy(filename, arrayData[i].filename);
+			}
+			if (arrayData[i].arrayType == 2){
+				saveDoubleArray((double *)arrayData[i].array, filename, arrayData[i].arrayLen, arrayData[i].arrayZero);
+				break;
+			}
+			if (arrayData[i].arrayType == 3){
+				writeFrequencyVars(filename);
+				break;
+			}
+			if (arrayData[i].arrayType == 4){
+				writeOffsets(filename);
+				break;
+			}
+
+		}
+	}
+}
 
 /**
  * Processes the files and config settings specified
@@ -631,14 +690,6 @@ bool configHasValue(int config, char *configVals[], void *value){
 void processFiles(char *configVals[], char *pbuf, int sz){
 
 	readConfigFile(configVals, pbuf, sz);
-
-	if (isEnabled(PPS_OFFSETS, configVals)){
-		writeOffsets();
-	}
-
-	if (isEnabled(FREQUENCY_VARS, configVals)){
-		writeFrequencyVars();
-	}
 
 	if (isEnabled(ERROR_DISTRIB, configVals)){
 		writeErrorDistribFile();
@@ -674,6 +725,8 @@ void processFiles(char *configVals[], char *pbuf, int sz){
 //	if (configHasValue(SET_GAIN, configVals, &value)){
 //		integralGain1 = value;
 //	}
+
+	processWriteRequest();
 
 	return;
 }
@@ -1149,32 +1202,163 @@ void INThandler(int sig){
 }
 
 /**
- * Checks if program is running. If not, returns false.
- * If running, prints a message to that effect and if
- * verbose param is "true" then also displays status
- * params of the running program to the terminal.
+ * Checks for and reports on missing arguments in a
+ * command line request.
  */
-bool programIsRunning(bool verbose){
-	int pfd = open(pidFilename, O_RDONLY);			// No error handling on this!
-	if (pfd > 0){									// If file exists, pps-client has a pid file in memory.
-		close(pfd);
-													// But it still might not be running.
-		if (! ppsIsRunning()){						// If not running,
-			remove(pidFilename);					// remove the zombie pidFilename.
-			return false;
-		}
-
-		signal(SIGINT, INThandler);					// Set handler to enable exiting with ctrl-c.
-
-		printf("pps-client v%s is running.\n", version);
-
-		if (verbose){
-			printf("Displaying second-by-second state params (ctrl-c to quit):\n");
-			showStatusEachSecond();
-		}
+bool missingArg(int argc, char *argv[], int i){
+	if (i == argc - 1 || argv[i+1][0] == '-'){
+		printf("Error: Missing argument for %s.\n", argv[i]);
 		return true;
 	}
 	return false;
+}
+
+/**
+ * Transmits a data save request to the pps-client daemon via
+ * data written to a tmpfs shared memory file. This will be
+ * read in the daemon by
+ */
+bool daemonSaveArray(const char *dataLabel, const char *filename){
+	char buf[200];
+
+	int fd = open_logerr(arrayData_file, O_CREAT | O_WRONLY | O_TRUNC);
+	if (fd == -1){
+		printf("Error: Open arrayData_file failed.\n");
+		return false;
+	}
+
+	strcpy(buf, dataLabel);
+
+	if (filename != NULL){
+		strcat(buf, " ");
+		strcat(buf, filename);
+	}
+
+	write(fd, buf, strlen(buf) + 1);
+
+	close(fd);
+	return true;
+}
+
+/**
+ * Prints a list to the terminal of the command line
+ * args for saving data that are recognized by pps-client.
+ */
+void printAcceptedArgs(void){
+	printf("Accepts these (as a quoted string):\n");
+	int arrayLen = sizeof(arrayData) / sizeof(struct saveFileData);
+	for (int i = 0; i < arrayLen; i++){
+		printf("\"%s\"\n", arrayData[i].label);
+	}
+}
+
+/**
+ * Reads a command line save data request and either forwards
+ * the data to the daemon interface or prints entry errors
+ * back to the terminal.
+ */
+bool parseSaveDataRequest(int argc, char *argv[], const char *dataLabel){
+
+	int arrayLen = sizeof(arrayData) / sizeof(struct saveFileData);
+
+	int i;
+	for (i = 0; i < arrayLen; i++){
+		if (strcmp(dataLabel, arrayData[i].label) == 0){
+			break;
+		}
+	}
+	if (i == arrayLen){
+		printf("Arg \"%s\" not recognized\n", argv[i+1]);
+		printAcceptedArgs();
+		return false;
+	}
+
+	char *filename = NULL;
+	for (int j = 1; j < argc; j++){
+		if (strcmp(argv[j], "-f") == 0){
+			if (missingArg(argc, argv, j)){
+				printf("Requires a filename.\n");
+				return false;
+			}
+			strncpy(g.strbuf, argv[j+1], STRBUF_SZ);
+			g.strbuf[strlen(argv[j+1])] = '\0';
+			filename = g.strbuf;
+			break;
+		}
+	}
+
+	if (filename != NULL){
+		printf("Writing to file: %s\n", filename);
+	}
+	else {
+		for (i = 0; i < arrayLen; i++){
+			if (strcmp(dataLabel, arrayData[i].label) == 0){
+				printf("Writing to default file: %s\n", arrayData[i].filename);
+			}
+		}
+	}
+
+	if (daemonSaveArray(dataLabel, filename) == false){
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Provides command line access to the pps-client daemon.
+ *
+ * Checks if program is running. If not, returns -1.
+ * If an error occurs returns -2. If the program is
+ * running then returns 0 and prints a message to that
+ * effect.
+ *
+ * Recognizes data save requests (-s) and forwards these
+ * to the daemon interface.
+ *
+ * If verbose flag (-v) is read then also displays status
+ * params of the running program to the terminal.
+ *
+ */
+int accessDaemon(int argc, char *argv[]){
+	bool verbose = false;
+
+	if (! ppsIsRunning()){						// If not running,
+		remove(pidFilename);					// remove a zombie pidFilename if one is present.
+		return -1;
+	}
+
+	signal(SIGINT, INThandler);					// Set handler to enable exiting with ctrl-c.
+
+	printf("pps-client v%s is running.\n", version);
+
+	if (argc > 1){
+
+		for (int i = 1; i < argc; i++){
+			if (strcmp(argv[i], "-v") == 0){
+				verbose = true;
+			}
+		}
+		for (int i = 1; i < argc; i++){
+			if (strcmp(argv[i], "-s") == 0){	// This is a save data request.
+				if (missingArg(argc, argv, i)){
+					printAcceptedArgs();
+					return -2;
+				}
+
+				if (parseSaveDataRequest(argc, argv, argv[i+1]) == false){
+					return -2;
+				}
+				break;
+			}
+		}
+	}
+
+	if (verbose){
+		printf("Displaying second-by-second state params (ctrl-c to quit):\n");
+		showStatusEachSecond();
+	}
+
+	return 0;
 }
 
 

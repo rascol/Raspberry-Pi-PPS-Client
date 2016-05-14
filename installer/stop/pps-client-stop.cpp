@@ -23,19 +23,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-
-const char *pidFilename = "/var/run/pps-client.pid";
-
-void ifExistsRemove(const char *filename){
-	int fd = open(filename, O_RDONLY);
-	if (fd > 0){
-		close(fd);
-		remove(filename);
-	}
-}
+#include <sys/stat.h>
 
 int main(void){
 	char cmd[500];
+	char *end;
+	char buf[50];
+	int daemonPID = 0;
+	struct stat sbuf;
 
 	uid_t uid = geteuid();
 	if (uid != 0){
@@ -43,41 +38,50 @@ int main(void){
 		return 1;
 	}
 
-	if(system("ps -e | grep pps-client > /run/shm/pps-client-pid.txt") == -1){
-		printf("Unable to do \"ps -e | grep pps-client > /run/shm/pps-client-pid.txt\"\n");
-		return 1;
+	const char *filename = "/run/shm/pps-msg";
+
+	system("pidof pps-client > /run/shm/pps-msg");
+
+	int fd = open(filename, O_RDONLY);
+	if (fd == -1){
+		printf("pps-client is not running.\n");
+		goto end;
 	}
 
-	int fd = open("/run/shm/pps-client-pid.txt", O_RDONLY);
+	memset(buf, 0, 50);
+	read(fd, buf, 50);
+
+	close(fd);
+	remove(filename);
+
+	sscanf(buf, "%d\n", &daemonPID);
+
+	if (daemonPID == 0){
+		printf("pps-client is not running.\n");
+		goto end;
+	}
 
 	strcpy(cmd, "kill ");
-												// Append the PID value if any to cmd
-	read(fd, cmd + strlen(cmd), 500 - strlen(cmd));
-
-	char *end = strchr(cmd, '\n');				// Get only the first line
+	strcat(cmd, buf);
+	end = strpbrk(cmd, "\n");
 	if (end != NULL){
-		*end = '\0';							// by ending at '\n'.
+		*end = '\0';
 	}
 
-	if (strstr(cmd, "pps-client-") != NULL){	// This is not pps-client.
-		ifExistsRemove(pidFilename);
-		printf("pps-client is not running.\n");	// It's pps-client-stop or
-		return 0;								// pps-client-remove.
-	}
+	system(cmd);
 
-	char *pid = strpbrk(cmd, "0123456789");		// Locate the PID value
-	if (pid == NULL){
-		ifExistsRemove(pidFilename);
-		printf("pps-client is not running.\n");
+	printf("Closing pps-client.\n");
+
+	sleep(3);				// Wait for pps-client to close
+end:
+	system("lsmod | grep pps_client > /run/shm/pps-msg");
+	int rv = stat(filename, &sbuf);
+	remove(filename);
+	if (rv == -1 || sbuf.st_size == 0){
 		return 0;
 	}
-
-	end = strpbrk(pid, " \r\n");				// Get the space after the PID value
-	*end = '\0';								// Terminate PID value at the space
-
-	printf("Closing pps-client\n");
-
-	system(cmd);								// Issue: "kill PID"
+	system("rm -f /dev/pps-client");
+	system("rmmod pps-client");
 
 	return 0;
 }

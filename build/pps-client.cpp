@@ -45,7 +45,7 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.3.5";
+const char *version = "0.4.0";
 
 /**
  * Declares the global variables defined in pps-client.h.
@@ -75,7 +75,6 @@ void initialize(bool verbose){
 	g.delayMedian = (double)INTERRUPT_LATENCY;
 	g.integralGain = INTEGRAL_GAIN;
 	g.invProportionalGain = INV_GAIN_0;
-	g.maxInterval = FIVE_MINUTES;
 	g.hardLimit = HARD_LIMIT_NONE;
 	g.delayPeriod = CALIBRATE_PERIOD;
 	g.doCalibration = true;
@@ -246,15 +245,16 @@ int clampJitter(int rawError){
  * clock.
  *
  * These values are recorded so that they may be saved to disk
- * for future analysis.
+ * for analysis.
  */
 void recordOffsets(int timeCorrection){
+
 	g.seq_numRec[g.recIndex2] = g.seq_num;
 	g.offsetRec[g.recIndex2] = timeCorrection;
 	g.freqOffsetRec2[g.recIndex2] = g.freqOffset;
 
 	g.recIndex2 += 1;
-	if (g.recIndex2 == SECS_PER_10_MIN){
+	if (g.recIndex2 >= SECS_PER_10_MIN){
 		g.recIndex2 = 0;
 	}
 }
@@ -266,18 +266,43 @@ void recordOffsets(int timeCorrection){
  *
  * The values of offset difference, g.freqOffsetDiff[], are used
  * to calculate the Allan deviation of the clock frequency offset
- * which is determined so that it can be saved to disk for analysis.
+ * which is determined so that it can be saved to disk.
  * g.freqOffsetSum is used to calculate the average clock frequency
  * offset in each 5 minute interval so that value can also be saved
- * to disk for analysis.
+ * to disk.
  */
 void recordFrequencyVars(void){
+	timeval t;
 	g.freqOffsetSum += g.freqOffset;
 
 	g.freqOffsetDiff[g.intervalCount] = g.freqOffset - g.lastFreqOffset;
 
 	g.lastFreqOffset = g.freqOffset;
 	g.intervalCount += 1;
+
+	if (g.intervalCount >= FIVE_MINUTES){						// Every five minutes
+		gettimeofday(&t, NULL);
+
+		double norm = 1.0 / (double)FREQDIFF_INTRVL;
+
+		double diffSum = 0.0;
+		for (int i = 0; i < FREQDIFF_INTRVL; i++){
+			diffSum += g.freqOffsetDiff[i] * g.freqOffsetDiff[i];
+		}
+		g.freqAllanDev[g.recIndex] = sqrt(diffSum * norm * 0.5);
+
+		g.timestampRec[g.recIndex] = t.tv_sec;
+
+		g.freqOffsetRec[g.recIndex] = g.freqOffsetSum * norm;
+
+		g.recIndex += 1;
+		if (g.recIndex == NUM_5_MIN_INTERVALS){
+			g.recIndex = 0;
+		}
+
+		g.intervalCount = 0;
+		g.freqOffsetSum = 0.0;
+	}
 }
 
 /**
@@ -457,76 +482,73 @@ void setClockToNTPtime(int pps_fd){
 }
 
 /**
- * Dynamically detects the presence of a second peak in rawError.
+ * Detects the presence of a delay peak in rawError.
  *
- * If a second peak is detected then the offset of the second peak is
- * returned. Else returns 0.
+ * If a delay peak is detected and does not exceed
+ * MAX_PEAK_DIFF then the offset of the delay peak
+ * is returned. Else returns 0.
  */
 void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count, int *delayShift, const char *caller){
 
-	int len = INTRPT_DISTRIB_LEN - 1;
+	int len = ERROR_DISTRIB_LEN - 1;
+
+	int idxMin = NOISE_LEVEL_MIN - 1 + RAW_ERROR_ZERO;
 	int idx = rawError + RAW_ERROR_ZERO;
+	if (idx > len){
+		idx = len;
+	}
+	else if (idx < 0){
+		idx = 0;
+	}
 
-	if (g.hardLimit <= HARD_LIMIT_4){
+	if (g.hardLimit == HARD_LIMIT_1){
 
-		if (*count % 60 == 0){												// About once a minute
-			int idxOfPeak1 = 0;
-			int idxOfPeak2 = 0;
+		if (*count % 60 == 0){										// About once a minute
+			int idxOfPeak = 0;
 			int idxOfValley = 0;
-			double valPeak1 = 0.0;
-			double valPeak2 = 0.0;
+			double valPeak = 0.0;
 			double valMin = 1e6;
 
 			for (int i = 0; i < len; i++){
 
-				if (i < RAW_ERROR_ZERO + g.noiseLevel){						// Get possible peak1 value prior to g.noiseLevel.
-					if (errorDistrib[i] > valPeak1){
-						valPeak1 = errorDistrib[i];
-						idxOfPeak1 = i;
-					}
-				}
-				else {														// Get possible peak2 value at and beyond g.noiseLevel.
-					if (errorDistrib[i] > valPeak2){
-						valPeak2 = errorDistrib[i];
-						idxOfPeak2 = i;
+				if (i >= RAW_ERROR_ZERO + g.noiseLevel) {			// Get possible peak value at and beyond g.noiseLevel.
+					if (errorDistrib[i] > valPeak){
+						valPeak = errorDistrib[i];
+						idxOfPeak = i;
 					}
 				}
 			}
-
-			for (int i = idxOfPeak1; i < idxOfPeak2; i++){					// Look between the possible peaks
-				if (errorDistrib[i] < valMin){								// for a valley.
+			for (int i = idxMin; i < idxOfPeak; i++){				// Look between idxMin and the possible peak
+				if (errorDistrib[i] < valMin){						// for a valley.
 					valMin = errorDistrib[i];
 					idxOfValley = i;
 				}
 			}
 
-			for (int i = 0; i < len; i++){									// Scale errorDistrib to allow
-				errorDistrib[i] *= RAW_ERROR_DECAY;							// older values to decay (halflife 6 hrs).
+			for (int i = 0; i < len; i++){							// Scale errorDistrib to allow older
+				errorDistrib[i] *= RAW_ERROR_DECAY;					// values to decay (halflife 1 hour).
 			}
-
 			if (*count > 600){
 
-				*delayShift = 0;											// Assume no shift.
+				*delayShift = 0;									// Assume no shift.
 
-				idxOfPeak1 -= RAW_ERROR_ZERO;								// Reference these to rawError 0
 				idxOfValley -= RAW_ERROR_ZERO;
-				idxOfPeak2 -= RAW_ERROR_ZERO;
+				idxOfPeak -= RAW_ERROR_ZERO;
 
-				if ((valPeak2 / valPeak1) > MIN_PEAK_RATIO){				// If there is a second possible peak
-					if (valMin / valPeak2 < MAX_VALLEY_RATIO){				// and a valley is verified then set
-						*delayShift = idxOfPeak2;							// delayShift to the relative peak2 index.
-					}
+				if (valPeak > 0.0 &&
+						valMin / valPeak < MAX_VALLEY_RATIO &&		// if a valley is verified and
+						idxOfPeak - idxOfValley < MAX_PEAK_DELAY){	// the peak is not too far from valley
+					*delayShift = idxOfPeak;						// then set delayShift to the relative peak index.
 				}
-
 				if (*delayShift == 0){
-					sprintf(g.msgbuf, "%s: No delay peak\n", caller);
+					sprintf(g.msgbuf, "%s: No delay peak. ", caller);
 					bufferStatusMsg(g.msgbuf);
 				}
 				else {
-					sprintf(g.msgbuf, "%s: Delay peak detected\n", caller);
+					sprintf(g.msgbuf, "%s: Delay peak detected. ", caller);
 					bufferStatusMsg(g.msgbuf);
 				}
-				sprintf(g.msgbuf, "Peak1: %lf, %d Valley: %lf, %d Peak2: %lf, %d\n", valPeak1, idxOfPeak1, valMin, idxOfValley, valPeak2, idxOfPeak2);
+				sprintf(g.msgbuf, "Sample levels: %lf at %d, %lf at %d\n", valMin, idxOfValley, valPeak, idxOfPeak);
 				bufferStatusMsg(g.msgbuf);
 			}
 		}
@@ -538,19 +560,18 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count, i
 }
 
 /**
- * Removes delay spikes and jitter from rawError and returns the resulting
- * zeroError.
+ * Removes delay, spikes and jitter from rawError and returns
+ * the resulting zeroError.
  *
- * If a second peak is detected in rawError when rawError >= g.noiseLevel
- * rawError is shifted by the offset of the peak. This has the effect of
- * overlaying the second peak on the PPS interrupt delay which improves
- * sampling and reduces the delay bias that would otherwise be introduced
- * by consequtive positive delay values.
+ * If a delay peak is detected in the rawError distribution
+ * where rawError >= g.noiseLevel then rawError is shifted by
+ * the offset of the peak. This has the effect of overlaying
+ * the peak on the PPS interrupt delay which improves sampling.
  *
- * At the same time g.sysDelayShift is set to the offset of the second
+ * At the same time g.sysDelayShift is set to the offset of the
  * peak and is added to g.sysDelay in the sysDelay value saved by
- * writeSysDelay(). On average this corrects for the lengthening of
- * the PPS delay caused by the second delay peak and significantly
+ * writeSysDelay(). On average this corrects for the lengthening
+ * of the PPS delay caused by the delay peak and significantly
  * reduces the width of interrupt-timer distributions.
  */
 int removeNoise(int rawError){
@@ -560,7 +581,7 @@ int removeNoise(int rawError){
 	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), "removeNoise()");
 
 	g.sysDelayShift = 0;
-	if (g.hardLimit <= HARD_LIMIT_4 && rawError >= g.noiseLevel){
+	if (g.hardLimit == HARD_LIMIT_1 && rawError >= g.noiseLevel){
 		g.sysDelayShift = g.delayShift;
 		rawError -= g.delayShift;
 	}
@@ -607,9 +628,7 @@ double getIntegral(void){
 													// the last minute
 	}
 
-	if (g.config_select & FREQUENCY_VARS){
-		recordFrequencyVars();
-	}
+	recordFrequencyVars();
 
 	return integral;
 }
@@ -700,9 +719,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 			adjtimex(&g.t3);							// Adjust the system clock frequency.
 		}
 
-		if (g.config_select & PPS_OFFSETS){
-			recordOffsets(timeCorrection);
-		}
+		recordOffsets(timeCorrection);
 
 		g.activeCount += 1;
 	}
@@ -718,6 +735,8 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
  */
 void TERMhandler(int sig){
 	signal(SIGTERM, SIG_IGN);
+	sprintf(g.logbuf,"Recieved SIGTERM\n");
+	writeToLog(g.logbuf);
 	g.exit_requested = true;
 	signal(SIGTERM, TERMhandler);
 }
@@ -786,6 +805,9 @@ void buildInterruptDistrib(int intrptDelay){
 	if (idx > len){
 		idx = len;
 	}
+	if (idx < 0){
+		idx = 0;
+	}
 	g.interruptDistrib[idx] += 1;
 
 	g.delay_idx += 1;
@@ -823,30 +845,41 @@ bool detectIntrptDelaySpike(int zeroError){
 
 
 /**
- * Removes delay spikes and jitter from rawError and
- * returns the resulting zeroError.
+ * Removes delay, spikes and jitter from intrptError and returns
+ * the resulting zeroError.
+ *
+ * If a delay peak is detected in the rawError distribution
+ * where rawError >= g.noiseLevel then rawError is shifted by
+ * the offset of the peak. This has the effect of overlaying
+ * the peak on the PPS interrupt delay which improves sampling.
+ *
+ * At the same time g.sysDelayShift is set to the offset of the
+ * peak and is added to g.sysDelay in the sysDelay value saved by
+ * writeSysDelay(). On average this corrects for the lengthening
+ * of the PPS delay caused by the delay peak and significantly
+ * reduces the width of interrupt-timer distributions.
  */
-int removeIntrptNoise(int rawError){
+int removeIntrptNoise(int intrptError){
 
 	int zeroError;
 
-	detectDelayPeak(rawError, g.peakDelayDistrib, &(g.intrptCount), &(g.intrptDelayShift), "removeIntrptNoise()");
+	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), &(g.intrptDelayShift), "removeIntrptNoise()");
 
 	if (g.hardLimit <= HARD_LIMIT_4){
 
-		if (rawError >= g.noiseLevel){
-			rawError -= g.intrptDelayShift;
+		if (intrptError >= g.noiseLevel){
+			intrptError -= g.intrptDelayShift;
 		}
 	}
 
 	if ((g.config_select & INTERRUPT_DISTRIB) && g.seq_num > SETTLE_TIME){
-		buildInterruptDistrib(rawError);
+		buildInterruptDistrib(intrptError);
 	}
 	else {
 		g.delayCount = 0;
 	}
 
-	bool isDelaySpike = detectIntrptDelaySpike(rawError);
+	bool isDelaySpike = detectIntrptDelaySpike(intrptError);
 	if (isDelaySpike){
 		return 0;
 	}
@@ -859,7 +892,7 @@ int removeIntrptNoise(int rawError){
 		bufferStatusMsg(g.msgbuf);
 	}
 
-	zeroError = clampJitter(rawError);						// Recover the time error by
+	zeroError = clampJitter(intrptError);						// Recover the time error by
 															// limiting away the jitter.
 	return zeroError;
 }
@@ -1011,13 +1044,156 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 			sprintf(g.logbuf, "pps-client is restarting...\n");
 			writeToLog(g.logbuf);
 
-			initialize(verbose);							// then restart the controller.
+			initialize(verbose);									// then restart the controller.
 
 			restart = true;
 		}
 	}
 
 	return restart;
+}
+
+void reportLeak(const char *msg){
+	sprintf(g.logbuf, msg);
+	writeToLog(g.logbuf);
+}
+
+void testForArrayLeaks(void){
+	if (g.seq_num % SECS_PER_10_MIN == 0){
+		for (int i = 0; i < 100; i++){
+			if (g.pad1[i] != 0){
+				reportLeak("Leak in g.pad1 .................................\n");
+			}
+
+			if (g.pad2[i] != 0){
+				reportLeak("Leak in g.pad2 .................................\n");
+			}
+
+			if (g.pad3[i] != 0){
+				reportLeak("Leak in g.pad3 .................................\n");
+			}
+
+			if (g.pad4[i] != 0){
+				reportLeak("Leak in g.pad4 .................................\n");
+			}
+
+			if (g.pad5[i] != 0){
+				reportLeak("Leak in g.pad5 .................................\n");
+			}
+
+			if (g.pad6[i] != 0){
+				reportLeak("Leak in g.pad6 .................................\n");
+			}
+
+			if (g.pad7[i] != 0){
+				reportLeak("Leak in g.pad7 .................................\n");
+			}
+
+			if (g.pad8[i] != 0){
+				reportLeak("Leak in g.pad8 .................................\n");
+			}
+
+			if (g.pad9[i] != 0){
+				reportLeak("Leak in g.pad9 .................................\n");
+			}
+
+			if (g.pad10[i] != 0){
+				reportLeak("Leak in g.pad10 .................................\n");
+			}
+
+			if (g.pad11[i] != 0){
+				reportLeak("Leak in g.pad11 .................................\n");
+			}
+
+			if (g.pad12[i] != 0){
+				reportLeak("Leak in g.pad12 .................................\n");
+			}
+
+			if (g.pad13[i] != 0){
+				reportLeak("Leak in g.pad13 .................................\n");
+			}
+
+			if (g.pad14[i] != 0){
+				reportLeak("Leak in g.pad14 .................................\n");
+			}
+
+			if (g.pad15[i] != 0){
+				reportLeak("Leak in g.pad15 .................................\n");
+			}
+
+			if (g.pad16[i] != 0){
+				reportLeak("Leak in g.pad16 .................................\n");
+			}
+
+			if (g.pad17[i] != 0){
+				reportLeak("Leak in g.pad17 .................................\n");
+			}
+
+			if (g.pad18[i] != 0){
+				reportLeak("Leak in g.pad18 .................................\n");
+			}
+
+			if (g.pad19[i] != 0){
+				reportLeak("Leak in g.pad19 .................................\n");
+			}
+
+			if (g.pad20[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad21[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad22[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad23[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad24[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad25[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad26[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad27[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad28[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad29[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad30[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad31[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad32[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+
+			if (g.pad33[i] != 0){
+				reportLeak("Leak in g.pad20 .................................\n");
+			}
+		}
+	}
 }
 
 /**
@@ -1101,6 +1277,8 @@ void waitForPPS(bool verbose, int pps_fd){
 			g.seconds = 0;
 		}
 
+		testForArrayLeaks();
+
 		gettimeofday(&tv1, NULL);
 
 		ts2 = setSyncDelay(timePPS, tv1.tv_usec);
@@ -1126,6 +1304,8 @@ end:
  * command line arg is also used, begins writing a
  * status string that will continue second-by-second
  * until ended by ctrl-c.
+ *
+ * Can also send command line args to the daemon.
  */
 int main(int argc, char *argv[])
 {
@@ -1139,7 +1319,13 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (programIsRunning(verbose)){
+	int prStat = accessDaemon(argc, argv);			// Send commands to the daemon.
+	if (prStat == 0 || prStat == -2){				// Program is running or an error occurred.
+		return rv;
+	}
+
+	if (geteuid() != 0){							// Superuser only!
+		printf("pps-client is not running. \"sudo pps-client\" to start.\n");
 		return rv;
 	}
 
