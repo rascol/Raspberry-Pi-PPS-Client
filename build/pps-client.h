@@ -64,10 +64,11 @@
 #define INTERRUPT_LATENCY 16			// Default interrupt latency in microseconds.
 
 #define RAW_ERROR_ZERO  20				// Index corresponding to rawError == 0 in detectDelayPeak().
-#define MIN_PEAK_RATIO 0.1				// Minimum ratio to detect a second peak in detectDelayPeak().
+#define MIN_PEAK_RATIO 0.05				// Minimum ratio to detect a second peak in detectDelayPeak().
 #define MAX_VALLEY_RATIO 0.95			// Maximum ratio to detect a valley before the second peak in detectDelayPeak().
 #define RAW_ERROR_DECAY 0.98851			// Decay rate for rawError samples (1 hour half life)
 #define MAX_PEAK_DELAY 15				// Look for a delay peak less than this value. If larger not a delay peak.
+#define MAX_PEAK_TO_TAIL_DELAY 7		// Maximum extent of a tail from the peak
 
 #define INTERRUPT_LOST 15				// Number of consequtive lost interrupts at which warning starts
 
@@ -147,7 +148,8 @@ struct ppsClientGlobalVars {
 
 	int sysDelayShift;
 	int delayShift;
-	int delayMin;
+	int delayMinIdx;
+	int delayTailIdx;
 
 	int pad1[100];
 
@@ -292,7 +294,8 @@ struct ppsClientGlobalVars {
 	int pad26[100];
 
 	int intrptDelayShift;
-	int intrptDelayMin;
+	int intrptDelayMinIdx;
+	int intrptDelayTailIdx;
 
 	unsigned int intrptCount;
 

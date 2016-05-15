@@ -489,7 +489,7 @@ void setClockToNTPtime(int pps_fd){
  * is returned. Else returns 0.
  */
 void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
-		int *delayShift, int* minLevelIdx, const char *caller){
+		int *delayShift, int* minLevelIdx, int *tailIdx, const char *caller){
 
 	int len = ERROR_DISTRIB_LEN - 1;
 
@@ -504,11 +504,20 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 
 	if (g.hardLimit == HARD_LIMIT_1){
 
-		if (*count % 60 == 0){										// About once a minute
+		if (*count > 600 && *count % 60 == 0){						// About once a minute
 			int idxOfPeak = 0;
 			int idxOfValley = 0;
+			int idxOfTail = 0;
+			int idxMax;
 			double valPeak = 0.0;
+			double peakTail = 0.0;
 			double valMin = 1e6;
+			double peakRatio = 0.0;
+			double valleyRatio = 0.0;
+			double valTail = 1e6;
+			int diffPeakToValley = 0;
+
+			double valMain = errorDistrib[RAW_ERROR_ZERO];
 
 			for (int i = 0; i < len; i++){
 
@@ -519,40 +528,76 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 					}
 				}
 			}
-			for (int i = idxMin; i < idxOfPeak; i++){				// Look between idxMin and the possible peak
-				if (errorDistrib[i] < valMin){						// for a valley.
-					valMin = errorDistrib[i];
-					idxOfValley = i;
+
+			peakRatio = valPeak / valMain;
+
+			if (peakRatio > MIN_PEAK_RATIO){
+				peakTail = 0.05 * valPeak;
+
+				idxMax = idxOfPeak + MAX_PEAK_TO_TAIL_DELAY + 1;
+				if (idxMax > len){
+					idxMax = len;
+				}
+
+				idxOfTail = idxMax - 1;
+				valTail = errorDistrib[idxOfTail];
+
+				for (int i = idxOfPeak; i < idxMax; i++){
+					if (errorDistrib[i] < peakTail){
+						idxOfTail = i;
+						valTail = errorDistrib[i];
+						break;
+					}
+				}
+
+				for (int i = idxMin; i < idxOfPeak; i++){			// Look between idxMin and the possible peak
+					if (errorDistrib[i] < valMin){					// for a valley.
+						valMin = errorDistrib[i];
+						idxOfValley = i;
+					}
+				}
+
+				valleyRatio = valMin / valPeak;
+				diffPeakToValley = idxOfPeak - idxOfValley;
+
+				if (valleyRatio < MAX_VALLEY_RATIO &&				// If possible, choose a symmetric tail for valley
+						diffPeakToValley > MAX_PEAK_TO_TAIL_DELAY){
+
+					idxOfValley = idxOfPeak - (idxOfTail - idxOfPeak);
+					diffPeakToValley = idxOfPeak - idxOfValley;
 				}
 			}
 
 			for (int i = 0; i < len; i++){							// Scale errorDistrib to allow older
 				errorDistrib[i] *= RAW_ERROR_DECAY;					// values to decay (halflife 1 hour).
 			}
-			if (*count > 600){
 
-				*delayShift = 0;									// Assume no shift.
+			*delayShift = 0;										// Assume no shift.
 
-				idxOfValley -= RAW_ERROR_ZERO;
-				idxOfPeak -= RAW_ERROR_ZERO;
+			idxOfPeak -= RAW_ERROR_ZERO;
+			idxOfValley -= RAW_ERROR_ZERO;
+			idxOfTail -= RAW_ERROR_ZERO;
 
-				if (valPeak > 0.0 &&
-						valMin / valPeak < MAX_VALLEY_RATIO &&		// if a valley is verified and
-						idxOfPeak - idxOfValley < MAX_PEAK_DELAY){	// the peak is not too far from valley
-					*delayShift = idxOfPeak;						// then set delayShift to the relative peak index.
-					*minLevelIdx = idxOfValley;
-				}
-				if (*delayShift == 0){
-					sprintf(g.msgbuf, "%s: No delay peak. ", caller);
-					bufferStatusMsg(g.msgbuf);
-				}
-				else {
-					sprintf(g.msgbuf, "%s: Delay peak detected. ", caller);
-					bufferStatusMsg(g.msgbuf);
-				}
-				sprintf(g.msgbuf, "Sample levels: %lf at %d, %lf at %d\n", valMin, idxOfValley, valPeak, idxOfPeak);
+			if (valPeak > 0.0 &&
+					peakRatio > MIN_PEAK_RATIO &&					// If the peak is sufficiently large and
+					valleyRatio < MAX_VALLEY_RATIO &&				// if a valley is verified and
+					diffPeakToValley < MAX_PEAK_DELAY){				// the peak is not too far from valley
+				*delayShift = idxOfPeak;							// then set delayShift to the relative peak index.
+				*minLevelIdx = idxOfValley;
+				*tailIdx = idxOfTail;
+			}
+			if (*delayShift == 0){
+				sprintf(g.msgbuf, "%s: No delay peak. ", caller);
 				bufferStatusMsg(g.msgbuf);
 			}
+			else {
+				sprintf(g.msgbuf, "%s: Delay peak detected. ", caller);
+				bufferStatusMsg(g.msgbuf);
+			}
+			sprintf(g.msgbuf, "Sample levels: %lf at %d usec, %lf at %d usec, tail: % lf at %d\n",
+					valMin, idxOfValley, valPeak, idxOfPeak, valTail, idxOfTail);
+			bufferStatusMsg(g.msgbuf);
+
 		}
 
 		errorDistrib[idx] += 1.0;
@@ -580,10 +625,12 @@ int removeNoise(int rawError){
 
 	int zeroError;
 
-	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), &(g.delayMin), "removeNoise()");
+	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), &(g.delayMinIdx), &(g.delayTailIdx), "removeNoise()");
 
 	g.sysDelayShift = 0;
-	if (g.hardLimit == HARD_LIMIT_1 && rawError > g.delayMin){
+	if (g.hardLimit == HARD_LIMIT_1 &&
+			rawError >= g.delayMinIdx &&
+			rawError <= g.delayTailIdx){
 		g.sysDelayShift = g.delayShift;
 		rawError -= g.delayShift;
 	}
@@ -865,20 +912,15 @@ int removeIntrptNoise(int intrptError){
 
 	int zeroError;
 
-	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), &(g.intrptDelayShift), &(g.intrptDelayMin), "removeIntrptNoise()");
+	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), &(g.intrptDelayShift), &(g.intrptDelayMinIdx), &(g.intrptDelayTailIdx), "removeIntrptNoise()");
 
-	if (g.hardLimit == HARD_LIMIT_1 && intrptError > g.intrptDelayMin){
+	if (g.hardLimit == HARD_LIMIT_1 &&
+			intrptError >= g.intrptDelayMinIdx &&
+			intrptError <= g.intrptDelayTailIdx){
 
-		if (intrptError > g.intrptDelayMin){
+		if (intrptError > g.intrptDelayMinIdx){
 			intrptError -= g.intrptDelayShift;
 		}
-	}
-
-	if ((g.config_select & INTERRUPT_DISTRIB) && g.seq_num > SETTLE_TIME){
-		buildInterruptDistrib(intrptError);
-	}
-	else {
-		g.delayCount = 0;
 	}
 
 	bool isDelaySpike = detectIntrptDelaySpike(intrptError);
@@ -968,6 +1010,13 @@ void getInterruptDelay(int pps_fd){
 	if (rv > 0){
 
 		g.intrptDelay = g.tm[5] - g.tm[3];
+
+		if ((g.config_select & INTERRUPT_DISTRIB) && g.seq_num > SETTLE_TIME){
+			buildInterruptDistrib(g.intrptDelay);
+		}
+		else {
+			g.delayCount = 0;
+		}
 
 		int zeroError = removeIntrptNoise(g.intrptDelay - g.sysDelay);
 

@@ -26,7 +26,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 5 microseconds by design. The figures below illustrate this clearly. This data was captured over a 24 hour period from a Raspberry Pi running Raspian with a [3.18.9-rt kernel](http://docs.emlid.com/Downloads/Real-time-Linux-RPi2/). Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock (dark blue) superimposed on raw system time measurements (light blue) made over the same period. 
+The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 10 microseconds by design. The figures below illustrate this. This data was captured over a 24 hour period from a Raspberry Pi running Raspian with a [3.18.9-rt kernel](http://docs.emlid.com/Downloads/Real-time-Linux-RPi2/). Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock (dark blue) superimposed on raw system time measurements (light blue) made over the same period. 
 
 <center><img src="/images/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
 
@@ -34,7 +34,7 @@ Figure 2 shows the system clock frequency set by the controller which held the A
 
 <center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
 
-The combination of time slew adjustments never needing to exceed 1 microsecond each second and time drift never exceeding 20 nanoseconds each second certifies a timekeeping precision of 1 microsecond over this 24 hour period. The claimed absolute accuracy limit of 5 microseconds is because of uncertainties in determining the precise value of the PPS interrupt delay and because allowance must be made for occasional time adjustments that could slightly exceed 1 microsecond (but didn't here). This is discussed in detail in the docs. In any case, the performance shown here can be considered to be worst case if Linux 4.1.y kernels are used because these have even better timekeeping performance than the 3.18.9-rt kernel from which this data was collected.
+The combination of time slew adjustments never needing to exceed 1 microsecond each second and time drift never exceeding 20 nanoseconds each second certifies a timekeeping control precision of 1 microsecond over this 24 hour period. The second-to-second absolute accuracy is limited to 10 microseconds by jitter in the system clock oscillator and by occasional time adjustments that could slightly exceed 1 microsecond (but didn't here). This is discussed in detail in the docs.
 
 # Hardware Requirements
 ---
