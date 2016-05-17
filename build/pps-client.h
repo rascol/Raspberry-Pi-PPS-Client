@@ -111,7 +111,7 @@
 #define INTERRUPT_DISTRIB 16
 #define SYSDELAY_DISTRIB 32
 #define EXIT_LOST_PPS 64
-
+#define FIX_DELAY_PEAK 128
 /**
  * Struct for passing arguments to and from threads
  * querying SNTP servers.
@@ -337,6 +337,8 @@ struct ppsClientGlobalVars {
 	int nIntrptDelaySpikes;
 	bool medianIsSet;
 	unsigned int ppsCount;
+
+	bool fixDelayPeak;
 };
 
 void initialize(void);

@@ -25,14 +25,13 @@ const char *last_distrib_file = "/var/local/error-distrib";			// File storing th
 const char *distrib_file = "/var/local/error-distrib-forming";		// File storing an incompleted distribution of offset corrections.
 const char *last_jitter_distrib_file = "/var/local/jitter-distrib";	// File storing the completed distribution of offset corrections.
 const char *jitter_distrib_file = "/var/local/jitter-distrib-forming";// File storing an incompleted distribution of offset corrections.
-//const char *offsets_file = "/var/local/pps-offsets";				// File storing time offset and freq offset second by second.
 const char *log_file = "/var/log/pps-client.log";					// File storing activity and errors.
 const char *old_log_file = "/var/log/pps-client.old.log";			// File storing activity and errors.
 const char *config_file = "/etc/pps-client.conf";					// The pps-client configuration file.
 const char *assert_file = "/run/shm/pps-assert";					// The timestamps of the time corrections each second
 const char *sysDelay_file = "/run/shm/pps-sysDelay";				// The current sysDelay value updated each second
 const char *last_intrpt_distrib_file = "/var/local/intrpt-distrib";	// File storing the completed distribution of offset corrections.
-const char *interrupt_distrib_file = "/var/local/intrpt-distrib-forming";// File storing an incompleted distribution of offset corrections.
+const char *interrupt_distrib_file = "/var/local/intrpt-distrib-forming";// File storing an incomplete distribution of offset corrections.
 const char *displayParams_file = "/run/shm/display-params";			// Temporary file storing params for the status display
 const char *arrayData_file = "/run/shm/save-data";
 const char *sysDelay_distrib_file = "/var/local/sysDelay-distrib-forming";
@@ -62,7 +61,8 @@ const char *config_str[] = {
 		"calibrate",
 		"interrupt-distrib",
 		"sysdelay-distrib",
-		"exit-lost-pps"
+		"exit-lost-pps",
+		"fix-delay-peak"
 };
 
 struct saveFileData arrayData[] = {
@@ -719,6 +719,13 @@ void processFiles(char *configVals[], char *pbuf, int sz){
 
 	if (g.doCalibration && isEnabled(SYSDELAY_DISTRIB, configVals)){
 		writeSysdelayDistribFile();
+	}
+
+	if (isEnabled(FIX_DELAY_PEAK, configVals)){
+		g.fixDelayPeak = true;
+	}
+	else if (isDisabled(FIX_DELAY_PEAK, configVals)){
+		g.fixDelayPeak = false;
 	}
 
 //	double value;

@@ -26,7 +26,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 10 microseconds by design. The figures below illustrate this. This data was captured over a 24 hour period from a Raspberry Pi running Raspian with a [3.18.9-rt kernel](http://docs.emlid.com/Downloads/Real-time-Linux-RPi2/). Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock (dark blue) superimposed on raw system time measurements (light blue) made over the same period. 
+The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 10 microseconds by design. The data below was captured over a 24 hour period from a Raspberry Pi running Raspian with a 4.1.19-v7+ kernel. Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
 <center><img src="/images/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
 
@@ -34,7 +34,7 @@ Figure 2 shows the system clock frequency set by the controller which held the A
 
 <center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
 
-The combination of time slew adjustments never needing to exceed 1 microsecond each second and time drift never exceeding 20 nanoseconds each second certifies a timekeeping control precision of 1 microsecond over this 24 hour period. The second-to-second absolute accuracy is limited to 10 microseconds by jitter in the system clock oscillator and by occasional time adjustments that could slightly exceed 1 microsecond (but didn't here). This is discussed in detail in the docs.
+The combination of time slew adjustments never exceeding 1 microsecond each second and time drift never exceeding 20 nanoseconds each second demonstrates a timekeeping control precision of 1 microsecond over this 24 hour period. The absolute accuracy is limited to 10 microseconds by second-to-second jitter in the system clock oscillator and by occasional time adjustments that could occasionally exceed 1 microsecond (but didn't here). This is discussed in detail in the docs.
 
 # Hardware Requirements
 ---
@@ -51,9 +51,7 @@ The combination of time slew adjustments never needing to exceed 1 microsecond e
 ---
 ## The Raspian OS
 
-Version 3.18.9-rt5 and later versions of Linux kernel 4.1.y are supported. Initial development was done with the [EMLID Navio kernel](http://docs.emlid.com/Downloads/Real-time-Linux-RPi2/) because it had real-time patches that were necessary for Linux 3.18.x. The stock 4.1.y kernel now provides equal or better timekeeping performance.
-
-The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded into the installer. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file, `\etc\pps-client.conf`.
+Versions of Linux kernel 4.1.y are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded into the installer. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file.
 
 ## The NTP daemon
 
@@ -70,7 +68,7 @@ This is necessary if you want to install pps-client as a system service.
 
 The pps-client has several versions of the installer. Copy the appropriate one to the RPi and run it from a terminal:
 ```
-$ sudo ./pps-client-4.1.20-v7+
+$ sudo ./pps-client-4.1.19-v7+
 ```
 The pps-client version must match the version of the Linux kernel on the RPi. The kernel version can be determined by running "`uname -r`" on an RPi terminal. Version matching is necessary because pps-client contains a kernel driver and all kernel drivers are compiled against a specific version of the Linux kernel and can only run on that kernel version.
 
@@ -135,13 +133,13 @@ $ cd ..
 $ git clone --depth=1 https://github.com/rascol/PPS-Client
 $ cd PPS-Client
 ```
-Now (assuming that the kernel source version is 4.1.20) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
+Now (assuming that the kernel source version is 4.1.19) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
 ```
-$ make KERNELDIR=~/rpi/linux KERNELVERS=4.1.20-v7+
+$ make KERNELDIR=~/rpi/linux KERNELVERS=4.1.19-v7+
 ```
-That will build the installer, `pps-client-4.1.20-v7+`. Run it on the RPi as root:
+That will build the installer, `pps-client-4.1.19-v7+`. Run it on the RPi as root:
 ```
-$ sudo ./pps-client-4.1.20-v7+
+$ sudo ./pps-client-4.1.19-v7+
 ```
 That completes the pps-client installation.
 
@@ -186,13 +184,13 @@ $ cd ~/rpi
 $ git clone --depth=1 https://github.com/rascol/PPS-Client
 $ cd PPS-Client
 ```
-Now (assuming that the kernel source version is 4.1.20) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
+Now (assuming that the kernel source version is 4.1.19) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
 ```
-$ make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=~/rpi/linux KERNELVERS=4.1.20-v7+
+$ make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=~/rpi/linux KERNELVERS=4.1.19-v7+
 ```
-That will build the installer, `pps-client-4.1.20-v7+`. Copy this to the RPi. Run it on the RPi as root:
+That will build the installer, `pps-client-4.1.19-v7+`. Copy this to the RPi. Run it on the RPi as root:
 ```
-$ sudo ./pps-client-4.1.20-v7+
+$ sudo ./pps-client-4.1.19-v7+
 ```
 That completes the pps-client installation.
 

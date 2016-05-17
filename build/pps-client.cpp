@@ -45,7 +45,7 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.4.1";
+const char *version = "0.4.3";
 
 /**
  * Declares the global variables defined in pps-client.h.
@@ -493,7 +493,6 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 
 	int len = ERROR_DISTRIB_LEN - 1;
 
-	int idxMin = NOISE_LEVEL_MIN - 1 + RAW_ERROR_ZERO;
 	int idx = rawError + RAW_ERROR_ZERO;
 	if (idx > len){
 		idx = len;
@@ -505,23 +504,30 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 	if (g.hardLimit == HARD_LIMIT_1){
 
 		if (*count > 600 && *count % 60 == 0){						// About once a minute
+			int idxOfMain = 0;
 			int idxOfPeak = 0;
 			int idxOfValley = 0;
 			int idxOfTail = 0;
-			int idxMax;
+			int idxMax = 0;
+			double valMain = 0.0;
 			double valPeak = 0.0;
 			double peakTail = 0.0;
-			double valMin = 1e6;
+			double valMin = NAN;
 			double peakRatio = 0.0;
 			double valleyRatio = 0.0;
-			double valTail = 1e6;
+			double valTail = NAN;
 			int diffPeakToValley = 0;
 
-			double valMain = errorDistrib[RAW_ERROR_ZERO];
+
+			for (int i = 0; i < g.noiseLevel + RAW_ERROR_ZERO; i++){
+				if (errorDistrib[i] > valMain){						// Get the main peak
+					valMain = errorDistrib[i];
+					idxOfMain = i;
+				}
+			}
 
 			for (int i = 0; i < len; i++){
-
-				if (i >= RAW_ERROR_ZERO + g.noiseLevel) {			// Get possible peak value at and beyond g.noiseLevel.
+				if (i > g.noiseLevel + RAW_ERROR_ZERO) {			// Get possible peak value beyond g.noiseLevel.
 					if (errorDistrib[i] > valPeak){
 						valPeak = errorDistrib[i];
 						idxOfPeak = i;
@@ -550,7 +556,8 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 					}
 				}
 
-				for (int i = idxMin; i < idxOfPeak; i++){			// Look between idxMin and the possible peak
+				valMin = 1e6;
+				for (int i = idxOfMain; i < idxOfPeak; i++){		// Look between Main and the possible peak
 					if (errorDistrib[i] < valMin){					// for a valley.
 						valMin = errorDistrib[i];
 						idxOfValley = i;
@@ -564,7 +571,6 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 						diffPeakToValley > MAX_PEAK_TO_TAIL_DELAY){
 
 					idxOfValley = idxOfPeak - (idxOfTail - idxOfPeak);
-					diffPeakToValley = idxOfPeak - idxOfValley;
 				}
 			}
 
@@ -574,14 +580,21 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 
 			*delayShift = 0;										// Assume no shift.
 
+			idxOfMain -= RAW_ERROR_ZERO;
 			idxOfPeak -= RAW_ERROR_ZERO;
-			idxOfValley -= RAW_ERROR_ZERO;
-			idxOfTail -= RAW_ERROR_ZERO;
+
+			if (idxOfValley != 0){
+				idxOfValley -= RAW_ERROR_ZERO;
+			}
+
+			if (idxOfTail != 0){
+				idxOfTail -= RAW_ERROR_ZERO;
+			}
 
 			if (valPeak > 0.0 &&
 					peakRatio > MIN_PEAK_RATIO &&					// If the peak is sufficiently large and
 					valleyRatio < MAX_VALLEY_RATIO &&				// if a valley is verified and
-					diffPeakToValley < MAX_PEAK_DELAY){				// the peak is not too far from valley
+					idxOfPeak < MAX_PEAK_DELAY){					// the peak is not too far from zero
 				*delayShift = idxOfPeak;							// then set delayShift to the relative peak index.
 				*minLevelIdx = idxOfValley;
 				*tailIdx = idxOfTail;
@@ -591,11 +604,11 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 				bufferStatusMsg(g.msgbuf);
 			}
 			else {
-				sprintf(g.msgbuf, "%s: Delay peak detected. ", caller);
+				sprintf(g.msgbuf, "%s: Delay peak. ", caller);
 				bufferStatusMsg(g.msgbuf);
 			}
-			sprintf(g.msgbuf, "Sample levels: %lf at %d usec, %lf at %d usec, tail: % lf at %d\n",
-					valMin, idxOfValley, valPeak, idxOfPeak, valTail, idxOfTail);
+			sprintf(g.msgbuf, "levels: %5.2lf at %d us, %5.2lf at %d us, %5.2lf at %d us, tail: %5.2lf at %d us\n",
+					valMain, idxOfMain, valMin, idxOfValley, valPeak, idxOfPeak, valTail, idxOfTail);
 			bufferStatusMsg(g.msgbuf);
 
 		}
@@ -607,11 +620,11 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 }
 
 /**
- * Removes delay, spikes and jitter from rawError and returns
- * the resulting zeroError.
+ * Removes delay peaks, spikes and jitter from rawError and
+ * returns the resulting zeroError.
  *
  * If a delay peak is detected in the rawError distribution
- * where rawError >= g.noiseLevel then rawError is shifted by
+ * and rawError >= g.noiseLevel then rawError is shifted by
  * the offset of the peak. This has the effect of overlaying
  * the peak on the PPS interrupt delay which improves sampling.
  *
@@ -628,7 +641,9 @@ int removeNoise(int rawError){
 	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), &(g.delayMinIdx), &(g.delayTailIdx), "removeNoise()");
 
 	g.sysDelayShift = 0;
-	if (g.hardLimit == HARD_LIMIT_1 &&
+
+	if (g.fixDelayPeak &&
+			g.hardLimit == HARD_LIMIT_1 &&
 			rawError >= g.delayMinIdx &&
 			rawError <= g.delayTailIdx){
 		g.sysDelayShift = g.delayShift;
@@ -894,11 +909,11 @@ bool detectIntrptDelaySpike(int zeroError){
 
 
 /**
- * Removes delay, spikes and jitter from intrptError and returns
- * the resulting zeroError.
+ * Removes delay peaks, spikes and jitter from intrptError and
+ * returns the resulting zeroError.
  *
  * If a delay peak is detected in the rawError distribution
- * where rawError >= g.noiseLevel then rawError is shifted by
+ * and rawError >= g.noiseLevel then rawError is shifted by
  * the offset of the peak. This has the effect of overlaying
  * the peak on the PPS interrupt delay which improves sampling.
  *
@@ -914,7 +929,8 @@ int removeIntrptNoise(int intrptError){
 
 	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), &(g.intrptDelayShift), &(g.intrptDelayMinIdx), &(g.intrptDelayTailIdx), "removeIntrptNoise()");
 
-	if (g.hardLimit == HARD_LIMIT_1 &&
+	if (g.fixDelayPeak &&
+			g.hardLimit == HARD_LIMIT_1 &&
 			intrptError >= g.intrptDelayMinIdx &&
 			intrptError <= g.intrptDelayTailIdx){
 
@@ -936,7 +952,7 @@ int removeIntrptNoise(int intrptError){
 		bufferStatusMsg(g.msgbuf);
 	}
 
-	zeroError = clampJitter(intrptError);						// Recover the time error by
+	zeroError = clampJitter(intrptError);					// Recover the time error by
 															// limiting away the jitter.
 	return zeroError;
 }
