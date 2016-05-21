@@ -82,6 +82,8 @@
 #define SLEW_LEN 10
 #define SLEW_MAX 65
 
+#define FUDGE -3
+
 #define MAX_LINE_LEN 50
 #define STRBUF_SZ 500
 #define LOGBUF_SZ 500

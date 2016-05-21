@@ -45,7 +45,7 @@
 
 #include "../build/pps-client.h"
 
-const char *version = "0.4.3";
+const char *version = "0.4.5";
 
 /**
  * Declares the global variables defined in pps-client.h.
@@ -644,8 +644,8 @@ int removeNoise(int rawError){
 
 	if (g.fixDelayPeak &&
 			g.hardLimit == HARD_LIMIT_1 &&
-			rawError >= g.delayMinIdx &&
-			rawError <= g.delayTailIdx){
+			rawError >= g.delayMinIdx){
+//			rawError <= g.delayTailIdx){
 		g.sysDelayShift = g.delayShift;
 		rawError -= g.delayShift;
 	}
@@ -748,7 +748,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 
 	int interruptTime = getFractionalSeconds(pps_t);
 
-	int rawError = interruptTime - g.sysDelay;			// References the controller to g.sysDelay which sets the time
+	int rawError = interruptTime - (g.sysDelay + FUDGE);// References the controller to g.sysDelay which sets the time
 														// of the PPS rising edge to zero at the start of the second.
 	int zeroError = removeNoise(rawError);
 
@@ -931,12 +931,12 @@ int removeIntrptNoise(int intrptError){
 
 	if (g.fixDelayPeak &&
 			g.hardLimit == HARD_LIMIT_1 &&
-			intrptError >= g.intrptDelayMinIdx &&
-			intrptError <= g.intrptDelayTailIdx){
+			intrptError >= g.intrptDelayMinIdx){
+//			intrptError <= g.intrptDelayTailIdx){
 
-		if (intrptError > g.intrptDelayMinIdx){
+//		if (intrptError > g.intrptDelayMinIdx){
 			intrptError -= g.intrptDelayShift;
-		}
+//		}
 	}
 
 	bool isDelaySpike = detectIntrptDelaySpike(intrptError);
@@ -1308,6 +1308,12 @@ void waitForPPS(bool verbose, int pps_fd){
 		}
 
 		nanosleep(&ts2, NULL);			// Sleep until ready to look for PPS interrupt
+
+//		if (g.doCalibration
+//				&& g.hardLimit == HARD_LIMIT_1){
+//
+//			getInterruptDelay(pps_fd);
+//		}
 
 		restart = readPPS_SetTime(verbose, pps_fd);
 
