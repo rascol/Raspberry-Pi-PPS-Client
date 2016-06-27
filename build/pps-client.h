@@ -65,12 +65,12 @@
 
 #define RAW_ERROR_ZERO  20				// Index corresponding to rawError == 0 in detectDelayPeak().
 #define MIN_PEAK_RATIO 0.05				// Minimum ratio to detect a second peak in detectDelayPeak().
-#define MAX_VALLEY_RATIO 0.95			// Maximum ratio to detect a valley before the second peak in detectDelayPeak().
+#define MAX_VALLEY_RATIO 0.99			// Maximum ratio to detect a valley before the second peak in detectDelayPeak().
 #define RAW_ERROR_DECAY 0.98851			// Decay rate for rawError samples (1 hour half life)
 #define MAX_PEAK_DELAY 15				// Look for a delay peak less than this value. If larger not a delay peak.
 #define MAX_PEAK_TO_TAIL_DELAY 7		// Maximum extent of a tail from the peak
 
-#define INTERRUPT_LOST 15				// Number of consequtive lost interrupts at which warning starts
+#define INTERRUPT_LOST 15				// Number of consequtive lost interrupts at which a warning starts
 
 #define MAX_SERVERS 10					// Maximum number of SNTP time servers to use
 #define CHECK_TIME 1024					// Interval between internet time checks (about 17 minutes)
@@ -79,11 +79,11 @@
 
 #define NOISE_FACTOR 0.354				// Adjusts g.noiseLevel to track g.sysDelay
 #define NOISE_LEVEL_MIN 4				// The minimum level at which interrupt delays are delay spikes.
-#define SLEW_LEN 10
-#define SLEW_MAX 65
+#define SLEW_LEN 10						// The slew accumulator (slewAccum) update interval
+#define SLEW_MAX 65						// Jitter slew value below which the controller will begin to frequency lock.
 
-#define FUDGE -3
-
+#define FUDGE 1							// Accurate time calibration required PPS latency to be longer than
+										// measured interrupt latency by this amount (micoseconds).
 #define MAX_LINE_LEN 50
 #define STRBUF_SZ 500
 #define LOGBUF_SZ 500
@@ -114,6 +114,7 @@
 #define SYSDELAY_DISTRIB 32
 #define EXIT_LOST_PPS 64
 #define FIX_DELAY_PEAK 128
+#define SHOW_REMOVE_NOISE 256
 /**
  * Struct for passing arguments to and from threads
  * querying SNTP servers.
@@ -151,13 +152,8 @@ struct ppsClientGlobalVars {
 	int sysDelayShift;
 	int delayShift;
 	int delayMinIdx;
-	int delayTailIdx;
-
-	int pad1[100];
 
 	int sysDelayDistrib[INTRPT_DISTRIB_LEN];
-
-	int pad2[100];
 
 	double delayMedian;
 
@@ -170,11 +166,7 @@ struct ppsClientGlobalVars {
 	struct timeval t2;
 	struct timex t3;
 
-	int pad3[100];
-
 	int tm[6];
-
-	int pad4[100];
 
 	time_t pps_t_sec;
 	int pps_t_usec;
@@ -186,15 +178,9 @@ struct ppsClientGlobalVars {
 	int jitter;
 	int jitterCount;
 
-	int pad5[100];
-
 	int jitterDistrib[JITTER_DISTRIB_LEN];
 
-	int pad6[100];
-
 	double rawErrorDistrib[ERROR_DISTRIB_LEN];
-
-	int pad7[100];
 
 	int noiseLevel;
 
@@ -203,11 +189,7 @@ struct ppsClientGlobalVars {
 
 	unsigned int seq_num;
 
-	int pad8[100];
-
 	int seq_numRec[SECS_PER_10_MIN];
-
-	int pad9[100];
 
 	unsigned int activeCount;
 	unsigned int lastActiveCount;
@@ -216,38 +198,22 @@ struct ppsClientGlobalVars {
 	int days;
 	int intervalCount;
 
-	int pad10[100];
-
 	__time_t timestampRec[NUM_5_MIN_INTERVALS];
-
-	int pad11[100];
 
 	double avgIntegral;
 	int integralCount;
 
-	int pad12[100];
-
 	double integral[NUM_AVERAGES];
-
-	int pad13[100];
 
 	int correctionAccum;
 	int correctionFifoCount;
 
-	int pad14[100];
-
 	int correctionFifo[OFFSETFIFO_LEN];
-
-	int pad15[100];
 
 	int correctionFifo_idx;
 	double avgCorrection;
 
-	int pad16[100];
-
 	int errorDistrib[ERROR_DISTRIB_LEN];
-
-	int pad17[100];
 
 	double avgSlew;
 	double slewAccum;
@@ -258,54 +224,31 @@ struct ppsClientGlobalVars {
 	double lastFreqOffset;
 	double freqOffsetSum;
 
-	int pad18[100];
-
 	double freqOffsetDiff[FREQDIFF_INTRVL];
-
-	int pad19[100];
 
 	double freqAllanDev[NUM_5_MIN_INTERVALS];
 
-	int pad20[100];
-
 	double freqOffsetRec[NUM_5_MIN_INTERVALS];
-
-	int pad21[100];
 
 	int offsetRec[SECS_PER_10_MIN];
 
-	int pad22[100];
-
 	int recIndex;
 
-	int pad23[100];
-
 	double freqOffsetRec2[SECS_PER_10_MIN];
-
-	int pad24[100];
 
 	int recIndex2;
 
 	int interruptLossCount;
 	bool interruptReceived;
 
-	int pad25[100];
-
 	int interruptDistrib[INTRPT_DISTRIB_LEN];
-
-	int pad26[100];
 
 	int intrptDelayShift;
 	int intrptDelayMinIdx;
-	int intrptDelayTailIdx;
 
 	unsigned int intrptCount;
 
-	int pad27[100];
-
 	double intrptErrorDistrib[ERROR_DISTRIB_LEN];
-
-	int pad28[100];
 
 	int consensisTimeError;
 
@@ -318,29 +261,22 @@ struct ppsClientGlobalVars {
 
 	unsigned int config_select;
 
-	int pad29[100];
-
 	char logbuf[LOGBUF_SZ];
-
-	int pad30[100];
 
 	char msgbuf[MSGBUF_SZ];
 
-	int pad31[100];
-
 	char savebuf[MSGBUF_SZ];
 
-	int pad32[100];
-
 	char strbuf[STRBUF_SZ];
-
-	int pad33[100];
 
 	int nIntrptDelaySpikes;
 	bool medianIsSet;
 	unsigned int ppsCount;
 
 	bool fixDelayPeak;
+	bool showRemoveNoise;
+	int delayPeakLen;
+	bool disableDelayShift;
 };
 
 void initialize(void);

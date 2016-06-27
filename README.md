@@ -26,7 +26,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 10 microseconds by design. The data below was captured over a 24 hour period from a Raspberry Pi running Raspian with a 4.1.19-v7+ kernel. Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
+The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 3 microseconds by design exclusive of clock jitter. The data below was captured over a 24 hour period from a Raspberry Pi running Raspian with a 4.1.19-v7+ kernel. Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
 <center><img src="/images/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
 
@@ -34,7 +34,7 @@ Figure 2 shows the system clock frequency set by the controller which held the A
 
 <center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
 
-The combination of time slew adjustments never exceeding 1 microsecond each second and time drift never exceeding 20 nanoseconds each second demonstrates a timekeeping control precision of 1 microsecond over this 24 hour period. The absolute accuracy is limited to 10 microseconds by second-to-second jitter in the system clock oscillator and by occasional time adjustments that could occasionally exceed 1 microsecond (but didn't here). This is discussed in detail in the docs.
+The combination of time slew adjustments never exceeding 1 microsecond each second and time drift never exceeding 20 nanoseconds each second demonstrates a timekeeping control precision of 1 microsecond over this 24 hour period. Average absolute accuracy is only slightly worse. The practical limitation to accurate time measurement at any instant in time is clock oscillator jitter which typically has a standard deviation of about 2 microseconds.
 
 # Hardware Requirements
 ---
@@ -51,7 +51,7 @@ The combination of time slew adjustments never exceeding 1 microsecond each seco
 ---
 ## The Raspian OS
 
-Versions of Linux kernel 4.1.y are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded into the installer. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file.
+Versions of Linux kernel 4.1 and 4.4 are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded into the installer. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file.
 
 ## The NTP daemon
 
@@ -66,7 +66,7 @@ This is necessary if you want to install pps-client as a system service.
 # Installing
 ---
 
-The pps-client has several versions of the installer. Copy the appropriate one to the RPi and run it from a terminal:
+The pps-client has a few versions of the installer for kernels currently in use on Raspian Jessy. Copy the appropriate one to the RPi and run it from a terminal:
 ```
 $ sudo ./pps-client-4.1.19-v7+
 ```
@@ -97,6 +97,7 @@ $ sudo mv /etc/pps-client.conf.orig  /ect/pps-client.conf
 Because pps-client contains a Linux kernel driver, building pps-client requires that a compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client. The pps-client project can be built directly on the RPi or on a Linux workstation with a cross-compiler. Building on the RPi is slower but more reliable. In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi.
 
 The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. If you are unable to match your kernel version to the source found [here](https://github.com/raspberrypi/linux) instructions for doing a complete kernel install can be found [here](https://www.raspberrypi.org/documentation/linux/kernel/building.md). Otherwise follow the steps below.
+
 
 If you need git:
 ```

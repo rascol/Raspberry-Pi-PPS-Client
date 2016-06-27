@@ -136,13 +136,14 @@ int waitForNTPServers(void){
 	tcp.ntp_server = f.ntp_server;
 
 	for (int i = 0; i < 6; i++){
-		sprintf(g.logbuf, "Waiting for NTP servers...\n");
-		writeToLog(g.logbuf);
-
 		nServers = allocNTPServerList(&tcp);
 		if (nServers != 0){
 			break;
 		}
+		sprintf(g.logbuf, "Waiting 10 seconds for NTP servers...\n");
+		printf(g.logbuf);
+		writeToLog(g.logbuf);
+
 		sleep(10);
 	}
 	if (tcp.buf != NULL){

@@ -41,6 +41,9 @@ const char *ntp_config_bac = "/etc/ntp.conf.bac";
 const char *ntp_config_part = "/etc/ntp.conf.part";
 const char *pidFilename = "/var/run/pps-client.pid";
 
+const char *space = " ";
+const char *num = "0123456789.";
+
 extern const char *version;
 /**
  * Local file-scope shared variables.
@@ -62,7 +65,8 @@ const char *config_str[] = {
 		"interrupt-distrib",
 		"sysdelay-distrib",
 		"exit-lost-pps",
-		"fix-delay-peak"
+		"fix-delay-peak",
+		"show-remove-noise"
 };
 
 struct saveFileData arrayData[] = {
@@ -589,7 +593,7 @@ bool isDisabled(int config, char *configVals[]){
 bool configHasValue(int config, char *configVals[], void *value){
 	int i = round(log2(config));
 	if (g.config_select & config){
-		char *val = strpbrk(configVals[i], "0123456789.");
+		char *val = strpbrk(configVals[i], num);
 		if (strpbrk(val, ".") != NULL){
 			sscanf(val, "%lf", (double *)value);
 		}
@@ -728,6 +732,15 @@ void processFiles(char *configVals[], char *pbuf, int sz){
 		g.fixDelayPeak = false;
 	}
 
+
+	if (isEnabled(SHOW_REMOVE_NOISE, configVals)){
+		g.showRemoveNoise = true;
+	}
+	else if (isDisabled(SHOW_REMOVE_NOISE, configVals)){
+		g.showRemoveNoise = false;
+	}
+
+
 //	double value;
 //	if (configHasValue(SET_GAIN, configVals, &value)){
 //		integralGain1 = value;
@@ -790,7 +803,14 @@ void bufferStateParams(void){
 		strftime(timeStr, 30, timefmt, localtime(&g.pps_t_sec));
 
 		char *printfmt = g.strbuf;
-		strcpy(printfmt, "%s.%06d  %d  jitter:");
+
+		if (g.sysDelayShift == 0){
+			strcpy(printfmt, "%s.%06d  %d  jitter:");
+		}
+		else {
+			strcpy(printfmt, "%s.%06d  %d *jitter:");
+		}
+
 		if (g.jitter < 0){
 			strcat(printfmt, "%d");
 			if (abs(g.jitter) > 9){
@@ -1067,7 +1087,7 @@ char *copyMajorTo(char *majorPos){
 	char *pos2 = pos;
 	while (pos2 == pos){
 		pos -= 1;
-		pos2 = strpbrk(pos,"0123456789");
+		pos2 = strpbrk(pos, num);
 	}
 	strcpy(majorPos, pos2);
 
@@ -1122,27 +1142,18 @@ void driver_unload(void){
  * loaded from displayParams_file and returns
  * the value.
  */
-int getSeqNum(const char *buf){
-	char *pStr, *snStr;
-	int seqNum;
-	char bufcpy[25];
+int getSeqNum(const char *pbuf){
 
-	pStr = strstr((char *)buf, "jitter:");
-	if (pStr == NULL){
-		return -1;
-	}
-	pStr -= 1;
-	while (*pStr == ' '){
-		pStr -= 1;
-	}
-	while (*pStr != ' '){
-		pStr -= 1;
-	}
-	strncpy(bufcpy, pStr, 24);
-	bufcpy[24] = '\0';
+	char *pSpc, *pNum;
+	int seqNum = 0;
 
-	snStr = strtok(bufcpy, " ");
-	sscanf(snStr, "%d", &seqNum);
+	pSpc = strpbrk((char *)pbuf, space);			// Compiler bug: Fails if pbuf is not cast to (char *).
+													// Looks like strpbrk arg 1 is implemented as (char *) not (const char *).
+	pNum = strpbrk(pSpc, num);
+	pSpc = strpbrk(pNum, space);
+	pNum = strpbrk(pSpc, num);
+
+	sscanf(pNum, "%d ", &seqNum);
 	return seqNum;
 }
 
@@ -1158,7 +1169,7 @@ void showStatusEachSecond(void){
 	struct stat stat_buf;
 	int seqNum, lastSeqNum = -1;
 
-	int dispTime = 500000;
+	int dispTime = 500000;									// Display at half second
 
 	gettimeofday(&tv1, NULL);
 	ts2 = setSyncDelay(dispTime, tv1.tv_usec);
