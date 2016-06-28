@@ -3,8 +3,8 @@ all:
 	mkdir pkg
 	mkdir tmp
 	
-	cd ./build && $(MAKE) all
-	cp ./build/pps-client ./pkg/pps-client
+	cd ./client && $(MAKE) all
+	cp ./client/pps-client ./pkg/pps-client
 	
 	cd ./driver && $(MAKE) all
 	cp ./driver/pps-client.ko ./pkg/pps-client.ko
@@ -65,8 +65,8 @@ all:
 	cp ./figures/StatusPrintoutAt10Min.png ./pkg/StatusPrintoutAt10Min.png
 	cp ./figures/StatusPrintoutOnStart.png ./pkg/StatusPrintoutOnStart.png
 	
-	cp ./build/pps-client.conf ./pkg/pps-client.conf
-	cp ./build/pps-client.sh ./pkg/pps-client.sh
+	cp ./client/pps-client.conf ./pkg/pps-client.conf
+	cp ./client/pps-client.sh ./pkg/pps-client.sh
 	tar czf pkg.tar.gz ./pkg
 	./installer/pps-client-make-install $(KERNELVERS)
 	rm pkg.tar.gz
@@ -78,7 +78,7 @@ clean:
 	rm -rf ./pkg
 	rm -rf ./tmp
 	
-	cd ./build && $(MAKE) clean
+	cd ./client && $(MAKE) clean
 	cd ./driver && $(MAKE) clean
 	cd ./utils && $(MAKE) clean
 		

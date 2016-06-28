@@ -10,7 +10,7 @@ all: pps-client-remove
 # Tool invocations
 pps-client-remove: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
-	@echo 'Invoking: Cross G++ Linker'
+	@echo 'Invoking: G++ Linker'
 	$(CROSS_COMPILE)g++ -o "pps-client-remove" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '

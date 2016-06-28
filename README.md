@@ -1,4 +1,3 @@
-
 # Raspberry Pi PPS Client
 
 <center><img src="/images/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" style="width: 400px;"/></center>
@@ -18,6 +17,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 - [Uninstalling](#uninstalling)
 - [Reinstalling](#reinstalling)
 - [Building from Source](#building-from-source)
+  - [Locate the Kernel Source](#locate-the-kernel-source)
   - [Building on the RPi](#building-on-the-rpi)
   - [Building on a Linux Workstation](#building-on-a-linux-workstation)
 - [Running pps-client](#running-pps-client)
@@ -26,7 +26,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 3 microseconds by design exclusive of clock jitter. The data below was captured over a 24 hour period from a Raspberry Pi running Raspian with a 4.1.19-v7+ kernel. Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
+The pps-client daemon provides synchronization precision of 1 microsecond and a timekeeping accuracy of 3 microseconds by design exclusive of clock jitter. The data below was captured over a 24 hour period from a Raspberry Pi running Raspian with a 4.4.14-v7+ kernel. Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
 <center><img src="/images/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
 
@@ -51,7 +51,7 @@ The combination of time slew adjustments never exceeding 1 microsecond each seco
 ---
 ## The Raspian OS
 
-Versions of Linux kernel 4.1 and 4.4 are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded into the installer. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file.
+Versions of Linux kernel 4.1 and later are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded into the installer. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file. However, we will not support versions of the Linux kernel earlier than v4.1 simply because real time performance can be substantially worse on earlier versions.
 
 ## The NTP daemon
 
@@ -68,11 +68,11 @@ This is necessary if you want to install pps-client as a system service.
 
 The pps-client has a few versions of the installer for kernels currently in use on Raspian Jessy. Copy the appropriate one to the RPi and run it from a terminal:
 ```
-$ sudo ./pps-client-4.1.19-v7+
+$ sudo ./pps-client-4.4.14-v7+
 ```
 The pps-client version must match the version of the Linux kernel on the RPi. The kernel version can be determined by running "`uname -r`" on an RPi terminal. Version matching is necessary because pps-client contains a kernel driver and all kernel drivers are compiled against a specific version of the Linux kernel and can only run on that kernel version.
 
-A few different Linux kernels are currently supported and more will be. This is not the best solution because it means that pps-client has to be re-installed every time Raspian updates the kernel version. The hope is that if there is enough interest in this project, the driver will be accepted into mainline in the upstream kernel.
+A few different Linux kernels are currently supported and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. fortunately that will not happen unless you run "`sudo rpi-update`". However, kernel development is proceeding very rapidly right now. Noticeable improvements occur from release to release. Our experience has been that is worthwhile to keep the kernel updated. The hope is that if there is enough interest in this project, the driver will be accepted into mainline in the upstream kernel and the version problem will go away.
 
 # Uninstalling
 ---
@@ -103,6 +103,13 @@ If you need git:
 ```
 $ sudo apt-get install git
 ```
+
+## Locate the Kernel Source
+
+First determine the Linux kernel version on your RPi with "`uname -r`". Then from a browser go to https://github.com/raspberrypi/linux. Look at the `makefile` in the files list. The merge comment will give the version, `Linux 4.4.14`, at the time this was written. If this agrees with the version of your RPi you have the kernel source page you need. 
+
+If the Linux version is more recent, browse to https://github.com/raspberrypi/linux/commits/rpi-4.4.y. Search down though the commit list until you find the commit for the Linux version of your RPi. Select its commit number. That will take you to a the commit page. Select the `Browse Files` button at the top right. That will open the source tree page that you need. Copy its URL. For example, https://github.com/raspberrypi/linux/tree/ba760d4302e4fce130007b8bdbce7fcafc9bd9a9 , is the kernel source page for `Linux 4.4.13`.
+
 ## Building on the RPi
 
 You might want to create a folder to hold the kernel and pps-client project. For example,
@@ -110,9 +117,9 @@ You might want to create a folder to hold the kernel and pps-client project. For
 $ mkdir ~/rpi
 $ cd ~/rpi
 ```
-Download the current version of the kernel sources:
+Download the version of the kernel sources corresponding to your RPi as described above in "Locate the Kernel Source", substituting the appropriate source page:
 ```
-$ git clone --depth=1 https://github.com/raspberrypi/linux
+$ git clone --depth=1 [your-rpi-kernel-source-page]
 ```
 Get missing dependencies:
 ```
@@ -134,13 +141,13 @@ $ cd ..
 $ git clone --depth=1 https://github.com/rascol/PPS-Client
 $ cd PPS-Client
 ```
-Now (assuming that the kernel source version is 4.1.19) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
+Now (assuming that the kernel source version is 4.4.14) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
 ```
-$ make KERNELDIR=~/rpi/linux KERNELVERS=4.1.19-v7+
+$ make KERNELDIR=~/rpi/linux KERNELVERS=4.4.14-v7+
 ```
-That will build the installer, `pps-client-4.1.19-v7+`. Run it on the RPi as root:
+That will build the installer, `pps-client-4.4.14-v7+`. Run it on the RPi as root:
 ```
-$ sudo ./pps-client-4.1.19-v7+
+$ sudo ./pps-client-4.4.14-v7+
 ```
 That completes the pps-client installation.
 
@@ -159,9 +166,9 @@ $ git clone https://github.com/raspberrypi/tools
 ```
 That should create a `tools` folder in `/rpi`.
 
-Download the current version of the kernel sources:
+Download the version of the kernel sources corresponding to your RPi as described above in "Locate the Kernel Source", substituting the appropriate source page:
 ```
-$ git clone --depth=1 https://github.com/raspberrypi/linux
+$ git clone --depth=1 [your-rpi-kernel-source-page]
 ```
 This environment variable will be needed both to configure the kernel and to build pps-client:
 ```
@@ -185,13 +192,13 @@ $ cd ~/rpi
 $ git clone --depth=1 https://github.com/rascol/PPS-Client
 $ cd PPS-Client
 ```
-Now (assuming that the kernel source version is 4.1.19) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
+Now (assuming that the kernel source version is 4.4.14) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
 ```
-$ make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=~/rpi/linux KERNELVERS=4.1.19-v7+
+$ make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=~/rpi/linux KERNELVERS=4.4.14-v7+
 ```
-That will build the installer, `pps-client-4.1.19-v7+`. Copy this to the RPi. Run it on the RPi as root:
+That will build the installer, `pps-client-4.4.14-v7+`. Copy this to the RPi. Run it on the RPi as root:
 ```
-$ sudo ./pps-client-4.1.19-v7+
+$ sudo ./pps-client-4.4.14-v7+
 ```
 That completes the pps-client installation.
 
