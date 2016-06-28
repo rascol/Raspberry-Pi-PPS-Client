@@ -18,7 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "../build/pps-client.h"
+#include "../client/pps-client.h"
 extern struct ppsClientGlobalVars g;
 
 const char *last_distrib_file = "/var/local/error-distrib";			// File storing the completed distribution of offset corrections.

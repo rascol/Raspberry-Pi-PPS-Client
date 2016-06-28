@@ -18,7 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "../build/pps-client.h"
+#include "../client/pps-client.h"
 #define ADDR_LEN 17
 extern struct ppsClientGlobalVars g;
 

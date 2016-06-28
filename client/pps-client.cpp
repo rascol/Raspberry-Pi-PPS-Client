@@ -43,7 +43,7 @@
  * "/lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko"
  */
 
-#include "../build/pps-client.h"
+#include "../client/pps-client.h"
 
 const char *version = "0.5.0";
 
