@@ -23,6 +23,8 @@
 #include <string.h>
 #include <unistd.h>
 
+const char *version = "pps-client-remove v1.0.0";
+
 int main(int argc, char *argv[])
 {
 	uid_t uid = geteuid();

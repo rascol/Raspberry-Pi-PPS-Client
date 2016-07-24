@@ -25,6 +25,8 @@
 #include <fcntl.h>
 #include <string.h>
 
+const char *version = "pps-client-installer v1.0.0";
+
 int main(int argc, char *argv[]){
 	unsigned char archive_start[8];
 	archive_start[0] = 0xff;

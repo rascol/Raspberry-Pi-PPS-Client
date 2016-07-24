@@ -25,6 +25,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+const char *version = "pps-client-stop v1.0.0";
+
 bool driverIsLoaded(void){
 	struct stat sbuf;
 	const char *filename = "/run/shm/pps-msg";

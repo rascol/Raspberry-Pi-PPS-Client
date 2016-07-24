@@ -93,7 +93,7 @@
 /* The text below will appear in output from 'cat /proc/interrupt' */
 #define INTERRUPT_NAME "pps-client"
 
-const char *version = "pps-client-driver v0.1.0";
+const char *version = "pps-client-driver v1.0.0";
 
 static int major = 0;							/* dynamic by default */
 module_param(major, int, 0);					/* but can be specified at load time */

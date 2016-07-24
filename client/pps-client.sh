@@ -9,7 +9,7 @@
 # Description:       This script executes pps-client and should be placed in /etc/init.d.
 ### END INIT INFO
 
-# Author: ray <rayconnell@usa.net>
+# Author: Raymond Connell
 
 # Do NOT "set -e"
 

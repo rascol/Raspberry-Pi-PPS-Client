@@ -45,7 +45,7 @@
 
 #include "../client/pps-client.h"
 
-const char *version = "0.5.0";
+const char *version = "1.1.0";
 
 /**
  * Declares the global variables defined in pps-client.h.
@@ -64,8 +64,11 @@ void setDelayTrackers(void){
 
 /**
  * Sets global variables to initial values at
- * startup or restart and sets frequency offset
- * to zero.
+ * startup or restart and sets system clock
+ * frequency offset to zero.
+ *
+ * @param {bool} verbose Enables printing of
+ * state status params if "true".
  */
 void initialize(bool verbose){
 	memset(&g, 0, sizeof(struct ppsClientGlobalVars));
@@ -104,6 +107,10 @@ void initialize(bool verbose){
  * convenience), this function returns "true" causing
  * the controller to begin to also adjust the system
  * clock frequency offset.
+ *
+ * @returns {bool} Returns "true" when the control loop
+ * can begin to control the system clock frequency.
+ * Else "false".
  */
 bool getAcquireState(void){
 
@@ -126,6 +133,9 @@ bool getAcquireState(void){
  * introduce additional time delay, hard limiting
  * is used instead of filtering to remove noise
  * (jitter) from the reported time of PPS capture.
+ *
+ * @param {double} avgCorrection Current average
+ * correction value.
  */
 void setHardLimit(double avgCorrection){
 
@@ -136,12 +146,12 @@ void setHardLimit(double avgCorrection){
 		return;
 	}
 
-	if (abs(g.avgSlew) > SLEW_MAX){					// As long as average time slew is
-		int d_4 = abs(g.avgSlew) * 4;				// ouside of range SLEW_MAX this keeps
-		while (g.hardLimit < d_4					// g.hardLimit above 4 * g.avgSlew
-				&& g.hardLimit < HARD_LIMIT_NONE){	// which is high enough to allow the
-			g.hardLimit = g.hardLimit << 1;			// controller to pull avgSlew within
-		}											// SLEW_MAX.
+	if (abs(g.avgSlew) > SLEW_MAX){							// As long as average time slew is
+		int d_4 = abs(g.avgSlew) * 4;						// ouside of range SLEW_MAX this keeps
+		while (g.hardLimit < d_4							// g.hardLimit above 4 * g.avgSlew
+				&& g.hardLimit < HARD_LIMIT_NONE){			// which is high enough to allow the
+			g.hardLimit = g.hardLimit << 1;					// controller to pull avgSlew within
+		}													// SLEW_MAX.
 		return;
 	}
 
@@ -170,11 +180,17 @@ void setHardLimit(double avgCorrection){
  * as long as the jitter value remains beyond a
  * threshold (g.noiseLevel). Is not active unless
  * g.hardLimit is at HARD_LIMIT_4 or below.
+ *
+ * @param {int} rawError The raw error vlue to be
+ * tested for a delay spike.
+ *
+ * @returns {bool} Returns "true" if a delay spike
+ * is detected. Else "false".
  */
-bool detectDelaySpike(int zeroError){
+bool detectDelaySpike(int rawError){
 	bool isDelaySpike = false;
 
-	if (g.hardLimit <= HARD_LIMIT_4 && zeroError >= g.noiseLevel){
+	if (g.hardLimit <= HARD_LIMIT_4 && rawError >= g.noiseLevel){
 		if (g.nDelaySpikes < MAX_SPIKES) {
 			g.nDelaySpikes += 1;					// Record unbroken sequence of delay spikes
 
@@ -198,10 +214,13 @@ bool detectDelaySpike(int zeroError){
  * Gets the average time offset from zero over the interval
  * SLEW_LEN and updates avgSlew with this value every SLEW_LEN
  * seconds.
+ *
+ * @param {int} rawError The raw error to be accumulated to
+ * determine average slew.
  */
-void getTimeSlew(int zeroError){
+void getTimeSlew(int rawError){
 
-	g.slewAccum += (double)zeroError;
+	g.slewAccum += (double)rawError;
 
 	g.slew_idx += 1;
 	if (g.slew_idx >= SLEW_LEN){
@@ -226,17 +245,22 @@ void getTimeSlew(int zeroError){
  * random and consequently would introduce a constantly changing
  * random offset. The result is also to move the average PPS interrupt
  * delay to its median value.
+ *
+ * @param {int} rawError The raw error value to be converted to a
+ * zero error.
  */
 int clampJitter(int rawError){
 
+	int zeroError = rawError;
+
 	if (rawError > g.hardLimit){
-		rawError = g.hardLimit;
+		zeroError = g.hardLimit;
 	}
 	else if (rawError < -g.hardLimit){
-		rawError = -g.hardLimit;
+		zeroError = -g.hardLimit;
 	}
 
-	return rawError;
+	return zeroError;
 }
 
 /**
@@ -247,6 +271,9 @@ int clampJitter(int rawError){
  *
  * These values are recorded so that they may be saved to disk
  * for analysis.
+ *
+ * @param {int} timeCorrection The time correction value to be
+ * recorded.
  */
 void recordOffsets(int timeCorrection){
 
@@ -314,6 +341,9 @@ void recordFrequencyVars(void){
  * A time correction is the raw time error passed through a hard
  * limitter to remove jitter and then scaled by the proportional
  * gain constant.
+ *
+ * @param {int} timeCorrection The time correction value to be
+ * accumulated to a distribution.
  */
 void buildDistrib(int timeCorrection){
 	int len = ERROR_DISTRIB_LEN - 1;
@@ -334,10 +364,13 @@ void buildDistrib(int timeCorrection){
  * saved to disk for future analysis.
  *
  * All jitter is collected including delay spikes.
+ *
+ * @param {int} rawError The raw error jitter value
+ * to save to the distribution.
  */
-void buildJitterDistrib(int zeroError){
+void buildJitterDistrib(int rawError){
 	int len = JITTER_DISTRIB_LEN - 1;
-	int idx = zeroError + len / 2;
+	int idx = rawError + len / 2;
 
 	if (idx < 0){
 		idx = 0;
@@ -363,6 +396,9 @@ void buildJitterDistrib(int zeroError){
  * average of the last 10 integrals to correct the
  * frequency offset of thesystem clock provides a modest
  * improvement over using only the single last integral.
+ *
+ * @param {double} avgCorrection The average correction
+ * to be integrated.
  */
 void makeAverageIntegral(double avgCorrection){
 
@@ -429,6 +465,9 @@ bool integralIsReady(void){
  * positive and negative corrections are equal and thus this
  * time delay, although not directly measureable, is the
  * median of the time delays causing the corrections.
+ *
+ * @param {int} timeCorrection The time correction value
+ * to be accumulated.
  */
 double getAverageCorrection(int timeCorrection){
 
@@ -462,12 +501,16 @@ double getAverageCorrection(int timeCorrection){
 /**
  * Sets the system time whenever there is an error
  * relative to the whole seconds obtained from
- * internet SNTP servers.
+ * internet SNTP servers by writing the whole
+ * second correction to the PPS kernel driver.
  *
  * Errors are infrequent: DST change twice a year or
  * leap seconds less frequently. The whole seconds
  * of system clock are set immedately to the correct
  * time.
+ *
+ * @param {int} pps_fd The pps-client device driver file
+ * descriptor.
  */
 void setClockToNTPtime(int pps_fd){
 
@@ -483,11 +526,15 @@ void setClockToNTPtime(int pps_fd){
 }
 
 /**
- * Detects the presence of a delay peak in rawError.
+ * Detects the presence of a delay peak in rawError by
+ * examining its error distribution.
  *
  * If a delay peak is detected and does not exceed
  * MAX_PEAK_DIFF then the offset of the delay peak
  * is returned. Else returns 0.
+ *
+ * @param {int} rawError The raw error value to be
+ * tested.
  */
 void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 		int *delayShift, int* minLevelIdx, const char *caller){
@@ -628,6 +675,11 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
  * MAX_SPIKES consequtive cycles without a detected
  * delay shift have occurred. That allows enough time
  * for the controller to correct the control point.
+ *
+ * @param {int} rawError The current raw error value.
+ *
+ * @returns {int} The rawError value possibly modified
+ * to remove a delay shift.
  */
 int correctDelayPeak(int rawError){
 	if (! g.disableDelayShift){
@@ -668,6 +720,11 @@ int correctDelayPeak(int rawError){
 /**
  * Removes delay peaks, spikes and jitter from rawError
  * and returns the resulting clamped zeroError.
+ *
+ * @param {int} rawError The raw error value to be
+ * processed.
+ *
+ * @returns {int} The resulting zeroError value.
  */
 int removeNoise(int rawError){
 
@@ -710,6 +767,8 @@ int removeNoise(int rawError){
  * time corrections over one minute. Otherwise gets the
  * integral time correction as the single last integral
  * of average time corrections over one minute.
+ *
+ * @returns The integral of time correcton values.
  */
 double getIntegral(void){
 	double integral;
@@ -732,6 +791,13 @@ double getIntegral(void){
  * Gets the time of the PPS rising edge from the
  * timeCorrection value and sets the corresponding
  * timestamp.
+ *
+ * @param {struct timeval} t The delayed time of the PPS
+ * rising edge returned by the system.
+ *
+ * @param {int} timeCorrection The correction to
+ * be applied to get the backdated time of the
+ * PPS rising edge.
  */
 void getPPStime(timeval t, int timeCorrection){
 	g.pps_t_sec = t.tv_sec;
@@ -749,6 +815,11 @@ void getPPStime(timeval t, int timeCorrection){
  * Gets the fractional seconds part of interrupt time
  * and if the value should be interpreted as negative
  * then translates the value.
+ *
+ * @param {struct timeval} pps_t The delayed time of
+ * the PPS rising edge returned by the system clock.
+ *
+ * @returns The fractional seconds part of the time.
  */
 int getFractionalSeconds(timeval pps_t){
 	int interruptTime = pps_t.tv_usec;
@@ -767,6 +838,12 @@ int getFractionalSeconds(timeval pps_t){
  * This function is called by readPPS_SetTime()
  * from within the one-second delay loop in the
  * waitForPPS() function.
+ *
+ * @param {struct timeval} pps_t The delayed time of
+ * the PPS rising edge returned by the system clock.
+ *
+ * @param {int} pps_fd The pps-client device driver
+ * file descriptor.
  */
 void makeTimeCorrection(timeval pps_t, int pps_fd){
 	g.interruptReceived = true;
@@ -827,6 +904,8 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 /**
  * Responds to the SIGTERM signal by starting the exit
  * sequence in the daemon.
+ *
+ * @param {int} sig The signal from the system.
  */
 void TERMhandler(int sig){
 	signal(SIGTERM, SIG_IGN);
@@ -838,6 +917,8 @@ void TERMhandler(int sig){
 
 /**
  * Catches the SIGHUP signal, causing it to be ignored.
+ *
+ * @param {int} sig The signal from the system.
  */
 void HUPhandler(int sig){
 	signal(SIGHUP, SIG_IGN);
@@ -848,6 +929,8 @@ void HUPhandler(int sig){
  * configured can set a hardware pin HIGH and LOW respectively.
  * Can force exit if the interrupt is lost for more than one
  * hour when "exit-lost-pps=enable" is set in the config file.
+ *
+ * @param {int} pps_fd The pps-client device driver file descriptor.
  */
 int checkPPSInterrupt(int pps_fd){
 	int output;
@@ -892,6 +975,10 @@ int checkPPSInterrupt(int pps_fd){
 
 /**
  * Accumulates a distribution of interrupt delay.
+ *
+ * @param {int} intrptDelay The interrupt delay
+ * value returned from the pps-client device
+ * driver.
  */
 void buildInterruptDistrib(int intrptDelay){
 	int len = INTRPT_DISTRIB_LEN - 1;
@@ -915,12 +1002,24 @@ void buildInterruptDistrib(int intrptDelay){
 	}
 }
 
-bool detectIntrptDelaySpike(int zeroError){
+/**
+ * Removes jitter delay spikes by returning "true"
+ * as long as the jitter value remains beyond a
+ * threshold (g.noiseLevel). Is not active unless
+ * g.hardLimit is at HARD_LIMIT_4 or below.
+ *
+ * @param {int} intrptError The raw interrupt error
+ * value to be tested for a delay spike.
+ *
+ * @returns {bool} Returns "true if a delay spike
+ * is detected. Else "false".
+ */
+bool detectIntrptDelaySpike(int intrptError){
 	bool isDelaySpike = false;
 
-	if (g.hardLimit <= HARD_LIMIT_4 && zeroError >= g.noiseLevel){
+	if (g.hardLimit <= HARD_LIMIT_4 && intrptError >= g.noiseLevel){
 		if (g.nIntrptDelaySpikes < MAX_SPIKES) {
-			g.nIntrptDelaySpikes += 1;					// Record unbroken sequence of delay spikes
+			g.nIntrptDelaySpikes += 1;				// Record unbroken sequence of delay spikes
 
 			isDelaySpike = true;
 		}
@@ -938,16 +1037,20 @@ bool detectIntrptDelaySpike(int zeroError){
 	return isDelaySpike;
 }
 
-
 /**
  * Removes delay peaks, spikes and jitter from intrptError
  * and returns the resulting clamped zeroError.
+ *
+ * @param {int} intrptError The raw interrupt error value
+ * to be processed.
+ *
+ * @returns The resulting zeroError value after processing.
  */
 int removeIntrptNoise(int intrptError){
 
 	int zeroError;
 
-	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), &(g.intrptDelayShift), &(g.intrptDelayMinIdx), "removeIntrptNoise()");
+//	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), &(g.intrptDelayShift), &(g.intrptDelayMinIdx), "removeIntrptNoise()");
 
 	bool isDelaySpike = detectIntrptDelaySpike(intrptError);
 	if (isDelaySpike){
@@ -970,6 +1073,9 @@ int removeIntrptNoise(int intrptError){
 /**
  * Accumulates a distribution of sysDelay that can
  * be saved to disk for analysis.
+ *
+ * @param {int} sysDelay The sysDelay value to be
+ * recorded to the distribution.
  */
 void buildSysDelayDistrib(int sysDelay){
 	int len = INTRPT_DISTRIB_LEN - 1;
@@ -985,6 +1091,13 @@ void buildSysDelayDistrib(int sysDelay){
  * Sets a nanosleep() time delay equal to the time remaining
  * in the second from the time recorded as fracSec plus an
  * adjustment value of timeAt in microseconds.
+ *
+ * @param {int} timeAt The adjustment value.
+ *
+ * @param {int} fracSec The fractional second part of
+ * the system time.
+ *
+ * @returns The length of time to sleep.
  */
 struct timespec setSyncDelay(int timeAt, int fracSec){
 
@@ -1020,6 +1133,9 @@ struct timespec setSyncDelay(int timeAt, int fracSec){
  * along with its median value. The median value,
  * generated with one-minute weighting, is the approximate
  * interrupt delay and is assigned to g.sysDelay.
+ *
+ * @param {int} pps_fd The pps-client device driver file
+ * descriptor.
  */
 void getInterruptDelay(int pps_fd){
 	ssize_t rv;
@@ -1090,6 +1206,12 @@ void getInterruptDelay(int pps_fd){
  * that getAcquireState() will set g.isAcquiring to "true".
  * This looping will eventually converge  but can take as
  * long as 20 minutes.
+ *
+ * @param {bool} verbose If "true" then write pps-client
+ * state status messages to the console. Else not.
+ *
+ * @param {int} pps_fd The pps-client device driver file
+ * descriptor.
  */
 bool readPPS_SetTime(bool verbose, int pps_fd){
 
@@ -1155,6 +1277,12 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
  * the PPS hardware interrupt that returns the
  * timestamp of the interrupt which is passed to
  * makeTimeCorrection().
+ *
+ * @param {bool} verbose If "true" then write pps-client
+ * state status messages to the console. Else not.
+ *
+ * @param {int} pps_fd The pps-client device driver
+ * file descriptor.
  */
 void waitForPPS(bool verbose, int pps_fd){
 	struct timeval tv1;

@@ -48,7 +48,7 @@
 /* The text below will appear in output from 'cat /proc/interrupt' */
 #define INTERRUPT_NAME "interrupt-timer"
 
-const char *version = "interrupt-timer-driver v0.1.0";
+const char *version = "interrupt-timer-driver v1.0.0";
 
 static int major = 0;							/* dynamic by default */
 module_param(major, int, 0);					/* but can be specified at load time */

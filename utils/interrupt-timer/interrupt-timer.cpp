@@ -65,7 +65,7 @@ const char *timer_distrib_file = "/var/local/timer-distrib-forming";
 const char *last_timer_distrib_file = "/var/local/timer-distrib";
 const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
 
-const char *version = "interrupt-timer v0.2.0";
+const char *version = "interrupt-timer v1.0.0";
 const char *timefmt = "%F %H:%M:%S";
 
 /**

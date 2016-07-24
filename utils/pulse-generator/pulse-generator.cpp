@@ -37,7 +37,7 @@
 #define GPIO_A 0
 #define GPIO_B 1
 
-const char *version = "pulse-generator v0.1.1";
+const char *version = "pulse-generator v1.0.0";
 
 struct pulseGeneratorGlobalVars {
 	char strbuf[200];

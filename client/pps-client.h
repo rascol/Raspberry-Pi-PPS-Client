@@ -115,6 +115,7 @@
 #define EXIT_LOST_PPS 64
 #define FIX_DELAY_PEAK 128
 #define SHOW_REMOVE_NOISE 256
+
 /**
  * Struct for passing arguments to and from threads
  * querying SNTP servers.
@@ -285,7 +286,6 @@ int writeStatusStrings(void);
 bool ppsIsRunning(void);
 int forceNTPupdate(void);
 int writeFileMsgToLog(const char *);
-int writeFileMsgToLogbuf(const char *, char *);
 void writeToLog(char *);
 pid_t getChildPID(void);
 int createPIDfile(void);
