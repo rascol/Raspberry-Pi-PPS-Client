@@ -894,10 +894,14 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 		recordOffsets(timeCorrection);
 
 		g.activeCount += 1;
+		writeSysDelay();
+	}
+	else {												// test
+		printf("Not acquiring yet .......................................");
 	}
 
 	getPPStime(pps_t, timeCorrection);
-	writeSysDelay();
+//	writeSysDelay();
 	return;
 }
 
@@ -1212,6 +1216,9 @@ void getInterruptDelay(int pps_fd){
  *
  * @param {int} pps_fd The pps-client device driver file
  * descriptor.
+ *
+ * @returns {bool} Returns "false" if no restart is required,
+ * else "true".
  */
 bool readPPS_SetTime(bool verbose, int pps_fd){
 
@@ -1236,7 +1243,7 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 
 		makeTimeCorrection(g.t, pps_fd);
 
-		if ((! g.isAcquiring && g.seq_num > SECS_PER_MINUTE)		// If time slew on startup is too large
+		if ((! g.isAcquiring && g.seq_num >= SECS_PER_MINUTE)		// If time slew on startup is too large
 				|| (g.isAcquiring && g.hardLimit > HARD_LIMIT_1024	// or if g.avgSlew becomes too large
 				&& abs(g.avgSlew) > SLEW_MAX)){						// after acquiring
 
