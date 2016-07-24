@@ -230,43 +230,59 @@ int open_logerr(const char* filename, int flags){
 /**
  * Writes the message saved in the file to pps-client.log.
  *
- * @param {const char *} filename
+ * This function is used by threads in pps-sntp.cpp.
+ *
+ * @param {const char *} filename File containg a message.
+ * @param {char *} logbuf The log file buffer.
+ *
+ * @returns {int} Returns 0 on success, else -1;
  */
-int writeFileMsgToLog(const char *filename){
+int writeFileMsgToLogbuf(const char *filename, char *logbuf){
 	struct stat stat_buf;
 	int rv;
 
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1){
-		couldNotOpenMsgTo(g.logbuf, filename);
-		printf(g.logbuf);
+		couldNotOpenMsgTo(logbuf, filename);
+		printf(logbuf);
 		return -1;
 	}
 	fstat(fd, &stat_buf);
 	int sz = stat_buf.st_size;
 
 	if (sz >= LOGBUF_SZ-1){
-		rv = read(fd, g.logbuf, LOGBUF_SZ-1);
+		rv = read(fd, logbuf, LOGBUF_SZ-1);
 		if (rv == -1){
-			errorReadingMsgTo(g.logbuf, filename);
-			printf(g.logbuf);
+			errorReadingMsgTo(logbuf, filename);
+			printf(logbuf);
 			return rv;
 		}
-		g.logbuf[LOGBUF_SZ-1] = '\0';
+		logbuf[LOGBUF_SZ-1] = '\0';
 	}
 	else {
-		rv = read(fd, g.logbuf, sz);
+		rv = read(fd, logbuf, sz);
 		if (rv == -1){
-			errorReadingMsgTo(g.logbuf, filename);
-			printf(g.logbuf);
+			errorReadingMsgTo(logbuf, filename);
+			printf(logbuf);
 			return rv;
 		}
-		g.logbuf[sz] = '\0';
+		logbuf[sz] = '\0';
 	}
 	close(fd);
 	remove(filename);
 
 	return 0;
+}
+
+/**
+ * Writes the message saved in the file to pps-client.log.
+ *
+ * @param {const char *} filename File containg a message.
+ *
+ * @returns {int} Returns 0 on success, else -1;
+ */
+int writeFileMsgToLog(const char *filename){
+	return writeFileMsgToLogbuf(filename, g.logbuf);
 }
 
 /**
@@ -883,7 +899,7 @@ void writeTimestamp(double timestamp){
  *
  * @returns {int} Adjusted length of the buffer.
  */
-static int alignNumbersAfter(char *token, char *buf, int len){
+static int alignNumbersAfter(const char *token, char *buf, int len){
 	int pos = 0;
 
 	char *str = strstr(buf, token);
@@ -920,7 +936,7 @@ static int alignNumbersAfter(char *token, char *buf, int len){
  *
  * @returns {int} The adjusted length of the buffer.
  */
-static int alignTokens(char *refToken, int offset, char *token, char *buf, int len){
+static int alignTokens(const char *refToken, int offset, const char *token, char *buf, int len){
 
 	int pos1, pos2;
 

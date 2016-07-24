@@ -286,6 +286,7 @@ int writeStatusStrings(void);
 bool ppsIsRunning(void);
 int forceNTPupdate(void);
 int writeFileMsgToLog(const char *);
+int writeFileMsgToLogbuf(const char *, char *);
 void writeToLog(char *);
 pid_t getChildPID(void);
 int createPIDfile(void);
