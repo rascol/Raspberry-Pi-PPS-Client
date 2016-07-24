@@ -1004,6 +1004,9 @@ void bufferStateParams(void){
  * @returns Returns 0 on success, else the system errno on failure.
  */
 int restartNTP(void){
+	sprintf(g.logbuf, "Restarting NTP\n");
+	writeToLog(g.logbuf);
+
 	int rv = system("service ntp restart > /run/shm/ntp-restart-msg");
 	if (rv != 0){
 		sprintf(g.logbuf, "\'service ntp restart\' failed with the following message:\n");
@@ -1130,7 +1133,7 @@ int disableNTP(void){
 
 	char *fbuf = new char[sz + strlen("\ndisable ntp\n") + 1];
 
-	int rv = read_logerr(fd, fbuf, sz, ntp_config_file);
+	int rv = read_logerr(fd, fbuf, sz, ntp_config_file);		// Read ntp.conf into fbuf
 	if (rv == -1 || rv != sz){
 		delete fbuf;
 		close(fd);
@@ -1146,12 +1149,16 @@ int disableNTP(void){
 		strcat(fbuf, "\ndisable ntp\n");
 	}
 
+	sprintf(g.logbuf, "Wrote 'disable ntp' to ntp.conf.\n");
+	writeToLog(g.logbuf);
+
 	rv = replaceNTPConfig(fbuf);
 	delete fbuf;
 
 	if (rv == -1){
 		return rv;
 	}
+
 	rv = restartNTP();
 	return rv;
 }
