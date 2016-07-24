@@ -896,12 +896,8 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 		g.activeCount += 1;
 		writeSysDelay();
 	}
-	else {												// test
-		printf("Not acquiring yet .......................................");
-	}
 
 	getPPStime(pps_t, timeCorrection);
-//	writeSysDelay();
 	return;
 }
 
