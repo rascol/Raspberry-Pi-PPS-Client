@@ -18,9 +18,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/**
+ * \file pps-sntp.cpp The pps-sntp.cpp file contains functions and structures for accessing time updates via SNTP.
+ */
+
 #include "../client/pps-client.h"
 #define ADDR_LEN 17
-extern struct ppsClientGlobalVars g;
+extern struct G g;
 
 /**
  * Local file-scope shared variables.
@@ -45,11 +49,9 @@ static struct sntpLocalVars {
  * the tcp->buf param. That automatically frees the tcp->ntp_server[]
  * array memory.
  *
- * @param {struct timeCheckParams *} tcp Struct pointer for passing
- * data to a thread.
+ * @param[out] tcp Struct pointer for passing data to a thread.
  *
- * @returns {int} Returns the number of server addresses or -1 on
- * error.
+ * @returns The number of server addresses or -1 on error.
  */
 int allocNTPServerList(timeCheckParams *tcp){
 	struct stat stat_buf;
@@ -127,13 +129,11 @@ int allocNTPServerList(timeCheckParams *tcp){
 }
 
 /**
- * Check for NTP servers in a wait loop that
- * waits for up to one minute for ntpq to respond
- * with a server list. This requires an active
- * internet connection over ethernet or wifi.
+ * Check for NTP servers in a wait loop that waits for up to
+ * one minute for ntpq to respond with a server list. This
+ * requires an active internet connection over ethernet or wifi.
  *
- * @returns {int} Returns the number of SNTP
- * servers or 0 if none found.
+ * @returns The number of SNTP servers or 0 if none found.
  */
 int waitForNTPServers(void){
 	int nServers = 0;
@@ -169,10 +169,16 @@ int waitForNTPServers(void){
 }
 
 /**
- * Gets the time in seconds since the epoch Jan 00, 1900 as
- * read from the SNTP server provided as the function arg.
+ * Reads the time in seconds since the epoch Jan 00, 1900 from
+ * an SNTP server.
  *
- * @returns {struct time_t} Returns the time or -1 on error.
+ * @param[in] server The server URL.
+ * @param[in] id An identifer for constructing a filename for
+ * server messages.
+ * @param[in] strbuf A buffer to hold server messages.
+ * @param[in] logbuf A buffer to hold messages for the error log.
+ *
+ * @returns The time or -1 on error.
  */
 time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	time_t t = 0;
@@ -249,7 +255,6 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 		return -1;
 	}
 
-
 	end = strstr(pLine, "+/-");					// Chop string here if this is returned
 	if (end != NULL){							// by a server.
 		*end = '\0';
@@ -286,7 +291,7 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
  * that exits after filling the timeCheckParams struct, tcp, with the
  * requested information and any error info.
  *
- * @param {struct timeCheckParams *} Struct pointer for passing data.
+ * @param[in,out] tcp Struct pointer for passing data.
  */
 void doTimeCheck(timeCheckParams *tcp){
 
@@ -325,7 +330,7 @@ void doTimeCheck(timeCheckParams *tcp){
  * the time reported by SNTP servers and reports the error as
  * g.consensisTimeError.
  *
- * @returns {int} Returns the number of SNTP servers reporting.
+ * @returns The number of SNTP servers reporting.
  */
 int getTimeConsensisAndCount(void){
 	int diff[MAX_SERVERS];
@@ -382,8 +387,8 @@ int getTimeConsensisAndCount(void){
  * Updates the pps-client log with any errors reported by threads
  * querying SNTP time servers.
  *
- * @param {char *} buf The message buffer shared by the threads.
- * @param {int} The number of SNTP servers.
+ * @param[out] buf The message buffer shared by the threads.
+ * @param[in] numServers The number of SNTP servers.
  */
 void updateLog(char *buf, int numServers){
 
@@ -401,9 +406,9 @@ void updateLog(char *buf, int numServers){
 /**
  * At an interval defined by CHECK_TIME, queries a list of SNTP servers
  * for date/time using detached threads so that delays in server responses
- * do not affect the operation of the syncPPSClient() loop.
+ * do not affect the operation of the waitForPPS() loop.
  *
- * @param {struct timeCheckParams} tcp Struct pointer for passing data.
+ * @param[in,out] tcp Struct pointer for passing data.
  */
 void makeSNTPTimeQuery(timeCheckParams *tcp){
 	int rv;
@@ -470,10 +475,9 @@ void makeSNTPTimeQuery(timeCheckParams *tcp){
  * makeSNTPTimeQuery() to query SNTP time servers. Thread must be
  * released and memory deleted by calling freeSNTPThreads().
  *
- * @param {struct timeCheckParams *} tcp Struct pointer for passing
- * data.
+ * @param[out] tcp Struct pointer for passing data.
  *
- * @returns {int} Returns 0 on success or -1 on error.
+ * @returns 0 on success or -1 on error.
  */
 int allocInitializeSNTPThreads(timeCheckParams *tcp){
 	memset(&f, 0, sizeof(struct sntpLocalVars));
@@ -509,8 +513,7 @@ int allocInitializeSNTPThreads(timeCheckParams *tcp){
 /**
  * Releases threads and deletes memory used by makeSNTPTimeQuery();
  *
- * @param {struct timeCheckParams *} tcp The struct pointer that
- * was used for passing data.
+ * @param[in] tcp The struct pointer that was used for passing data.
  */
 void freeSNTPThreads(timeCheckParams *tcp){
 	pthread_attr_destroy(&(tcp->attr));
@@ -520,6 +523,3 @@ void freeSNTPThreads(timeCheckParams *tcp){
 		delete tcp->buf;
 	}
 }
-
-
-

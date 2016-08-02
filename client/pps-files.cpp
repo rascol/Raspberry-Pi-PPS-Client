@@ -18,30 +18,34 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/**
+ * \file pps-files.cpp The pps-files.cpp file contains functions and structures for saving files intended for pps-client status monitoring and analysis.
+ */
+
 #include "../client/pps-client.h"
-extern struct ppsClientGlobalVars g;
+extern struct G g;
 
-const char *last_distrib_file = "/var/local/pps-error-distrib";					// Stores the completed distribution of offset corrections.
-const char *distrib_file = "/var/local/pps-error-distrib-forming";				// Stores a forming distribution of offset corrections.
-const char *last_jitter_distrib_file = "/var/local/pps-jitter-distrib";			// Stores the completed distribution of offset corrections.
-const char *jitter_distrib_file = "/var/local/pps-jitter-distrib-forming";		// Stores a forming distribution of offset corrections.
-const char *log_file = "/var/log/pps-client.log";								// Stores activity and errors.
-const char *old_log_file = "/var/log/pps-client.old.log";						// Stores activity and errors.
-const char *last_intrpt_distrib_file = "/var/local/pps-intrpt-distrib";			// Stores the completed distribution of offset corrections.
-const char *interrupt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	// Stores a forming distribution of offset corrections.
-const char *sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib-forming";	// Stores a forming distribution of sysDelay values.
-const char *last_sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib";		// Stores a distribution of sysDelay.
-const char *pidFilename = "/var/run/pps-client.pid";							// Stores the PID of pps-client.
+const char *last_distrib_file = "/var/local/pps-error-distrib";					//!< Stores the completed distribution of offset corrections.
+const char *distrib_file = "/var/local/pps-error-distrib-forming";				//!< Stores a forming distribution of offset corrections.
+const char *last_jitter_distrib_file = "/var/local/pps-jitter-distrib";			//!< Stores the completed distribution of offset corrections.
+const char *jitter_distrib_file = "/var/local/pps-jitter-distrib-forming";		//!< Stores a forming distribution of offset corrections.
+const char *log_file = "/var/log/pps-client.log";								//!< Stores activity and errors.
+const char *old_log_file = "/var/log/pps-client.old.log";						//!< Stores activity and errors.
+const char *last_intrpt_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
+const char *interrupt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
+const char *sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib-forming";	//!< Stores a forming distribution of sysDelay values.
+const char *last_sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib";		//!< Stores a distribution of sysDelay.
+const char *pidFilename = "/var/run/pps-client.pid";							//!< Stores the PID of pps-client.
 
-const char *config_file = "/etc/pps-client.conf";								// The pps-client configuration file.
-const char *ntp_config_file = "/etc/ntp.conf";									// The NTP configuration file.
-const char *ntp_config_bac = "/etc/ntp.conf.bac";								// Backup of the NTP configuration file.
-const char *ntp_config_part = "/etc/ntp.conf.part";								// Temporary filename for an NTP config file during copy.
+const char *config_file = "/etc/pps-client.conf";								//!< The pps-client configuration file.
+const char *ntp_config_file = "/etc/ntp.conf";									//!< The NTP configuration file.
+const char *ntp_config_bac = "/etc/ntp.conf.bac";								//!< Backup of the NTP configuration file.
+const char *ntp_config_part = "/etc/ntp.conf.part";								//!< Temporary filename for an NTP config file during copy.
 
-const char *sysDelay_file = "/run/shm/pps-sysDelay";							// The current sysDelay value updated each second
-const char *assert_file = "/run/shm/pps-assert";								// The timestamps of the time corrections each second
-const char *displayParams_file = "/run/shm/pps-display-params";					// Temporary file storing params for the status display
-const char *arrayData_file = "/run/shm/pps-save-data";							// Stores a request sent to the pps-client daemon.
+const char *sysDelay_file = "/run/shm/pps-sysDelay";							//!< The current sysDelay value updated each second
+const char *assert_file = "/run/shm/pps-assert";								//!< The timestamps of the time corrections each second
+const char *displayParams_file = "/run/shm/pps-display-params";					//!< Temporary file storing params for the status display
+const char *arrayData_file = "/run/shm/pps-save-data";							//!< Stores a request sent to the pps-client daemon.
 
 const char *space = " ";
 const char *num = "0123456789.";
@@ -51,20 +55,20 @@ extern const char *version;
 /**
  * Local file-scope shared variables.
  */
-static struct filesLocalVars {
+static struct ppsFilesVars {
 	struct stat configFileStat;
 	time_t modifyTime;
 	int lastJitterFileno;
 	int lastSysDelayFileno;
 	int lastErrorFileno;
 	int lastIntrptFileno;
-} f;
+} f; 														//!< Local file-scope shared variables.
 
 /**
- * Configuration string labels for the pps-client
+ * Recognized configuration strings for the pps-client
  * configuration file.
  */
-const char *config_str[] = {
+const char *valid_config[] = {
 		"error-distrib",
 		"alert-pps-lost",
 		"jitter-distrib",
@@ -76,6 +80,10 @@ const char *config_str[] = {
 		"show-remove-noise"
 };
 
+/**
+ * Data associations for pps-client comand line save
+ * data requests with the -s flag.
+ */
 struct saveFileData arrayData[] = {
 	{"rawError", g.rawErrorDistrib, "/var/local/pps-raw-error-distrib", ERROR_DISTRIB_LEN, 2, RAW_ERROR_ZERO},
 	{"intrptError", g.intrptErrorDistrib, "/var/local/pps-intrpt-error-distrib", ERROR_DISTRIB_LEN, 2, RAW_ERROR_ZERO},
@@ -108,7 +116,7 @@ void errorReadingMsgTo(char *logbuf, const char *filename){
 /**
  * Appends logbuf to the log file.
  *
- * @param {char *} logbuf Pointer to the log buffer.
+ * @param[in,out] logbuf Pointer to the log buffer.
  */
 void writeToLog(char *logbuf){
 	struct stat info;
@@ -142,7 +150,7 @@ void writeToLog(char *logbuf){
  * second. These messages can be read and displayed to the
  * command line by showStatusEachSecond().
  *
- * @param {const char *} msg Pointer to the message to be
+ * @param[in] msg Pointer to the message to be
  * concatenated.
  */
 void bufferStatusMsg(const char *msg){
@@ -163,11 +171,13 @@ void bufferStatusMsg(const char *msg){
 
 /**
  * Writes status strings accumulated in a message buffer,
- * g.savebuf, to a tmpfs memory file, displayParams_file,
- * once each second. This file can be displayed in real
- * time by invoking the pps-client program with the -v
- * command line param while the pps-client daemon is
- * running.
+ * g.savebuf, from bufferStateParams() and other sources
+ * to a tmpfs memory file, displayParams_file, once each
+ * second. This file can be displayed in real time by
+ * invoking the pps-client program with the -v command
+ * line flag while the pps-client daemon is running.
+ *
+ * @returns 0 on success, else -1 on error.
  */
 int writeStatusStrings(void){
 
@@ -188,10 +198,10 @@ int writeStatusStrings(void){
 /**
  * Reads a file with error logging.
  *
- * @param {int} fd The file descriptor.
- * @param {char *} buf The buffer to hold the file data.
- * @param {int} sz The number of bytes to read.
- * @param {const char *} filename The filename of the file being read.
+ * @param[in] fd The file descriptor.
+ * @param[out] buf The buffer to hold the file data.
+ * @param[in] sz The number of bytes to read.
+ * @param[in] filename The filename of the file being read.
  *
  * @returns The number of bytes read.
  */
@@ -209,8 +219,8 @@ int read_logerr(int fd, char *buf, int sz, const char *filename){
  * Opens a file with error logging and sets standard
  * file permissions for O_CREAT.
  *
- * @param {const char *} filename The file to open.
- * @param {int} flags The file open flags.
+ * @param[in] filename The file to open.
+ * @param[in] flags The file open flags.
  *
  * @returns The file descriptor.
  */
@@ -232,10 +242,10 @@ int open_logerr(const char* filename, int flags){
  *
  * This function is used by threads in pps-sntp.cpp.
  *
- * @param {const char *} filename File containg a message.
- * @param {char *} logbuf The log file buffer.
+ * @param[in] filename File containg a message.
+ * @param[out] logbuf The log file buffer.
  *
- * @returns {int} Returns 0 on success, else -1;
+ * @returns 0 on success, else -1 on error;
  */
 int writeFileMsgToLogbuf(const char *filename, char *logbuf){
 	struct stat stat_buf;
@@ -277,9 +287,9 @@ int writeFileMsgToLogbuf(const char *filename, char *logbuf){
 /**
  * Writes the message saved in the file to pps-client.log.
  *
- * @param {const char *} filename File containg a message.
+ * @param[in] filename File containg a message.
  *
- * @returns {int} Returns 0 on success, else -1;
+ * @returns 0 on success, else -1 on error;
  */
 int writeFileMsgToLog(const char *filename){
 	return writeFileMsgToLogbuf(filename, g.logbuf);
@@ -385,14 +395,20 @@ int createPIDfile(void){
  * then config_str has a NULL char* in the corresponding
  * location.
  *
- * @param {char **) config_str The string pointers.
- * @param {char *} fbuf The memory for config_str strings.
- * @param {int} size The maximum configuration file size.
+ * @param[out] config_str The string pointers.
+ * @param[out] fbuf The memory for config_str strings.
+ * @param[in] size The maximum configuration file size.
  *
- * @returns If successful returns 0, else -1.
+ * @returns 0 on success, else -1 on error.
  */
 int readConfigFile(char *config_str[], char *fbuf, int size){
 	struct stat stat_buf;
+
+	if (fbuf == NULL){
+		sprintf(g.logbuf, "readConfigFile(): fbuf is NULL.\n");
+		writeToLog(g.logbuf);
+		return -1;
+	}
 
 	int rvs = stat(config_file, &f.configFileStat);
 	if (rvs == -1){
@@ -427,47 +443,68 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 	}
 	close(fd);
 
-	int j = 0;
-	char *pch = strtok(fbuf, "\n");
-	while (pch != NULL){
-		if (pch[0] != '#'){
-			config_str[j] = pch;
-			j += 1;
-		}
-		pch = strtok(NULL, "\n");
-	}
-
+	int nCfgStrs = 0;
 	int i;
 
-	fbuf[0] = 0;
-	for (i = 0; i < j; i++){
-		strcat(fbuf, config_str[i]);
+	char *pToken = strtok(fbuf, "\n");					// Separate tokens at "\n" and space
+
+	for (i = 0; i < 100; i++){
+		if (pToken == NULL){
+			break;
+		}
+		if (strlen(pToken) != 0){						// If not a blank line
+			for (int j = 0; j < 10; j++){				// Remove leading spaces
+				if (pToken[0] == ' '){
+					pToken += 1;
+				}
+			}
+
+			if (pToken[0] != '#'){						// Ignore comment lines
+				config_str[nCfgStrs] = pToken;
+				nCfgStrs += 1;
+			}
+		}
+		pToken = strtok(NULL, "\n");					// Get the next token
+	}
+
+	if (nCfgStrs == 0){
+		return 0;
+	}
+
+	for (i = 0; i < nCfgStrs; i++){						// Compact fbuf to remove string terminators inserted by
+		if (i == 0){									// strtok() so that fbuf can be searched as a single string.
+			strcpy(fbuf, config_str[i]);
+		}
+		else {
+			strcat(fbuf, config_str[i]);
+		}
 		strcat(fbuf, "\n");
 	}
 
-	char **configVal = config_str;				// Use config_str to return pointers
-	char *value;
-	sz = (int)(sizeof(config_str)/sizeof(char*));
-	for (i = 0; i < sz; i++){
+	int nValidCnfgs = sizeof(valid_config) / sizeof(char *);
 
-		char *found = strstr(fbuf, config_str[i]);
+	char **configVal = config_str;						// Use config_str to return pointers to value strings
+	char *value;
+
+	for (i = 0; i < nValidCnfgs; i++){
+
+		char *found = strstr(fbuf, valid_config[i]);
 		if (found != NULL){
-			g.config_select |= 1 << i;			// Set a bit in config_select
+			g.config_select |= 1 << i;					// Set a bit in config_select
 
 			value = strpbrk(found, "=");
 			value += 1;
 
-			configVal[i] = value;				// Point to config_str[i] value in fbuf
-												// The value will be terminated with '\n'.
+			configVal[i] = value;						// Point to config_str[i] value string in fbuf
 		}
 		else {
-			g.config_select &= ~(1 << i);		// Clear a bit in config_select
+			g.config_select &= ~(1 << i);				// Clear a bit in config_select
 			configVal[i] = NULL;
 		}
 	}
 
-	for (i = 0; i < sz; i++){					// Terminate the value strings.
-		if (configVal[i] != NULL){
+	for (i = 0; i < nValidCnfgs; i++){					// Replace the "\n" at the end of each value
+		if (configVal[i] != NULL){						// string with a string terminator.
 			value = strpbrk(configVal[i], "\n");
 			if (value != NULL){
 				*value = 0;
@@ -483,14 +520,14 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
  * to disk and rolls over the accumulating data to a new file every
  * epochInterval days and begins a new distribution file.
  *
- * @param {int *} distrib The int array containing the distribution.
- * @param {int} len The length of the array.
- * @param {int} scaleZero The array index corresponding to distribution zero.
- * @param {int} epochInterval The rollover interval in days.
- * @param {int *} last_epoch The saved count of the previous epoch.
- * @param {const char *} distrib_file The filename of the last completed
+ * @param[in] distrib The int array containing the distribution.
+ * @param[in] len The length of the array.
+ * @param[in] scaleZero The array index corresponding to distribution zero.
+ * @param[in] epochInterval The rollover interval in days.
+ * @param[out] last_epoch The saved count of the previous epoch.
+ * @param[in] distrib_file The filename of the last completed
  * distribution file.
- * @param {const char *} last_distrib_file The filename of the currently
+ * @param[in] last_distrib_file The filename of the currently
  * forming distribution file.
  */
 void writeDistribution(int distrib[], int len, int scaleZero, int epochInterval,
@@ -572,7 +609,7 @@ void writeErrorDistribFile(void){
  * Writes the previously completed list of 10 minutes of recorded
  * time offsets and applied frequency offsets indexed by seq_num.
  *
- * @param {const char *} filename The file to write to.
+ * @param[in] filename The file to write to.
  */
 void writeOffsets(const char *filename){
 	int fd = open_logerr(filename, O_CREAT | O_WRONLY | O_TRUNC);
@@ -595,7 +632,7 @@ void writeOffsets(const char *filename){
  * deviation in each 5 minute interval indexed by the timestamp
  * at each interval.
  *
- * @param {const char *} filename The file to write to.
+ * @param[in] filename The file to write to.
  */
 void writeFrequencyVars(const char *filename){
 	int fd = open_logerr(filename, O_CREAT | O_WRONLY | O_TRUNC);
@@ -617,11 +654,11 @@ void writeFrequencyVars(const char *filename){
  * Tests configuration strings from /etc/pps-client.conf
  * for the "enable" keyword.
  *
- * @param {int} config The configuration identifier value.
- * @param {char **} config_str Array of configuration strings.
+ * @param[in] config The configuration identifier value.
+ * @param[in] config_str Array of configuration strings.
  *
- * @returns {bool} Returns "true" if the "enable" keyword is
- * detected, else "false".
+ * @returns "true" if the "enable" keyword is detected,
+ * else "false".
  */
 bool isEnabled(int config, char *config_str[]){
 	int i = round(log2(config));
@@ -639,16 +676,16 @@ bool isEnabled(int config, char *config_str[]){
  * Tests configuration strings from /etc/pps-client.conf
  * for the "disable" keyword.
  *
- * @param {int} config The configuration identifier value.
- * @param {char **} config_str Array of configuration strings.
+ * @param[in] config_val Configuration identifier value.
+ * @param[in] config_str Array of configuration strings.
  *
- * @returns {bool} Returns "true" if the "disable" keyword is
- * detected, else false.
+ * @returns "true" if the "disable" keyword is detected,
+ * else false.
  */
-bool isDisabled(int config, char *config_str[]){
-	int i = round(log2(config));
+bool isDisabled(int config_val, char *config_str[]){
+	int i = round(log2(config_val));
 
-	if (g.config_select & config){
+	if (g.config_select & config_val){
 		char *val = strstr(config_str[i], "disable");
 		if (val != NULL){
 			return true;
@@ -664,16 +701,16 @@ bool isDisabled(int config, char *config_str[]){
  * value pointer and the presence of a decimal point
  * determining int or double.
  *
- * @param {int} config The configuration identifier value.
- * @param {char **} config_str Array of configuration strings.
- * @param {void *} The returned numeric value.
+ * @param[in] config_val The configuration identifier value.
+ * @param[in] config_str Array of configuration strings.
+ * @param[out] value The returned numeric value as int or double.
  *
- * @returns {bool} Returns "true" if the selected config_str
- * has a numeric value, else "false".
+ * @returns "true" if the selected config_str has a numeric
+ * value, else "false".
  */
-bool configHasValue(int config, char *config_str[], void *value){
-	int i = round(log2(config));
-	if (g.config_select & config){
+bool configHasValue(int config_val, char *config_str[], void *value){
+	int i = round(log2(config_val));
+	if (g.config_select & config_val){
 		char *val = strpbrk(config_str[i], num);
 		if (strpbrk(val, ".") != NULL){
 			sscanf(val, "%lf", (double *)value);
@@ -689,18 +726,18 @@ bool configHasValue(int config, char *config_str[], void *value){
 /**
  * Saves a distribution consisting of an array of doubles.
  *
- * @param {double *} distrib The distribution array.
- * @param {const char *} filename The file to save to.
- * @param {int} len The length of the array.
- * @param {int} arrayZero The array index of distribution value zero.
+ * @param[in] distrib The distribution array.
+ * @param[in] filename The file to save to.
+ * @param[in] len The length of the array.
+ * @param[in] arrayZero The array index of distribution value zero.
  *
- * @returns {bool} Returns "true" on success, else "false".
+ * @returns 0 on success, else -1 on error.
  */
-bool saveDoubleArray(double distrib[], const char *filename, int len, int arrayZero){
+int saveDoubleArray(double distrib[], const char *filename, int len, int arrayZero){
 
 	int fd = open_logerr(filename, O_CREAT | O_WRONLY | O_TRUNC);
 	if (fd == -1){
-		return false;
+		return -1;
 	}
 
 	int fileMaxLen = len * MAX_LINE_LEN * sizeof(char);
@@ -719,7 +756,7 @@ bool saveDoubleArray(double distrib[], const char *filename, int len, int arrayZ
 
 	delete filebuf;
 	close(fd);
-	return true;
+	return 0;
 }
 
 /**
@@ -779,13 +816,9 @@ void processWriteRequest(void){
  * Processes the files and configuration settings specified
  * by the pps-client config file.
  *
- * @param {char **} config_str Array of configuration string
- * pointers.
- *
- * @param {char *} pbuf The buffer containing the configuration
- * strings.
- *
- * @param {int} size The maximum configuration file size.
+ * @param[in] config_str Array of configuration string pointers.
+ * @param[in] pbuf The buffer containing the configuration strings.
+ * @param[in] size The maximum configuration file size.
  */
 void processFiles(char *config_str[], char *pbuf, int size){
 
@@ -835,7 +868,6 @@ void processFiles(char *config_str[], char *pbuf, int size){
 		g.showRemoveNoise = false;
 	}
 
-
 //	double value;
 //	if (configHasValue(SET_GAIN, config_str, &value)){
 //		integralGain1 = value;
@@ -868,7 +900,7 @@ void writeSysDelay(void){
  * Write a timestamp provided as a double to a temporary
  * file each second.
  *
- * @param {double} timestamp The timestamp value.
+ * @param[in] timestamp The timestamp value.
  */
 void writeTimestamp(double timestamp){
 	memset(g.strbuf, 0, STRBUF_SZ);
@@ -885,24 +917,28 @@ void writeTimestamp(double timestamp){
 }
 
 /**
+ * Privides formatting for console printf() strings.
+ *
  * Horizontally left-aligns a number following token, ignoring
  * numeric sign, in a buffer generated by sprintf() by padding
  * the buffer with spaces preceding the number to be aligned and
  * returning the adjusted length of the buffer.
  *
- * @param {char *} token The token string preceding the number
- * to be aligned.
+ * @param[in] token The token string preceding the number to be aligned.
+ * @param[in,out] buf The buffer containing the token.
+ * @param[in] len The initial length of the buffer.
  *
- * @param {char *} buf The buffer containing the token.
- *
- * @param {int} len The initial length of the buffer.
- *
- * @returns {int} Adjusted length of the buffer.
+ * @returns Adjusted length of the buffer.
  */
-static int alignNumbersAfter(const char *token, char *buf, int len){
+int alignNumbersAfter(const char *token, char *buf, int len){
 	int pos = 0;
 
 	char *str = strstr(buf, token);
+	if (str == NULL){
+		sprintf(g.logbuf, "alignNumbersAfter(): token not found. Exiting.\n");
+		writeToLog(g.logbuf);
+		return -1;
+	}
 	str += strlen(token);
 
 	pos = str - buf;
@@ -915,36 +951,45 @@ static int alignNumbersAfter(const char *token, char *buf, int len){
 }
 
 /**
+ * Privides formatting for console printf() strings.
+ *
  * Horizontally aligns token by a fixed number of
  * characters from the end of refToken by padding
  * the buffer with spaces at the end of the number
  * following refToken.
  *
- * @param {char *} refToken The reference token which
+ * @param[in] refToken The reference token which
  * is followed by a number having a variable length.
  *
- * @param {int} offset The number of characters in the
+ * @param[in] offset The number of characters in the
  * adjusted buffer from the end of refToken to the start
- * of token. This offset is larger than the character
- * length of any number that might follow refToken.
+ * of token.
  *
- * @param {char *} token The token to be aligned.
+ * @param[in] token The token to be aligned.
+ * @param[out] buf The buffer containing the tokens.
+ * @param[in] len the initial length of the buffer.
  *
- * @param {char *} buf The buffer containing the tokens.
- *
- * @param {int} len the initial length of the buffer.
- *
- * @returns {int} The adjusted length of the buffer.
+ * @returns The adjusted length of the buffer.
  */
-static int alignTokens(const char *refToken, int offset, const char *token, char *buf, int len){
+int alignTokens(const char *refToken, int offset, const char *token, char *buf, int len){
 
 	int pos1, pos2;
 
 	char *str = strstr(buf, refToken);
+	if (str == NULL){
+		sprintf(g.logbuf, "alignTokens(): refToken not found. Exiting.\n");
+		writeToLog(g.logbuf);
+		return -1;
+	}
 	str += strlen(refToken);
 	pos1 = str - buf;
 
 	str = strstr(buf, token);
+	if (str == NULL){
+		sprintf(g.logbuf, "alignTokens(): token not found. Exiting.\n");
+		writeToLog(g.logbuf);
+		return -1;
+	}
 	pos2 = str - buf;
 
 	while (pos2 < pos1 + offset){
@@ -962,8 +1007,10 @@ static int alignTokens(const char *refToken, int offset, const char *token, char
  * is saved to a tmpfs memory file by writeStatusStrings()
  * along with other relevant messages recorded during the
  * same second.
+ *
+ * @returns 0 on success, else -1 on error.
  */
-void bufferStateParams(void){
+int bufferStateParams(void){
 
 	if (g.interruptLossCount == 0) {
 		const char *timefmt = "%F %H:%M:%S";
@@ -975,33 +1022,52 @@ void bufferStateParams(void){
 		char *printfmt = g.strbuf;
 
 		if (g.sysDelayShift == 0){
-			strcpy(printfmt, "%s.%06d  %d  jitter:");
+			strcpy(printfmt, "%s.%06d  %d  jitter: ");
 		}
 		else {
-			strcpy(printfmt, "%s.%06d  %d *jitter:");
+			strcpy(printfmt, "%s.%06d  %d *jitter: ");
 		}
 
-		strcat(printfmt, "%d freqOffset: %d freqOffset:%lf  avgCorrection:%f  clamp: %d\n");
+		strcat(printfmt, "%d freqOffset: %f avgCorrection: %f  clamp: %d\n");
 
 		sprintf(printStr, printfmt, timeStr, g.pps_t_usec, g.seq_num,
 				g.jitter, g.freqOffset, g.avgCorrection, g.hardLimit);
 
-		int len = strlen(printStr);
-		len = alignNumbersAfter("jitter:", printStr, len);
-		len = alignTokens("jitter:", 4, "freqOffset:", printStr, len);
+		int len = strlen(printStr) + 1;							// strlen + '\0'
+		len = alignNumbersAfter("jitter: ", printStr, len);
+		if (len == -1){
+			return -1;
+		}
+		len = alignTokens("jitter:", 6, "freqOffset:", printStr, len);
+		if (len == -1){
+			return -1;
+		}
 		len = alignNumbersAfter("freqOffset:", printStr, len);
-		len = alignTokens("freqOffset:", 11, "avgCorrection:", printStr, len);
-		len = alignNumbersAfter("avgCorrection:", printStr, len);
-		alignTokens("avgCorrection:", 11, "clamp:", printStr, len);
+		if (len == -1){
+			return -1;
+		}
+		len = alignTokens("freqOffset:", 12, "avgCorrection:", printStr, len);
+		if (len == -1){
+			return -1;
+		}
+		len = alignNumbersAfter("avgCorrection: ", printStr, len);
+		if (len == -1){
+			return -1;
+		}
+		len = alignTokens("avgCorrection:", 12, "clamp:", printStr, len);
+		if (len == -1){
+			return -1;
+		}
 
 		bufferStatusMsg(printStr);
 	}
+	return 0;
 }
 
 /**
  * Restarts NTP with error message handling.
  *
- * @returns Returns 0 on success, else the system errno on failure.
+ * @returns 0 on success, else the system errno on failure.
  */
 int restartNTP(void){
 	sprintf(g.logbuf, "Restarting NTP\n");
@@ -1022,9 +1088,9 @@ int restartNTP(void){
  * backing up /etc/ntp.conf if the backup does
  * not already exist.
  *
- * @param {const char *} fbuf The replacement text.
+ * @param[in] fbuf The replacement text.
  *
- * @returns {int} Returns zero on success, else -1.
+ * @returns 0 on success, else -1 on error.
  */
 int replaceNTPConfig(const char *fbuf){
 	int fd = open_logerr(ntp_config_part, O_CREAT | O_RDWR | O_TRUNC);
@@ -1064,12 +1130,11 @@ int replaceNTPConfig(const char *fbuf){
 }
 
 /**
- * Removes all lines containing "key1 key2" from the
- * text in fbuf.
+ * Removes all lines containing "key1 key2" from the text in fbuf.
  *
- * @param {const char *} key1
- * @param {const char *} key2
- * @param {char *} fbuf The text buffer to process.
+ * @param[in] key1
+ * @param[in] key2
+ * @param[out] fbuf The text buffer to process.
  */
 void removeConfigKeys(const char *key1, const char *key2, char *fbuf){
 
@@ -1115,10 +1180,10 @@ void removeConfigKeys(const char *key1, const char *key2, char *fbuf){
 
 /**
  * Disables NTP control of system time by appending
- * "disable ntp" to the NTP config file and
- * then restarting NTP.
+ * "disable ntp" to the NTP config file and then
+ * restarting NTP.
  *
- * @returns {int} Returns 0 on success, else -1.
+ * @returns 0 on success, else -1 on error.
  */
 int disableNTP(void){
 	struct stat stat_buf;
@@ -1168,7 +1233,7 @@ int disableNTP(void){
  * "disable ntp" from the NTP config file and
  * then restarting NTP.
  *
- * @returns Returns 0 on success, else -1.
+ * @returns 0 on success, else -1 on error.
  */
 int enableNTP(void){
 	int rv = 0;
@@ -1214,10 +1279,10 @@ int enableNTP(void){
  * value is used to load the hardware driver that
  * pps-client requires to load PPS interrupt times.
  *
- * @param {char *} majorPos A string possibly containing
+ * @param[in/out] majorPos A string possibly containing
  * the major number.
  *
- * @returns Returns the major number as a char string if
+ * @returns The major number as a char string if
  * found in the input string, else NULL.
  */
 char *copyMajorTo(char *majorPos){
@@ -1227,8 +1292,8 @@ char *copyMajorTo(char *majorPos){
 	const char *filename = "/run/shm/proc_devices";
 
 	system("cat /proc/devices > /run/shm/proc_devices"); 	// "/proc/devices" can't be handled like
-															// a normal file so we copy it to a file.
-	int fd = open_logerr(filename, O_RDONLY);
+															// a normal file so it is copied to a memory
+	int fd = open_logerr(filename, O_RDONLY);				// file where its is contents can be read.
 	if (fd == -1){
 		return NULL;
 	}
@@ -1277,7 +1342,7 @@ char *copyMajorTo(char *majorPos){
  * is expected to be available in the file:
  * "/lib/modules/'uname -r'/kernel/drivers/misc/pps-client.ko".
  *
- * @returns Returns 0 if successful, else -1.
+ * @returns 0 on success, else -1 on error.
  */
 int driver_load(void){
 
@@ -1316,20 +1381,20 @@ void driver_unload(void){
 }
 
 /**
- * Extracts the sequence number g.seq_num from
- * buf which contains second-by-second params
- * loaded from displayParams_file and returns
- * the value.
+ * Extracts the sequence number g.seq_num from a char string
+ * and returns the value.
  *
- * @returns {int} The sequence number.
+ * @param[in] pbuf The string to search.
+ *
+ * @returns The sequence number.
  */
 int getSeqNum(const char *pbuf){
 
 	char *pSpc, *pNum;
 	int seqNum = 0;
 
-	pSpc = strpbrk((char *)pbuf, space);			// Compiler bug: Fails if pbuf is not cast to (char *).
-													// Looks like strpbrk arg 1 is implemented as (char *) not (const char *).
+	pSpc = strpbrk((char *)pbuf, space);
+
 	pNum = strpbrk(pSpc, num);
 	pSpc = strpbrk(pNum, space);
 	pNum = strpbrk(pSpc, num);
@@ -1388,7 +1453,7 @@ void showStatusEachSecond(void){
 
 		ts2 = setSyncDelay(dispTime, tv1.tv_usec);
 	}
-	printf("Exiting pps-client params display\n");
+	printf("Exiting pps-client status display\n");
 }
 
 /**
@@ -1396,7 +1461,7 @@ void showStatusEachSecond(void){
  * the exit_loop flag. This causes an exit from the
  * showStatusEachSecond() function.
  *
- * @param {int} The signal returned by the system.
+ * @param[in] sig The signal returned by the system.
  */
 void INThandler(int sig){
 	g.exit_loop = true;
@@ -1406,11 +1471,11 @@ void INThandler(int sig){
  * Checks for and reports on missing arguments in a
  * command line request.
  *
- * @param {int} argc
- * @param {char **} argv
- * @param {int} i The number of args.
+ * @param[in] argc System command line arg
+ * @param[in] argv System command line arg
+ * @param[in] i The number of args.
  *
- * @returns Returns "true" if an argument is missing,
+ * @returns "true" if an argument is missing,
  * else "false".
  */
 bool missingArg(int argc, char *argv[], int i){
@@ -1425,18 +1490,18 @@ bool missingArg(int argc, char *argv[], int i){
  * Transmits a data save request to the pps-client daemon via
  * data written to a tmpfs shared memory file.
  *
- * @param {const char *} requestStr The request string.
- * @param {const char *} filename The shared memory file to write to.
+ * @param[in] requestStr The request string.
+ * @param[in] filename The shared memory file to write to.
  *
- * @returns {bool} Returns "true" on success, else false.
+ * @returns 0 on success, else -1 on error.
  */
-bool daemonSaveArray(const char *requestStr, const char *filename){
+int daemonSaveArray(const char *requestStr, const char *filename){
 	char buf[200];
 
 	int fd = open_logerr(arrayData_file, O_CREAT | O_WRONLY | O_TRUNC);
 	if (fd == -1){
 		printf("Error: Open arrayData_file failed.\n");
-		return false;
+		return -1;
 	}
 
 	strcpy(buf, requestStr);
@@ -1449,7 +1514,7 @@ bool daemonSaveArray(const char *requestStr, const char *filename){
 	write(fd, buf, strlen(buf) + 1);
 
 	close(fd);
-	return true;
+	return 0;
 }
 
 /**
@@ -1469,13 +1534,13 @@ void printAcceptedArgs(void){
  * the data to the daemon interface or prints entry errors
  * back to the terminal.
  *
- * @param {int} argc
- * @param {char **} argv
- * @param {const char *} requestStr The request string.
+ * @param[in] argc System command line arg
+ * @param[in] argv System command line arg
+ * @param[in] requestStr The request string.
  *
- * @returns {bool} Returns "true" on success, else "false"
+ * @returns 0 on success, else -1 on error.
  */
-bool parseSaveDataRequest(int argc, char *argv[], const char *requestStr){
+int parseSaveDataRequest(int argc, char *argv[], const char *requestStr){
 
 	int arrayLen = sizeof(arrayData) / sizeof(struct saveFileData);
 
@@ -1488,7 +1553,7 @@ bool parseSaveDataRequest(int argc, char *argv[], const char *requestStr){
 	if (i == arrayLen){
 		printf("Arg \"%s\" not recognized\n", argv[i+1]);
 		printAcceptedArgs();
-		return false;
+		return -1;
 	}
 
 	char *filename = NULL;
@@ -1496,7 +1561,7 @@ bool parseSaveDataRequest(int argc, char *argv[], const char *requestStr){
 		if (strcmp(argv[j], "-f") == 0){
 			if (missingArg(argc, argv, j)){
 				printf("Requires a filename.\n");
-				return false;
+				return -1;
 			}
 			strncpy(g.strbuf, argv[j+1], STRBUF_SZ);
 			g.strbuf[strlen(argv[j+1])] = '\0';
@@ -1516,10 +1581,10 @@ bool parseSaveDataRequest(int argc, char *argv[], const char *requestStr){
 		}
 	}
 
-	if (daemonSaveArray(requestStr, filename) == false){
-		return false;
+	if (daemonSaveArray(requestStr, filename) == -1){
+		return -1;
 	}
-	return true;
+	return 0;
 }
 
 /**
@@ -1536,10 +1601,10 @@ bool parseSaveDataRequest(int argc, char *argv[], const char *requestStr){
  * If verbose flag (-v) is read then also displays status
  * params of the running program to the terminal.
  *
- * @param {int} argc
- * @param {char **} argv
+ * @param[in] argc System command line arg
+ * @param[in] argv System command line arg
  *
- * @returns Returns 0 on success, else as described.
+ * @returns 0 on success, else as described.
  */
 int accessDaemon(int argc, char *argv[]){
 	bool verbose = false;
@@ -1567,7 +1632,7 @@ int accessDaemon(int argc, char *argv[]){
 					return -2;
 				}
 
-				if (parseSaveDataRequest(argc, argv, argv[i+1]) == false){
+				if (parseSaveDataRequest(argc, argv, argv[i+1]) == -1){
 					return -2;
 				}
 				break;
@@ -1581,5 +1646,197 @@ int accessDaemon(int argc, char *argv[]){
 	}
 
 	return 0;
+}
+
+/**
+ * Constructs a distribution of time correction values with
+ * zero offset at middle index so that this distribution can
+ * be saved to disk for future analysis.
+ *
+ * A time correction is the raw time error passed through a hard
+ * limitter to remove jitter and then scaled by the proportional
+ * gain constant.
+ *
+ * @param[in] timeCorrection The time correction value to be
+ * accumulated to a distribution.
+ */
+void buildDistrib(int timeCorrection){
+	int len = ERROR_DISTRIB_LEN - 1;
+	int idx = timeCorrection + len / 2;
+
+	if (idx < 0){
+		idx = 0;
+	}
+	else if (idx > len){
+		idx = len;
+	}
+	g.errorDistrib[idx] += 1;
+}
+
+/**
+ * Constructs a distribution of jitter with zero offset
+ * at middle index so that this distribution may be
+ * saved to disk for future analysis.
+ *
+ * All jitter is collected including delay spikes.
+ *
+ * @param[in] rawError The raw error jitter value
+ * to save to the distribution.
+ */
+void buildJitterDistrib(int rawError){
+	int len = JITTER_DISTRIB_LEN - 1;
+	int idx = rawError + len / 2;
+
+	if (idx < 0){
+		idx = 0;
+	}
+	else if (idx > len){
+		idx = len;
+	}
+	g.jitterDistrib[idx] += 1;
+
+	g.jitterCount += 1;
+	if (g.jitterCount == SECS_PER_MINUTE){
+		g.jitterCount = 0;
+	}
+}
+
+/**
+ * Responds to the SIGTERM signal by starting the exit
+ * sequence in the daemon.
+ *
+ * @param[in] sig The signal from the system.
+ */
+void TERMhandler(int sig){
+	signal(SIGTERM, SIG_IGN);
+	sprintf(g.logbuf,"Recieved SIGTERM\n");
+	writeToLog(g.logbuf);
+	g.exit_requested = true;
+	signal(SIGTERM, TERMhandler);
+}
+
+/**
+ * Catches the SIGHUP signal, causing it to be ignored.
+ *
+ * @param[in] sig The signal from the system.
+ */
+void HUPhandler(int sig){
+	signal(SIGHUP, SIG_IGN);
+}
+
+/**
+ * Accumulates a distribution of interrupt delay.
+ *
+ * @param[in] intrptDelay The interrupt delay
+ * value returned from the pps-client device
+ * driver.
+ */
+void buildInterruptDistrib(int intrptDelay){
+	int len = INTRPT_DISTRIB_LEN - 1;
+	int idx = intrptDelay;
+
+	if (idx > len){
+		idx = len;
+	}
+	if (idx < 0){
+		idx = 0;
+	}
+	g.interruptDistrib[idx] += 1;
+
+	g.delay_idx += 1;
+	if (g.delay_idx >= g.delayPeriod){
+		g.delay_idx = 0;
+	}
+
+	if (g.delayCount < g.delayPeriod){
+		g.delayCount += 1;
+	}
+}
+
+/**
+ * Accumulates a distribution of sysDelay that can
+ * be saved to disk for analysis.
+ *
+ * @param[in] sysDelay The sysDelay value to be
+ * recorded to the distribution.
+ */
+void buildSysDelayDistrib(int sysDelay){
+	int len = INTRPT_DISTRIB_LEN - 1;
+	int idx = sysDelay;
+
+	if (idx > len){
+		idx = len;
+	}
+	g.sysDelayDistrib[idx] += 1;
+}
+
+/**
+ * Accumulates the clock frequency offset over the last 5 minutes
+ * and records offset difference each minute over the previous 5
+ * minute interval. This function is called once each minute.
+ *
+ * The values of offset difference, g.freqOffsetDiff[], are used
+ * to calculate the Allan deviation of the clock frequency offset
+ * which is determined so that it can be saved to disk.
+ * g.freqOffsetSum is used to calculate the average clock frequency
+ * offset in each 5 minute interval so that value can also be saved
+ * to disk.
+ */
+void recordFrequencyVars(void){
+	timeval t;
+	g.freqOffsetSum += g.freqOffset;
+
+	g.freqOffsetDiff[g.intervalCount] = g.freqOffset - g.lastFreqOffset;
+
+	g.lastFreqOffset = g.freqOffset;
+	g.intervalCount += 1;
+
+	if (g.intervalCount >= FIVE_MINUTES){
+		gettimeofday(&t, NULL);
+
+		double norm = 1.0 / (double)FREQDIFF_INTRVL;
+
+		double diffSum = 0.0;
+		for (int i = 0; i < FREQDIFF_INTRVL; i++){
+			diffSum += g.freqOffsetDiff[i] * g.freqOffsetDiff[i];
+		}
+		g.freqAllanDev[g.recIndex] = sqrt(diffSum * norm * 0.5);
+
+		g.timestampRec[g.recIndex] = t.tv_sec;
+
+		g.freqOffsetRec[g.recIndex] = g.freqOffsetSum * norm;
+
+		g.recIndex += 1;
+		if (g.recIndex == NUM_5_MIN_INTERVALS){
+			g.recIndex = 0;
+		}
+
+		g.intervalCount = 0;
+		g.freqOffsetSum = 0.0;
+	}
+}
+
+/**
+ * Each second, records the time correction that was applied to
+ * the system clock and also records the last clock frequency
+ * offset (in parts per million) that was applied to the system
+ * clock.
+ *
+ * These values are recorded so that they may be saved to disk
+ * for analysis.
+ *
+ * @param[in] timeCorrection The time correction value to be
+ * recorded.
+ */
+void recordOffsets(int timeCorrection){
+
+	g.seq_numRec[g.recIndex2] = g.seq_num;
+	g.offsetRec[g.recIndex2] = timeCorrection;
+	g.freqOffsetRec2[g.recIndex2] = g.freqOffset;
+
+	g.recIndex2 += 1;
+	if (g.recIndex2 >= SECS_PER_10_MIN){
+		g.recIndex2 = 0;
+	}
 }
 

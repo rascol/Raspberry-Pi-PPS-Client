@@ -72,7 +72,6 @@ all:
 	rm pkg.tar.gz
 	
 	rm -rf ./tmp
-#	rm -rf ./pkg
 
 clean:
 	rm -rf ./pkg
@@ -80,7 +79,8 @@ clean:
 	
 	cd ./client && $(MAKE) clean
 	cd ./driver && $(MAKE) clean
-	cd ./utils && $(MAKE) clean
+	cd ./utils/interrupt-timer && $(MAKE) clean
+	cd ./utils/pulse-generator && $(MAKE) clean
 		
 	rm ./installer/pps-client-install-hd
 	rm ./installer/pps-client-make-install
