@@ -1,7 +1,7 @@
 # Raspberry Pi PPS Client {#mainpage}
 
 - [Uses](#uses)
-- [Achieving High Timekeeping Accuracy](#achieving-high-timekeeping-accuracy)
+- [Achieving High Accuracy Timekeeping](#achieving-high-accuracy-timekeeping)
   - [Noise](#noise)
 - [The pps-client Controller](#the-pps-client-controller)
   - [Feedback Controller](#feedback-controller)
@@ -9,7 +9,7 @@
   - [Controller Behavior on Startup](#controller-behavior-on-startup)
   - [Performance Under Stress](#performance-under-stress)
   - [Kernel Device Driver](#kernel-device-driver)
-- [Error Handling](#error-handling)
+  - [Error Handling](#error-handling)
 - [Testing](#testing)
   - [Performance Evaluation](#performance-evaluation)
     - [Configuration File](#configuration-file)
@@ -21,7 +21,7 @@
 
 # Uses {#uses}
 
-This project is the reference design for a general technique that provides high precision timekeeping. It was implemented on an ARM processor that is computationally relatively limited. That should illustrate that a similar software solution can be used on typical application processors that have better performance. On Linux systems, the userland code in the project `client` folder, could be used with minor changes on most processors. The GPIO code of the kernel driver in the `driver` folder is unique to the RPi processor but also could easily be rewritten for other processors.
+This project is the reference design for a general technique that provides high accuracy timekeeping. It was implemented on an ARM processor that is relatively slow. That should illustrate that a similar software solution can be used on most application processors. On Linux systems, the userland code in the project `client` folder, could be used with minor changes on other processors. The GPIO code of the kernel driver in the `driver` folder is unique to the RPi processor but also could easily be rewritten for other processors.
 
 Although the goal of high accuracy computer timekeeping, evident from even a cursory search on the internet, has been around since at least the introduction of the Network Time Protocol, general support for high precision timekeeping over the internet is still not available. However, GPS reception is available everywhere and in conjunction with a daemon like pps-client can be used for that purpose now. Indeed, an internet search found GPS repeaters for sale that can bring GPS reception indoors with local coverage up to at least 30 meters.
 
@@ -29,29 +29,29 @@ The ability to time synchronize multiple computers is particularly important for
 
 There are other uses for time synchronized computers: Network administrators would find it useful to have the possibility of making one-way, single-path time measurements of network delays. That becomes possible if the computers at the endpoints are accurately synchronized to GPS time - which is rarely the case at present. Also, certain kinds of scientific applications require accurate synchronization to an external clock. One of interest to amateur astronomers is occultation timings. Another is collection of distributed seismic data in the study of earthquakes or for substratum mapping. There are many others.
 
-# Achieving High Timekeeping Accuracy {#achieving-high-timekeeping-accuracy}
+# Achieving High Accuracy Timekeeping {#achieving-high-accuracy-timekeeping}
 
-The pps-client is implemented as a [proportional-integral (PI) controller](https://en.wikipedia.org/wiki/PID_controller) (a.k.a. a Type 2 Servo) with proportional and integral feedback provided each second but with the value of the integral feedback adjusted once per minute. The PI controller model provides a view of time synchronization as a linear feedback system in which gain coefficients can be adjusted to provide a good compromise among stability, transient response and amount of noise introduced by the error signal. 
+The pps-client is implemented as a [proportional-integral (PI) controller](https://en.wikipedia.org/wiki/PID_controller) (a.k.a. a Type 2 Servo) with proportional and integral feedback provided each second but with the value of the integral feedback adjusted once per minute. The PI controller model provides a view of time synchronization as a linear feedback system in which gain coefficients can be adjusted to provide a good compromise among stability, transient response and amount of noise introduced in the error signal. 
 
-The error signal is the time difference between the one-second interval provided by a PPS signal and the length of the second reported by the system clock. The noise of concern is the second-to-second variation in time reported by the system because of the corresponding variation of system delay in responding to the PPS interrupt. This variable component of the delay, referred to as jitter, is a combination of clock oscillator jitter, PPS signal jitter and  system latency in responding the the interrupt.
+The error signal is the time difference between the one-second interval provided by a PPS signal and the length of the second reported by the system clock. The noise of concern is the second-to-second variation in time reported by the system because of the corresponding variation of system delay in responding to the PPS interrupt. This variable component of the delay, referred to as jitter, is a combination of clock oscillator jitter, PPS signal jitter and system latency in responding the the interrupt.
 
 Because the error signal has jitter and is being used to control synchronization, the jitter component has the effect of a false error signal that causes the time and frequency synchronization to fluctuate as the controller attempts to follow the jitter. The conventional approach to reducing jitter is to low-pass or median filter the error signal. But filtering has the serious disadvantage that reduction of the jitter must be traded off against time delay introduced by the filter. Additional time delay in the feedback loop inevitably degrades controller performance. The pps-client program uses a much better technique that introduces no delay. To reduce the jitter, the time values returned by the system are passed through a hard limiter that clips extreme values before applying them as time corrections.
 
-In fact, the individual time corrections constitute jitter added to a very small time correction. Consequently, each individual correction is mostly jitter and thus is wrong by nearly the amount it deviates from zero. Because of that, the limiting employed in this system clips the maximum time corrections when the controller has fully stabilized to the resolution of the time reported by the system which is 1 microsecond.
+In fact, the individual time corrections constitute jitter added to a very small time correction. Consequently, each individual correction is mostly jitter and thus is wrong by nearly the amount it deviates from zero. Because of that, the limiting employed in this system clips the maximum time corrections when the controller has fully stabilized to the time resolution of the system clock which is 1 microsecond.
 
-It might seem that such extreme limiting would remove the desired error signal along with the noise. But that doesn't happen because the true time error is a slowly varying quasi-stationary (DC) level. Limiting only slices off the dynamic (AC) component of the error signal. The DC component remains. (To see exactly what limiting does see Figures 3, 4, and 5 and the relevant discussion.) If the jitter were not limited, the controller would make the sum of the positive and negative jitter zero. That would be undesirable even after filtering because the noise has significant components in time periods that extend to well beyond one minute. Filtering would remove noise only for time intervals within the cut-off region of the filter. Longer period noise would remain. 
+It might seem that such extreme limiting would remove the desired error signal along with the noise. But that doesn't happen because the true time error is a slowly varying quasi-stationary (DC) level. Limiting only slices off the dynamic (AC) component of the error signal. The DC component remains. (To see what limiting does see Figures 3, 4, and 5 and the relevant discussion.) If the jitter were not limited, the controller would make the sum of the positive and negative jitter zero. That would be undesirable even after filtering because the noise has significant components in time periods that extend to well beyond one minute. Filtering would remove noise only for time intervals within the cut-off region of the filter. Longer period noise would remain. 
 
 On the other hand, instead of zeroing the sum of negative and positive jitter and thereby allowing the difference to be introduced as noise, once the controller has acquired, hard limiting causes the controller to make the number of positive and negative excursions to be equal around zero. That happens because the clipped positive and negative amplitudes are identical (1 microsecond). Thus, making the sum zero makes the count equal. As a result, the varying magnitude of the jitter around the control point is ignored and the reported time delay of the PPS rising edge adjusts to its median value, the delay at which there were as many shorter as longer reported delays over the previous minute.
 
 The only (almost insignificant) disadvantage of hard limiting is that it reduces the amount of time correction that can be applied each each second. But that limitation is easily circumvented by allowing the hard limit level to track the amount of required time correction. This insures that the hard limit level does not prevent larger time corrections when they are necessary.
 
-As described, hard limiting removes the error that would be introduced by the magnitude of jitter around the control point. However noise that is outside the control region of the controller, that is, noise with a period appreciably longer than one minute would remain. The time delay corresponding to PPS interrupt latency contains noise of that kind which appears as a slow variation in the latency which tends to increase with processor activity. This latency is compensated in pps-client by a variable called `sysDelay`. The `sysDelay` value directly determines the control point of the controller because the time of the rollover of the second is determined as the reported time of the interrupt minus the value of `sysDelay`.
+As described, hard limiting removes the error that would be introduced by the magnitude of jitter around the control point. However noise that is outside the control region of the controller, that is, noise with a period appreciably longer than one minute would remain. The time delay corresponding to PPS interrupt latency contains noise of that kind which appears as a slow variation in the latency which changes with processor activity. This latency is compensated in pps-client by a variable called `sysDelay`. The `sysDelay` value directly determines the control point of the controller because the time of the rollover of the second is determined as the reported time of the interrupt minus the value of `sysDelay`.
 
 ## Noise {#noise}
 
-The situation with regard to jitter and latency (noise) in the PPS interrupt response is complicated. The goal is not only to characterize `sysDelay` but also to remove as much noise as possible. In order to characterize `sysDelay`, measurements of interrupt latency were made by timing the triggering of the hardware interrupt from a GPIO pin tied across to the GPIO pin that requested the interrupt.  Those measurements revealed that interrupt latency has four distinct components: (1) a constant component corresponding to the minimum time required to process the interrupt interrupt request, (2) an approximately Gaussian random component introduced by random jitter in the system clock oscillator and in the PPS signal, (3) components consisting of intermittently occurring long sequences of constant latency of unknown origin and (4) intermittently occurring spikes of long duration latency.
+The situation with regard to jitter and latency (noise) in the PPS interrupt response is complicated. It is not only necessary to characterize `sysDelay` but also to remove as much of the noise as possible. In order to characterize `sysDelay`, measurements of interrupt latency were made by timing the triggering of the hardware interrupt from a GPIO pin tied across to the GPIO pin that requested the interrupt.  Those measurements revealed that interrupt latency has four distinct components: (1) a constant component corresponding to the minimum time required to process the interrupt interrupt request, (2) an approximately Gaussian random component introduced by random jitter in the system clock oscillator and in the PPS signal, (3) components consisting of intermittently occurring long sequences of constant latency of unknown origin and (4) intermittently occurring spikes of long duration latency.
 
-The constant and average random components of interrupt latency completely characterize `sysDelay` and are determined by incorporating the interrupt latency measurement into the RPi hardware. The pps-client driver that records the reception time of a PPS interrupt also has the ability to measure the initiation and reception times of a test interrupt triggered across a pair of GPIO pins. The time difference in those is used to determine the PPS interrupt latency for a particular RPi 2 and Linux kernel. The median of the latency measurement then becomes the applied `sysDelay` value. This cancels the median of the actual delay from the PPS rising edge generated by the hard limiting in the controller.
+The constant and average random components of interrupt latency completely characterize `sysDelay` and are determined by incorporating the interrupt latency measurement into the RPi hardware. The pps-client driver that records the reception time of a PPS interrupt also has the ability to measure the initiation and reception times of a test interrupt triggered across a pair of GPIO pins. The time difference in those is used to determine the PPS interrupt latency for a particular RPi 2 and Linux kernel. The median of the latency measurement then becomes the applied `sysDelay` value. This cancels the median of the delay from the PPS rising edge generated by the hard limiting in the controller.
 
 Components (3) and (4) are treated as noise that is to be removed. Component (3) is not always present. Moreover it comes and goes. But when this component is present, it can have a complicated structure. Figure 2 is an example of this.
 
@@ -131,7 +131,7 @@ To get some idea of what the worst case corrections might be, Figure 5 demonstra
 
 ## Kernel Device Driver {#kernel-device-driver}
 
-# Error Handling {#error-handling}
+## Error Handling {#error-handling}
 
 All trapped errors are reported to the log file `/var/log/pps-client.log`. In addition to the usual suspects, pps-client also reports interrupt dropouts. Also because sustained dropouts may indicate a fault with the PPS source, there is a provision to allow hardware enunciation of PPS dropouts. Setting the configuration option `alert-pps-lost=enable` will cause RPi GPIO header pin 15 to go to a logic HIGH on loss of the PPS interrupt and to return to a logic LOW when the interrupt resumes.
 
@@ -191,7 +191,7 @@ Data can be collected while pps-client is running either by setting specific dat
 
 ### Configuration File {#configuration-file}
 
-Data that can be collected using the configuration file is enabled with settings in `/etc/pps-client.conf`. These instruct the pps-client daemon to generate data files, some of which provided the data used to generate the spreadsheet graphs shown on this page and in the project README file. Generating a particular file requires setting a flag. All of these files are disabled by default. But they can be enable or disabled at any time, including while the pps-client daemon is running, by editing and saving the config file. Here are the flags you can use to enable them:
+Data that can be collected using the configuration file is enabled with settings in `/etc/pps-client.conf`. These instruct the pps-client daemon to generate data files, some of which provided the data used to generate the spreadsheet graphs shown on this page and in the project README file. Generating a particular file requires setting a flag. All of these files are disabled by default. But they can be enabled or disabled at any time, including while the pps-client daemon is running, by editing and saving the config file. Here are the flags you can use to enable them:
 
 * `error-distrib=enable` generates `/var/local/pps-error-distrib-forming` which contains the currently forming distribution of time corrections to the system clock. When 24 hours of corrections have been accumulated, these are transferred to `/var/local/pps-error-distrib` which contains the cumulative distribution of time corrections applied to the system clock over 24 hours.
 
@@ -209,39 +209,39 @@ Note that while the turnover interval for some of the files above is given as 24
 
 Some of the data that can be saved by a running pps-client daemon is of the on-demand type. This is enabled by executing pps-client with the `-s` flag while the daemon is running. For example,
 
-    $ pps-client -s "frequency-vars"
+    $ pps-client -s frequency-vars
 
 will return something like this
 
-    pps-client v0.4.1 is running.
+    pps-client v1.1.0 is running.
     Writing to default file: /var/local/pps-frequency-vars
 
 You can write to a different filename or location by using the `-f` flag followed by the 
 desired path and filename:
 
-    $ pps-client -s "frequency-vars" -f "data/freq-vars-01.txt"
+    $ pps-client -s frequency-vars -f data/freq-vars-01.txt
 
-The specified directories must already exist and the syntax requires spaces and quotation marks as shown. You may also include the `-v` flag if you want the status display to start as soon as the requested file is written to disk.
+The specified directories must already exist. You may also include the `-v` flag if you want the status display to start as soon as the requested file is written to disk.
 
 As an aid to remembering what can be requested, omitting the type of data will print a list of what's available. Currently that would result in something like,
 
     $ pps-client -s
-    pps-client v0.4.1 is running.
+    pps-client v1.1.0 is running.
     Error: Missing argument for -s.
-    Accepts these (as a quoted string):
-    "rawError"
-    "intrptError"
-    "frequency-vars"
-    "pps-offsets"
+    Accepts any of these:
+    rawError
+    intrptError
+    frequency-vars
+    pps-offsets
 
 described as,
-* `"rawError"` writes an exponentially decaying distribution of unprocessed PPS jitter values as they enter the controller. Each jitter value that is added to the distribution has a half-life of one hour. So the distribution is almost completely refreshed every four to five hours.
+* `rawError` writes an exponentially decaying distribution of unprocessed PPS jitter values as they enter the controller. Each jitter value that is added to the distribution has a half-life of one hour. So the distribution is almost completely refreshed every four to five hours.
 
-* `"intrptError"` writes an exponentially decaying distribution of unprocessed test interrupt delay values. The description is otherwise the same as for `"rawError"`.
+* `intrptError` writes an exponentially decaying distribution of unprocessed test interrupt delay values. The description is otherwise the same as for `"rawError"`.
 
-* `"frequency-vars"` writes the last 24 hours of clock frequency offset and Allan deviation of one-minute samples in each five-minute interval indexed by the timestamp at each interval.
+* `frequency-vars` writes the last 24 hours of clock frequency offset and Allan deviation of one-minute samples in each five-minute interval indexed by the timestamp at each interval.
 
-* `"pps-offsets"` writes the previous 10 minutes of recorded time offsets and applied frequency offsets indexed by the sequence number (seq_num) each second.
+* `pps-offsets` writes the previous 10 minutes of recorded time offsets and applied frequency offsets indexed by the sequence number (seq_num) each second.
 
 ## Accuracy Validation {#accuracy-validation}
 
@@ -251,7 +251,7 @@ It has been determined that the system clock oscillator synchronized by pps-clie
 
     $ pps-client -s "frequency-vars"
 
-Consequently, any interval measurement of one second or less on the system clock will have an average error smaller than 1 microsecond (on the local system clock). Absolute accuracy will be a few microseconds because of jitter in the RPi clock oscillator. That will, in fact, be true of any time measurement because whole seconds are synchronized to the PPS signal.
+Consequently, any interval measurement of one second or less on the system clock will have an average error smaller than 1 microsecond (on the local system clock). That will, in fact, be true of any time measurement because whole seconds are synchronized to the PPS signal. Absolute accuracy will be a few microseconds because of jitter in the RPi clock oscillator. 
 
 Accuracy validation requires an external source of timing pulses that are connected to the RPi under test (RUT) through its GPIO inputs. These inputs trigger interrupts that are timestamped by the RUT. The interval accuracy of the system clock on an RPi controlled by pps-client made it possible to use an RPi synchronized by pps-client as a time interval generator to test and verify the time accuracy of pps-client running on the RUT.
 
@@ -291,7 +291,7 @@ Under the hood, interrupt-timer compensates for system interrupt delay by readin
 
 ### Testing Accuracy {#testing-accuracy}
 
-Accuracy testing consists of making a large number of independent time interval measurements and then statistically evaluating the results. This removes the effect of second-to-second jitter in the oscillators of the RPi under test (RUT) and one used to provide timing pulses. The pulse-generator utility runs in two-pulse mode on an RPi identified as RPi-1. The interrupt-timer utility is used on the RUT, RPi-2, to time the reception of pulse 2 from pulse-generator while the pulse 1 provides the PPS signal to the RUT. 
+The absolute limit to time accuracy on any processor that uses a conventional integrated circuit crystal oscillator is flicker noise in the oscillator. At the 1 Hz operating frequency of the pps-client controller, flicker noise is apparent as the random component of second-to-second jitter. To minimise the effects of flicker noise, accuracy testing consists of making a large number of independent time interval measurements and then statistically evaluating the results. This reduces the average error in the oscillators of both the RPi under test (RUT) and one used to provide timing pulses. The pulse-generator utility runs in two-pulse mode on an RPi identified as RPi-1. The interrupt-timer utility is used on the RUT, RPi-2, to time the reception of pulse 2 from pulse-generator while the pulse 1 provides the PPS signal to the RUT. 
 
 Validation is successful if the average time of reception of pulse 2 is equal to the time difference between the times of pulse 2 and pulse 1 with sufficiently small error.
 

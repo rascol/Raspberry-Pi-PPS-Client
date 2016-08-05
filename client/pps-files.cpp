@@ -1522,10 +1522,10 @@ int daemonSaveArray(const char *requestStr, const char *filename){
  * args for saving data that are recognized by pps-client.
  */
 void printAcceptedArgs(void){
-	printf("Accepts these (as a quoted string):\n");
+	printf("Accepts any of these:\n");
 	int arrayLen = sizeof(arrayData) / sizeof(struct saveFileData);
 	for (int i = 0; i < arrayLen; i++){
-		printf("\"%s\"\n", arrayData[i].label);
+		printf("%s\n", arrayData[i].label);
 	}
 }
 
