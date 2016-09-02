@@ -1,5 +1,6 @@
-/*
- * pps-files.cpp
+/**
+ * @file pps-files.cpp
+ * @brief The pps-files.cpp file contains functions and structures for saving files intended for pps-client status monitoring and analysis.
  *
  * Copyright (C) 2016  Raymond S. Connell
  *
@@ -18,10 +19,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-/**
- * \file pps-files.cpp The pps-files.cpp file contains functions and structures for saving files intended for pps-client status monitoring and analysis.
- */
-
 #include "../client/pps-client.h"
 extern struct G g;
 
@@ -32,6 +29,8 @@ const char *jitter_distrib_file = "/var/local/pps-jitter-distrib-forming";		//!<
 const char *log_file = "/var/log/pps-client.log";								//!< Stores activity and errors.
 const char *old_log_file = "/var/log/pps-client.old.log";						//!< Stores activity and errors.
 const char *last_intrpt_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
+const char *last_intrpt_jitter_distrib_file = "/var/local/pps-intrpt-jitter-distrib";
+const char *intrpt_jitter_distrib_file = "/var/local/pps-intrpt-jitter-distrib-forming";
 const char *interrupt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
 const char *sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib-forming";	//!< Stores a forming distribution of sysDelay values.
 const char *last_sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib";		//!< Stores a distribution of sysDelay.
@@ -62,6 +61,7 @@ static struct ppsFilesVars {
 	int lastSysDelayFileno;
 	int lastErrorFileno;
 	int lastIntrptFileno;
+	int lastIntrptJitterFileno;
 } f; 														//!< Local file-scope shared variables.
 
 /**
@@ -593,6 +593,20 @@ void writeJitterDistribFile(void){
 
 /**
  * Writes a distribution to disk approximately once a minute
+ * containing 60 additional interrupt jitter samples recorded at
+ * the occurrance of the interrupt measurement. The distribution
+ * is rolled over to a new file every 24 hours.
+ */
+void writeIntrptJitterDistribFile(void){
+	if (g.intrptJitterCount == 0 && g.seq_num > SETTLE_TIME){
+		int scaleZero = INTRPT_DISTRIB_LEN / 2;
+		writeDistribution(g.intrptJitterDistrib, INTRPT_DISTRIB_LEN, scaleZero, 1,
+				&f.lastIntrptJitterFileno, intrpt_jitter_distrib_file, last_intrpt_jitter_distrib_file);
+	}
+}
+
+/**
+ * Writes a distribution to disk approximately once a minute
  * containing 60 additional time correction samples derived
  * from the PPS interrupt. The distribution is rolled over
  * to a new file every 24 hours.
@@ -848,6 +862,7 @@ void processFiles(char *config_str[], char *pbuf, int size){
 
 	if (g.doCalibration && isEnabled(INTERRUPT_DISTRIB, config_str)){
 		writeInterruptDistribFile();
+		writeIntrptJitterDistribFile();
 	}
 
 	if (g.doCalibration && isEnabled(SYSDELAY_DISTRIB, config_str)){
@@ -1650,8 +1665,8 @@ int accessDaemon(int argc, char *argv[]){
 
 /**
  * Constructs a distribution of time correction values with
- * zero offset at middle index so that this distribution can
- * be saved to disk for future analysis.
+ * zero offset at middle index that can be saved to disk for
+ * analysis.
  *
  * A time correction is the raw time error passed through a hard
  * limitter to remove jitter and then scaled by the proportional
@@ -1675,8 +1690,7 @@ void buildDistrib(int timeCorrection){
 
 /**
  * Constructs a distribution of jitter with zero offset
- * at middle index so that this distribution may be
- * saved to disk for future analysis.
+ * at middle index that can be saved to disk for analysis.
  *
  * All jitter is collected including delay spikes.
  *
@@ -1750,6 +1764,35 @@ void buildInterruptDistrib(int intrptDelay){
 
 	if (g.delayCount < g.delayPeriod){
 		g.delayCount += 1;
+	}
+}
+
+/**
+ * Constructs a distribution of interrupt jitter that
+ * can be saved to disk for analysis.
+ *
+ * Interrupt jitter is g.intrptError = g.intrptDelay - g.sysDelay.
+ * This is the random component of g.intrptDelay. All jitter is
+ * collected including delay spikes.
+ *
+ * @param[in] intrptError The interrupt jitter value
+ * to save to the distribution.
+ */
+void buildInterruptJitterDistrib(int intrptError){
+	int len = INTRPT_DISTRIB_LEN - 1;
+	int idx = intrptError + len / 4;
+
+	if (idx < 0){
+		idx = 0;
+	}
+	else if (idx > len){
+		idx = len;
+	}
+	g.intrptJitterDistrib[idx] += 1;
+
+	g.intrptJitterCount += 1;
+	if (g.intrptJitterCount == SECS_PER_MINUTE){
+		g.intrptJitterCount = 0;
 	}
 }
 

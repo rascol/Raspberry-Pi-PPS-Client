@@ -1,27 +1,8 @@
-/*
- * pps-client.cpp - Client for synchronizing the system clock to a GPS PPS source
+/**
+ * @file pps-client.cpp
+ * @brief The pps-client.cpp file contains the principal pps-client controller functions and structures.
  *
- * Created on: Nov 17, 2015
- *
- * Copyright (C) 2016  Raymond S. Connell
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * NOTES:
- *
- * This daemon synchronizes the system clock to a Pulse-Per-Second (PPS)
+ * The pps-client daemon synchronizes the system clock to a Pulse-Per-Second (PPS)
  * source to a resolution of one microsecond with an absolute accuracy
  * of a few microseconds. To obtain this level of performance pps-client
  * provides offset corrections every second and frequency corrections every
@@ -40,10 +21,24 @@
  *
  * The kernel driver is
  * "/lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko"
- */
-
-/**
- * \file pps-client.cpp The pps-client.cpp file contains the principal pps-client controller functions and structures.
+ *
+ * Created on: Nov 17, 2015
+ *
+ * Copyright (C) 2016  Raymond S. Connell
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #include "../client/pps-client.h"
@@ -417,7 +412,7 @@ void setClockToNTPtime(int pps_fd){
  * Else delayShift is unchanged.
  *
  * @param[in] rawError The raw error value to be tested.
- * @param[in] errorDistrib The error distribution to examine.
+ * @param[in] errorDistrib The error distribution to create and examine.
  * @param[in,out] count Counts the number of distribution entries.
  * @param[out] delayShift The amount of delay shift in microsecs.
  * @param[out] minLevelIdx The index of the minimum delay when a delay shift exists.
@@ -973,25 +968,27 @@ void getInterruptDelay(int pps_fd){
 	struct timespec rec, rem;
 
 	rec.tv_sec = 0;
-	rec.tv_nsec = 100000;						// Wait until the PPS interrupt has occurred to
-	nanosleep(&rec, &rem);						// avoid a collision with the calibrate interrupt
+	rec.tv_nsec = 100000;								// Wait until the PPS interrupt has occurred to
+	nanosleep(&rec, &rem);								// avoid a collision with the calibrate interrupt
 
 	int out = 1;
-	write(pps_fd, &out, sizeof(int));			// Set the output pin and disable PPS interrupt reads.
-
-	rv = read(pps_fd, (void *)g.tm, 6 * sizeof(int));
+	write(pps_fd, &out, sizeof(int));					// Set the output pin to generate an interrupt
+														// and disable reads of the PPS interrupt.
+	rv = read(pps_fd, (void *)g.tm, 6 * sizeof(int));	// Read the interrupt write and response times.
 	if (rv > 0){
 
 		g.intrptDelay = g.tm[5] - g.tm[3];
 
+		g.intrptError = g.intrptDelay - g.sysDelay;
+
 		if ((g.config_select & INTERRUPT_DISTRIB) && g.seq_num > SETTLE_TIME){
 			buildInterruptDistrib(g.intrptDelay);
+			buildInterruptJitterDistrib(g.intrptError);
 		}
 		else {
 			g.delayCount = 0;
 		}
 
-		g.intrptError = g.intrptDelay - g.sysDelay;
 
 		int zeroError = removeIntrptNoise(g.intrptError);
 

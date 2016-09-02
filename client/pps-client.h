@@ -1,5 +1,6 @@
-/*
- * pps-client.h
+/**
+ * @file pps-client.h
+ * @brief The pps-client.h file contains includes, defines and structures for pps-client.
  *
  * Copyright (C) 2016  Raymond S. Connell
  *
@@ -240,6 +241,7 @@ struct G {
 
 	int jitter;
 	int jitterCount;
+	int intrptJitterCount;
 
 	int seq_numRec[SECS_PER_10_MIN];
 
@@ -252,6 +254,7 @@ struct G {
 	double intrptErrorDistrib[ERROR_DISTRIB_LEN];	//!< The intrptError distribution calculated in detectDelayPeak().
 
 	int interruptDistrib[INTRPT_DISTRIB_LEN];
+	int intrptJitterDistrib[INTRPT_DISTRIB_LEN];
 	int delayCount;
 	int delayPeriod;
 	int delay_idx;
@@ -269,6 +272,10 @@ struct G {
 	 */
 };													//!< Struct for program-wide global variables showing those important to the controller.
 
+/**
+ * @cond FILES
+ */
+
 int allocNTPServerList(timeCheckParams *);
 time_t getServerTime(const char *, int, char *, char *);
 int allocInitializeSNTPThreads(timeCheckParams *);
@@ -276,9 +283,6 @@ void freeSNTPThreads(timeCheckParams *);
 void makeSNTPTimeQuery(timeCheckParams *);
 int waitForNTPServers(void);
 
-/**
- * @cond FILES
- */
 /**
  * Struct to hold associated data for pps-client command line
  * save data requests with the -s flag.
@@ -324,6 +328,7 @@ void buildJitterDistrib(int);
 void TERMhandler(int);
 void HUPhandler(int);
 void buildInterruptDistrib(int);
+void buildInterruptJitterDistrib(int);
 void buildSysDelayDistrib(int);
 void recordFrequencyVars(void);
 void recordOffsets(int timeCorrection);

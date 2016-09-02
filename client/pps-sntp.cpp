@@ -1,5 +1,6 @@
-/*
- * pps-sntp.cpp
+/**
+ * @file pps-sntp.cpp
+ * @brief The pps-sntp.cpp file contains functions and structures for accessing time updates via SNTP.
  *
  * Copyright (C) 2016  Raymond S. Connell
  *
@@ -16,10 +17,6 @@
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
-/**
- * \file pps-sntp.cpp The pps-sntp.cpp file contains functions and structures for accessing time updates via SNTP.
  */
 
 #include "../client/pps-client.h"
