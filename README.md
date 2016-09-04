@@ -91,10 +91,12 @@ A few different Linux kernels are currently supported and more will be. This is 
 
 Uninstall pps-client on the RPi with:
 ```
+$ sudo pps-client-stop
 $ sudo pps-client-remove
 ```
 # Reinstalling
 ---
+On a reinstall, first uninstall as [described above](#unstalling).
 
 If you want to keep your current pps-client configuration file rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. For example, you could preserve it by doing something like,
 ```

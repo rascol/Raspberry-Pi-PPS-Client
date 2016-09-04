@@ -188,6 +188,7 @@ bool detectDelaySpike(int rawError){
 	bool isDelaySpike = false;
 
 	if (g.hardLimit <= HARD_LIMIT_4 && rawError >= g.noiseLevel){
+
 		if (g.nDelaySpikes < MAX_SPIKES) {
 			g.nDelaySpikes += 1;					// Record unbroken sequence of delay spikes
 
@@ -196,6 +197,9 @@ bool detectDelaySpike(int rawError){
 		else {										// If nDelaySpikes == MAX_SPIKES stop the
 			isDelaySpike = false;					// suspend even if spikes continue.
 		}
+	}
+	else if (g.hardLimit == HARD_LIMIT_1 && rawError <= -4){
+		isDelaySpike = true;						// Remove negative spikes introduced by the PPS source.
 	}
 	else {
 		isDelaySpike = false;
@@ -544,8 +548,8 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
 					sprintf(g.msgbuf, "%s: Delay peak. ", caller);
 					bufferStatusMsg(g.msgbuf);
 				}
-				sprintf(g.msgbuf, "levels: %5.2lf at %d us, %5.2lf at %d us, %5.2lf at %d us, tail: %5.2lf at %d us\n",
-						valMain, idxOfMain, valMin, idxOfValley, valPeak, idxOfPeak, valTail, idxOfTail);
+				sprintf(g.msgbuf, "levels: %5.2lf at %d us, %5.2lf at %d us, %5.2lf at %d us, tail: %5.2lf at %d us g.noiseLevel: %d\n",
+						valMain, idxOfMain, valMin, idxOfValley, valPeak, idxOfPeak, valTail, idxOfTail, g.noiseLevel);
 				bufferStatusMsg(g.msgbuf);
 			}
 		}
@@ -563,9 +567,8 @@ void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
  *
  * Since a displaced control point is likely if a delay
  * peak persists for longer than MAX_SPIKES then, in that
- * case, delay shifting is discontinued until MAX_SPIKES
- * consequtive cycles without a detected delay shift have
- * occurred. That allows enough time for the controller
+ * case, delay shifting is discontinued for 10 minutes.
+ * That allows enough time for the controller
  * to correct the control point.
  *
  * @param[in] rawError The current raw error value.
@@ -584,6 +587,7 @@ int correctDelayPeak(int rawError){
 			g.delayPeakLen += 1;
 			if (g.delayPeakLen == MAX_SPIKES){		// If MAX_SPIKES consequtive delays
 				g.disableDelayShift = true;			// then disable delay shifting.
+				g.disableDelayCount = SECS_PER_10_MIN;
 
 				sprintf(g.logbuf, "Disabled delay shifting.\n");
 				writeToLog(g.logbuf);
@@ -594,18 +598,15 @@ int correctDelayPeak(int rawError){
 		}
 	}
 	else {											// g.disableDelayShift == true
-		if (rawError <= g.delayMinIdx){
-			g.delayPeakLen -= 1;
-			if (g.delayPeakLen == 0){				// If MAX_SPIKES consequtive no delays
-				g.disableDelayShift = false;		// then re-enable delay shifting.
+		if (g.disableDelayCount <= 0){
+			g.disableDelayShift = false;
+			g.delayPeakLen = 0;
 
-				sprintf(g.logbuf, "Re-enabled delay shifting.\n");
-				writeToLog(g.logbuf);
-			}
+			sprintf(g.logbuf, "Re-enabled delay shifting.\n");
+			writeToLog(g.logbuf);
 		}
-		else {
-			g.delayPeakLen = MAX_SPIKES;
-		}
+
+		g.disableDelayCount -= 1;
 	}
 	return rawError;
 }
@@ -765,7 +766,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 
 	adjtimex(&g.t3);									// it can take up to 20 minutes to start pps-client.
 
-	g.isAcquiring = getAcquireState();					// Provides some time to reduce time slew on startup.
+	g.isAcquiring = getAcquireState();					// Provides enough time to reduce time slew on startup.
 	if (g.isAcquiring){
 
 		g.avgCorrection = getAverageCorrection(g.timeCorrection);

@@ -168,7 +168,7 @@ struct G {
 	int sysDelayShift;								//!< Assigned from G.delayShift and subtracted from G.rawError in correctDelayPeak() when a delay shift occurs.
 	int delayPeakLen;								//!< Counts the length of a delay peak that is being corrected in correctDelayPeak().
 	bool disableDelayShift;							//!< Suspends delay shift correction in correctDelayPeak() when G.delayPeakLen exceeds \b MAX_SPIKES.
-
+	int disableDelayCount;
 													//!< Delay shift correction is suspended if a continuous sequence of delay spikes is longer
 													//!< than \b MAX_SPIKES because that indicates that a shift in the control point is required.
 

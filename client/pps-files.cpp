@@ -1436,33 +1436,41 @@ void showStatusEachSecond(void){
 	ts2 = setSyncDelay(dispTime, tv1.tv_usec);
 
 	for (;;){
+
 		if (g.exit_loop){
 			break;
 		}
 		nanosleep(&ts2, NULL);
 
 		int fd = open(displayParams_file, O_RDONLY);
+		if (fd == -1){
+			printf("showStatusEachSecond(): Could not open ");
+			printf(displayParams_file);
+			printf("\n");
+		}
+		else {
+			fstat(fd, &stat_buf);
+			int sz = stat_buf.st_size;
 
-		fstat(fd, &stat_buf);
-		int sz = stat_buf.st_size;
-
-		if (sz >= MSGBUF_SZ){
-			printf("showStatusEachSecond() buffer too small. sz: %d\n", sz);
+			if (sz >= MSGBUF_SZ){
+				printf("showStatusEachSecond() buffer too small. sz: %d\n", sz);
+				close(fd);
+				break;
+			}
+			read(fd, paramsBuf, sz);
 			close(fd);
-			break;
+
+			if (sz > 0){
+				paramsBuf[sz]= '\0';
+
+				seqNum = getSeqNum(paramsBuf);
+
+				if (seqNum != lastSeqNum){
+					printf(paramsBuf);
+				}
+				lastSeqNum = seqNum;
+			}
 		}
-
-		read(fd, paramsBuf, sz);
-		close(fd);
-
-		paramsBuf[sz]= '\0';
-
-		seqNum = getSeqNum(paramsBuf);
-
-		if (seqNum != lastSeqNum){
-			printf(paramsBuf);
-		}
-		lastSeqNum = seqNum;
 
 		gettimeofday(&tv1, NULL);
 
