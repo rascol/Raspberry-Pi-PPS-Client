@@ -999,9 +999,9 @@ void getInterruptDelay(int pps_fd){
 	ssize_t rv;
 	struct timespec rec, rem;
 
-	rec.tv_sec = 0;
-	rec.tv_nsec = 100000;								// Wait until the PPS interrupt has occurred to
-	nanosleep(&rec, &rem);								// avoid a collision with the calibrate interrupt
+//	rec.tv_sec = 0;
+//	rec.tv_nsec = 100000;								// Wait until the PPS interrupt has occurred to
+//	nanosleep(&rec, &rem);								// avoid a collision with the calibrate interrupt.
 
 	int out = 1;
 	write(pps_fd, &out, sizeof(int));					// Set the output pin to generate an interrupt
@@ -1230,16 +1230,14 @@ void waitForPPS(bool verbose, int pps_fd){
 
 			if (! g.interruptLost && ! g.isDelaySpike){
 				processFiles(configVals, pbuf, CONFIG_FILE_SZ);
+
+				if (g.doCalibration && g.hardLimit == HARD_LIMIT_1){
+					getInterruptDelay(pps_fd);
+				}
 			}
+
+			writeStatusStrings();
 		}
-
-		if (g.doCalibration
-				&& g.hardLimit == HARD_LIMIT_1){
-
-			getInterruptDelay(pps_fd);
-		}
-
-		writeStatusStrings();
 
 		g.seconds += 1;
 		if (g.seconds == SECS_PER_DAY){
