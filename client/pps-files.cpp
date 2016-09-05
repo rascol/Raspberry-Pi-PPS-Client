@@ -599,7 +599,7 @@ void writeJitterDistribFile(void){
  */
 void writeIntrptJitterDistribFile(void){
 	if (g.intrptJitterCount == 0 && g.seq_num > SETTLE_TIME){
-		int scaleZero = INTRPT_DISTRIB_LEN / 2;
+		int scaleZero = INTRPT_DISTRIB_LEN / 4;
 		writeDistribution(g.intrptJitterDistrib, INTRPT_DISTRIB_LEN, scaleZero, 1,
 				&f.lastIntrptJitterFileno, intrpt_jitter_distrib_file, last_intrpt_jitter_distrib_file);
 	}

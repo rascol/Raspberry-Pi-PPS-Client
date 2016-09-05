@@ -198,7 +198,7 @@ bool detectDelaySpike(int rawError){
 			isDelaySpike = false;					// suspend even if spikes continue.
 		}
 	}
-	else if (g.hardLimit == HARD_LIMIT_1 && rawError <= -4){
+	else if (g.hardLimit == HARD_LIMIT_1 && rawError <= -g.noiseLevel){
 		isDelaySpike = true;						// Remove negative spikes introduced by the PPS source.
 	}
 	else {
@@ -405,6 +405,33 @@ void setClockToNTPtime(int pps_fd){
 	write(pps_fd, msg, 2 * sizeof(int));
 
 	g.consensisTimeError = 0;
+}
+
+
+
+void buildRawErrorDistrib(int rawError, int *count){
+	int len = ERROR_DISTRIB_LEN - 1;
+
+	int idx = rawError + RAW_ERROR_ZERO;
+	if (idx > len){
+		idx = len;
+	}
+	else if (idx < 0){
+		idx = 0;
+	}
+
+	if (g.hardLimit == HARD_LIMIT_1){
+
+		if (*count > 600 && *count % 60 == 0){						// About once a minute
+
+			for (int i = 0; i < len; i++){							// Scale errorDistrib to allow older
+				errorDistrib[i] *= RAW_ERROR_DECAY;					// values to decay (halflife 1 hour).
+			}
+		}
+		errorDistrib[idx] += 1.0;
+	}
+
+	*count += 1;
 }
 
 /**
@@ -623,13 +650,15 @@ int removeNoise(int rawError){
 
 	int zeroError;
 
-	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), &(g.delayMinIdx), "removeNoise()");
+//	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), &(g.delayMinIdx), "removeNoise()");
+
+	buildRawErrorDistrib(rawError, &(g.ppsCount));
 
 	g.sysDelayShift = 0;
 
-	if (g.fixDelayPeak && g.hardLimit == HARD_LIMIT_1){
-		rawError = correctDelayPeak(rawError);
-	}
+//	if (g.fixDelayPeak && g.hardLimit == HARD_LIMIT_1){
+//		rawError = correctDelayPeak(rawError);
+//	}
 
 	g.jitter = rawError;
 
@@ -891,7 +920,9 @@ int removeIntrptNoise(int intrptError){
 
 	int zeroError;
 
-	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), NULL, NULL, "removeIntrptNoise()");
+//	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), NULL, NULL, "removeIntrptNoise()");
+
+	buildRawErrorDistrib(intrptError, &(g.intrptCount));
 
 	bool isDelaySpike = detectIntrptDelaySpike(intrptError);
 	if (isDelaySpike){
@@ -1050,6 +1081,10 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 
 	bool restart = false;
 
+	struct timeval tv2, tv1;
+
+	gettimeofday(&tv2, NULL);
+
 	ssize_t rv = read(pps_fd, (void *)g.tm, 2 * sizeof(int));
 
 	g.interruptLost = false;
@@ -1068,6 +1103,16 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 		g.t.tv_usec = g.tm[1];
 
 		makeTimeCorrection(g.t, pps_fd);
+
+		gettimeofday(&tv1, NULL);
+		__suseconds_t strt = tv2.tv_usec;
+		__suseconds_t end = tv1.tv_usec;
+		if (strt > 500000){
+			strt = -(1000000 - strt);
+		}
+		int ex_t = end - strt;
+		printf("Execution start: %ld duration: %d\n", strt, ex_t);
+
 
 		if ((! g.isAcquiring && g.seq_num >= SECS_PER_MINUTE)		// If time slew on startup is too large
 				|| (g.isAcquiring && g.hardLimit > HARD_LIMIT_1024	// or if g.avgSlew becomes too large
@@ -1120,6 +1165,7 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 void waitForPPS(bool verbose, int pps_fd){
 	struct timeval tv1;
 	struct timespec ts2;
+
 	char *configVals[MAX_CONFIGS];
 	int timePPS;
 	int rv;
@@ -1147,7 +1193,9 @@ void waitForPPS(bool verbose, int pps_fd){
 	sprintf(g.logbuf, "pps-client v%s is starting ...\n", version);
 	writeToLog(g.logbuf);
 										// Set up a one-second delay loop that stays in synch by
-	timePPS = 0;		    			// continuously re-timing to the roll-over of the second
+	timePPS = -150;		    			// continuously re-timing to before the roll-over of the second.
+										// This allows for a delay of about 50 microseconds coming out
+										// of sleep plus interrupt latencies up to 100 microseconds.
 	gettimeofday(&tv1, NULL);
 	ts2 = setSyncDelay(timePPS, tv1.tv_usec);
 
