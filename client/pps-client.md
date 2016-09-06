@@ -18,7 +18,6 @@
     - [The pulse-generator Utility](#the-pulse-generator-utility)
     - [The interrupt-timer Utility](#the-interrupt-timer-utility)
     - [Testing Accuracy](#testing-accuracy)
-- [PPS Source Errors](#pps-source-errors)
 
 # Uses {#uses}
 
@@ -351,16 +350,5 @@ This test as described above was performed with a pair of RPi processors and RPi
 ![Accuracy Verifying Distribution](client/figures/AccuracyVerifyDistrib.png)
 
 The distribution shows the average recorded pulse time to be about a half microsecond lower than the ideal time of 800,000 microseconds. We also see small pulse distributions on the left and right of the main peak introduced by incompletely removed secondary delay peaks in both the RPi-1 pulse source (the peak to the left) and the RPi-2 UUT (the peak to the right). While all peaks are broadened by the combined flicker noise in the two RPi system clocks, neither of the  secondary peaks are wide enough to affect the average pulse time deduced from the shape of the main peak. Notice from the log plot that pulses were received with a delay as much as 30 usecs because of Linux system interrupt latency.
-
-# PPS Source Errors {#pps-source-errors}
-
-Excessively noisy performance observed in the "jitter" field of the status printout (`pps-client -v`) can be the result of delayed edges in the PPS signal from the GPS receiver. When this is the case, negative jitter samples that are not the result of random noise will be visible to the left of the main jitter peak as in Figure 7. This happens because when a PPS edge is received later than the median delay, the difference between the edge arrival time and the sysDelay constant is negative. For an example of how the left side of this distribution should appear, see Figure 3 in the README file.
-
-![Bad PPS Signal](client/figures/pps-jitter-distrib-bad-gps.png)
-
-Figure 7 is a jitter distribution of PPS delay relative to the `sysDelay` value and captured over a periood of 24 hours in the file `/var/local/pps-jitter-distrib` when `jitter-distrib=enable` was set in `/etc/pps-client.conf`.
-
-Although the PPS source is generating bad edges, the rate at which they are occurring (about 1 in 30) is not servere enough to affect time synchronization. The controller is quite tolerant of jitter including jitter introduced by the PPS source. Whether to use a GPS receiver generating errors at this level is entirely a judgment call.
-
 
 

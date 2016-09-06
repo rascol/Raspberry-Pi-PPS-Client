@@ -316,14 +316,16 @@ start:
 		return 1;
 	}
 
-	pulseStart1 = g.pulseTime1 - 125;
-
+	pulseStart1 = g.pulseTime1 - 175;					// This will start the driver about 125 microsecs ahead of the
+														// pulse write time thus allowing about 50 usec coming out of sleep
+														// plus 125 usecs of system response latency. A spin loop in the
+														// driver will chew up the excess time until the write at g.pulseTime1.
 	if (g.pulseTime2 > g.pulseTime1){
-		pulseStart2 = g.pulseTime2 - 125;
+		pulseStart2 = g.pulseTime2 - 175;				// Same for pulseStart2.
 	}
 
 	gettimeofday(&tv1, NULL);
-	ts2 = setSyncDelay(10000, tv1.tv_usec);				// Read the pps-assert value at 10 msec into the second
+	ts2 = setSyncDelay(1000, tv1.tv_usec);				// Sleep until about 1 msec into the second
 
 	for (;;){
 		nanosleep(&ts2, NULL);
@@ -345,7 +347,7 @@ start:
 			pulseEnd1 = readData[1];
 		}
 
-		if (g.pulseTime2 > g.pulseTime1){				// If true, generate a second pulse.
+		if (g.pulseTime2 > g.pulseTime1){				// If there is a pulseTime2, generate a second pulse.
 
 			gettimeofday(&tv1, NULL);
 			ts2.tv_nsec = (pulseStart2 - tv1.tv_usec) * 1000;
@@ -381,7 +383,7 @@ start:
 		g.badRead = false;
 
 		gettimeofday(&tv1, NULL);
-		ts2 = setSyncDelay(10000, tv1.tv_usec);			// Read the pps-assert value at 10 msec into the second
+		ts2 = setSyncDelay(1000, tv1.tv_usec);			// Sleep until about 1 msec into the second
 	}
 
 	close(fd);											// Close the pulse-generator device driver.

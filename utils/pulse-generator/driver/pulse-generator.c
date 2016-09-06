@@ -170,7 +170,7 @@ void generate_pulse(int timeout, int *gpio_out)
 }
 
 /**
- * Asserts up to two 50 usec pulses at the fractional second
+ * Asserts up to two 10 usec pulses at the fractional second
  * times requested by buf as a pair of integers. The count
  * value must be 2 * sizeof(int).
  */

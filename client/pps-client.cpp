@@ -409,7 +409,7 @@ void setClockToNTPtime(int pps_fd){
 
 
 
-void buildRawErrorDistrib(int rawError, int *count){
+void buildRawErrorDistrib(int rawError, double errorDistrib[], unsigned int *count){
 	int len = ERROR_DISTRIB_LEN - 1;
 
 	int idx = rawError + RAW_ERROR_ZERO;
@@ -639,8 +639,8 @@ int correctDelayPeak(int rawError){
 }
 
 /**
- * Removes delay peaks, spikes and jitter from rawError
- * and returns the resulting clamped zeroError.
+ * Removes spikes and jitter from rawError and
+ * returns the resulting clamped zeroError.
  *
  * @param[in] rawError The raw error value to be processed.
  *
@@ -652,7 +652,7 @@ int removeNoise(int rawError){
 
 //	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), &(g.delayMinIdx), "removeNoise()");
 
-	buildRawErrorDistrib(rawError, &(g.ppsCount));
+	buildRawErrorDistrib(rawError, g.rawErrorDistrib, &(g.ppsCount));
 
 	g.sysDelayShift = 0;
 
@@ -922,7 +922,7 @@ int removeIntrptNoise(int intrptError){
 
 //	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), NULL, NULL, "removeIntrptNoise()");
 
-	buildRawErrorDistrib(intrptError, &(g.intrptCount));
+	buildRawErrorDistrib(intrptError, g.intrptErrorDistrib, &(g.intrptCount));
 
 	bool isDelaySpike = detectIntrptDelaySpike(intrptError);
 	if (isDelaySpike){
@@ -997,11 +997,6 @@ struct timespec setSyncDelay(int timeAt, int fracSec){
  */
 void getInterruptDelay(int pps_fd){
 	ssize_t rv;
-	struct timespec rec, rem;
-
-//	rec.tv_sec = 0;
-//	rec.tv_nsec = 100000;								// Wait until the PPS interrupt has occurred to
-//	nanosleep(&rec, &rem);								// avoid a collision with the calibrate interrupt.
 
 	int out = 1;
 	write(pps_fd, &out, sizeof(int));					// Set the output pin to generate an interrupt
@@ -1027,7 +1022,9 @@ void getInterruptDelay(int pps_fd){
 		g.delayMedian += (double)zeroError * INV_DELAY_SAMPLES_PER_MIN;
 		g.sysDelay = (int)round(g.delayMedian);
 
-		buildSysDelayDistrib(g.sysDelay);
+		if (g.activeCount > SETTLE_TIME){
+			buildSysDelayDistrib(g.sysDelay);
+		}
 
 		if (g.activeCount % SHOW_INTRPT_DATA_INTVL == 0 && g.activeCount != g.lastActiveCount){
 			g.lastActiveCount = g.activeCount;

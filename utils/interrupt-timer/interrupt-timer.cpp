@@ -570,8 +570,6 @@ start:
 		}
 	}
 
-//	remove(pulse_verify_file);
-
 	printf(version);
 	printf("\n");
 
@@ -590,7 +588,7 @@ start:
 			if (rv == -1){
 				return 1;
 			}
-			tm[1] -= sysDelay;								// time microseconds corrected for system interrupt sysDelay
+			tm[1] -= sysDelay;								// Time in microseconds corrected for system interrupt sysDelay
 			if (tm[1] < 0){									// If negative after correction, fix the time.
 				tm[1] = 1000000 + tm[1];
 				tm[0] -= 1;

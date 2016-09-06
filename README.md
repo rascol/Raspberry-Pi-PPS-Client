@@ -30,7 +30,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides synchronization precision of 1 microsecond and an average timekeeping accuracy of 1 microsecond exclusive of timing errors introduced by clock jitter and Linux OS latency. This is demonstrated by the data shown below.
+The pps-client daemon provides synchronization precision of 1 microsecond and an average timekeeping accuracy of 1 microsecond. This is demonstrated by the data shown below.
 
 The data was captured over a 24 hour period from a Raspberry Pi 2 running Raspian with a 4.4.14-v7+ Linux kernel. Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
@@ -42,9 +42,9 @@ Although the clock frequency was free to drift between each 1 minute correction,
 
 <center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
 
-The combination of time slew adjustments never exceeding 1 microsecond each second and time drift never exceeding about 100 nanoseconds each second demonstrates a timekeeping control precision of 1 microsecond over this 24 hour period. Average absolute accuracy is about the same.
+The combination of time slew adjustments never exceeding 1 microsecond each second and time drift never exceeding about 100 nanoseconds each second demonstrates a timekeeping control precision of 1 microsecond over this 24 hour period. Testing has determined that average absolute accuracy is also within 1 microsecond.
 
-But there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [](#practical-limits-to-time-measurement).
+However, there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [](#practical-limits-to-time-measurement).
 
 For a detailed description of the pps-client controller and accuracy testing run Doxygen to generate the documentation or visit the [PPS-Client-Pages](https://rascol.github.io/Raspberry-Pi-PPS-Client) website.
 
