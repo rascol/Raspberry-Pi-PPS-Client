@@ -315,7 +315,7 @@ ssize_t pps_i_write (struct file *filp, const char __user *buf, size_t count, lo
 		tv.tv_sec = 0;
 		tv.tv_usec = 0;
 
-		while (tv.tv_usec < 100){		// Spin to 100 microseconds before
+		while (tv.tv_usec < 300){		// Spin to 300 microseconds before
 			do_gettimeofday(&tv);		// writing the output pin.
 		}
 

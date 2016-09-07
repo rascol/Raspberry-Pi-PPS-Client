@@ -998,6 +998,11 @@ struct timespec setSyncDelay(int timeAt, int fracSec){
 void getInterruptDelay(int pps_fd){
 	ssize_t rv;
 
+	struct timespec ts, ts2;
+	ts.tv_sec = 0;
+	ts.tv_nsec = 190000;
+	nanosleep(&ts, &ts2);					// Sleep to about 200 usecs;
+
 	int out = 1;
 	write(pps_fd, &out, sizeof(int));					// Set the output pin to generate an interrupt
 														// and disable reads of the PPS interrupt.
