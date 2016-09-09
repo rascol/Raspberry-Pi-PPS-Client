@@ -76,7 +76,6 @@ const char *valid_config[] = {
 		"interrupt-distrib",
 		"sysdelay-distrib",
 		"exit-lost-pps",
-		"fix-delay-peak",
 		"show-remove-noise"
 };
 
@@ -585,7 +584,7 @@ void writeSysdelayDistribFile(void){
  */
 void writeJitterDistribFile(void){
 	if (g.jitterCount == 0 && g.seq_num > SETTLE_TIME){
-		int scaleZero = JITTER_DISTRIB_LEN / 2;
+		int scaleZero = JITTER_DISTRIB_LEN / 6;
 		writeDistribution(g.jitterDistrib, JITTER_DISTRIB_LEN, scaleZero, 1,
 				&f.lastJitterFileno, jitter_distrib_file, last_jitter_distrib_file);
 	}
@@ -599,7 +598,7 @@ void writeJitterDistribFile(void){
  */
 void writeIntrptJitterDistribFile(void){
 	if (g.intrptJitterCount == 0 && g.seq_num > SETTLE_TIME){
-		int scaleZero = INTRPT_DISTRIB_LEN / 4;
+		int scaleZero = INTRPT_DISTRIB_LEN / 6;
 		writeDistribution(g.intrptJitterDistrib, INTRPT_DISTRIB_LEN, scaleZero, 1,
 				&f.lastIntrptJitterFileno, intrpt_jitter_distrib_file, last_intrpt_jitter_distrib_file);
 	}
@@ -613,7 +612,7 @@ void writeIntrptJitterDistribFile(void){
  */
 void writeErrorDistribFile(void){
 	if (g.correctionFifo_idx == 0){
-		int scaleZero = ERROR_DISTRIB_LEN / 2;
+		int scaleZero = ERROR_DISTRIB_LEN / 6;
 		writeDistribution(g.errorDistrib, ERROR_DISTRIB_LEN, scaleZero,
 				1, &f.lastErrorFileno, distrib_file, last_distrib_file);
 	}
@@ -867,13 +866,6 @@ void processFiles(char *config_str[], char *pbuf, int size){
 
 	if (g.doCalibration && isEnabled(SYSDELAY_DISTRIB, config_str)){
 		writeSysdelayDistribFile();
-	}
-
-	if (isEnabled(FIX_DELAY_PEAK, config_str)){
-		g.fixDelayPeak = true;
-	}
-	else if (isDisabled(FIX_DELAY_PEAK, config_str)){
-		g.fixDelayPeak = false;
 	}
 
 	if (isEnabled(SHOW_REMOVE_NOISE, config_str)){
@@ -1685,7 +1677,7 @@ int accessDaemon(int argc, char *argv[]){
  */
 void buildDistrib(int timeCorrection){
 	int len = ERROR_DISTRIB_LEN - 1;
-	int idx = timeCorrection + len / 2;
+	int idx = timeCorrection + len / 6;
 
 	if (idx < 0){
 		idx = 0;
@@ -1707,7 +1699,7 @@ void buildDistrib(int timeCorrection){
  */
 void buildJitterDistrib(int rawError){
 	int len = JITTER_DISTRIB_LEN - 1;
-	int idx = rawError + len / 2;
+	int idx = rawError + len / 6;
 
 	if (idx < 0){
 		idx = 0;
@@ -1788,7 +1780,7 @@ void buildInterruptDistrib(int intrptDelay){
  */
 void buildInterruptJitterDistrib(int intrptError){
 	int len = INTRPT_DISTRIB_LEN - 1;
-	int idx = intrptError + len / 4;
+	int idx = intrptError + len / 6;
 
 	if (idx < 0){
 		idx = 0;

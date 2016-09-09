@@ -92,9 +92,9 @@
 #define SNTP_MSG_SZ 110
 #define CONFIG_FILE_SZ 10000
 
-#define ERROR_DISTRIB_LEN 101
-#define JITTER_DISTRIB_LEN 201
-#define INTRPT_DISTRIB_LEN 51
+#define ERROR_DISTRIB_LEN 121
+#define JITTER_DISTRIB_LEN 121
+#define INTRPT_DISTRIB_LEN 121
 
 #define HARD_LIMIT_NONE 32768
 #define HARD_LIMIT_1024 1024
@@ -114,8 +114,7 @@
 #define INTERRUPT_DISTRIB 16
 #define SYSDELAY_DISTRIB 32
 #define EXIT_LOST_PPS 64
-#define FIX_DELAY_PEAK 128
-#define SHOW_REMOVE_NOISE 256
+#define SHOW_REMOVE_NOISE 128
 
 /*
  * Struct for passing arguments to and from threads

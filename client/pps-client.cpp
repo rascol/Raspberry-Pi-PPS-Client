@@ -407,8 +407,15 @@ void setClockToNTPtime(int pps_fd){
 	g.consensisTimeError = 0;
 }
 
-
-
+/**
+ * Constructs an exponentially decaying distribution
+ * of rawError with a halflife on indivdual samples
+ * of 1 hour.
+ *
+ * @param[in] rawError The distribution values.
+ * @param[out] errorDistrib The distribution being constructed.
+ * @param[in/out] count The count of distribution samples.
+ */
 void buildRawErrorDistrib(int rawError, double errorDistrib[], unsigned int *count){
 	int len = ERROR_DISTRIB_LEN - 1;
 
@@ -435,210 +442,6 @@ void buildRawErrorDistrib(int rawError, double errorDistrib[], unsigned int *cou
 }
 
 /**
- * Detects the presence of a delay peak in rawError by
- * examining its error distribution.
- *
- * If a delay peak is detected and does not exceed MAX_PEAK_DIFF
- * then the offset of the delay peak is returned in delayShift.
- * Else delayShift is unchanged.
- *
- * @param[in] rawError The raw error value to be tested.
- * @param[in] errorDistrib The error distribution to create and examine.
- * @param[in,out] count Counts the number of distribution entries.
- * @param[out] delayShift The amount of delay shift in microsecs.
- * @param[out] minLevelIdx The index of the minimum delay when a delay shift exists.
- * @param[in] caller The string name of the function calling this
- * one which is used for status messages.
- */
-void detectDelayPeak(int rawError, double errorDistrib[], unsigned int *count,
-		int *delayShift, int* minLevelIdx, const char *caller){
-
-	int len = ERROR_DISTRIB_LEN - 1;
-	int shift = 0;
-
-	int idx = rawError + RAW_ERROR_ZERO;
-	if (idx > len){
-		idx = len;
-	}
-	else if (idx < 0){
-		idx = 0;
-	}
-
-	if (g.hardLimit == HARD_LIMIT_1){
-
-		if (*count > 600 && *count % 60 == 0){						// About once a minute
-			int idxOfMain = 0;
-			int idxOfPeak = 0;
-			int idxOfValley = 0;
-			int idxOfTail = 0;
-			int idxMax = 0;
-			double valMain = 0.0;
-			double valPeak = 0.0;
-			double peakTail = 0.0;
-			double valMin = NAN;
-			double peakRatio = 0.0;
-			double valleyRatio = 0.0;
-			double valTail = NAN;
-			int diffPeakToValley = 0;
-
-			for (int i = 0; i < g.noiseLevel + RAW_ERROR_ZERO; i++){
-				if (errorDistrib[i] > valMain){						// Get the main peak
-					valMain = errorDistrib[i];
-					idxOfMain = i;
-				}
-			}
-			for (int i = 0; i < len; i++){
-				if (i > g.noiseLevel + RAW_ERROR_ZERO) {			// Get possible peak value beyond g.noiseLevel.
-					if (errorDistrib[i] > valPeak){
-						valPeak = errorDistrib[i];
-						idxOfPeak = i;
-					}
-				}
-			}
-
-			peakRatio = valPeak / valMain;
-
-			if (peakRatio > MIN_PEAK_RATIO){
-				peakTail = 0.05 * valPeak;
-
-				idxMax = idxOfPeak + MAX_PEAK_TO_TAIL_DELAY + 1;
-				if (idxMax > len){
-					idxMax = len;
-				}
-
-				idxOfTail = idxMax - 1;
-				valTail = errorDistrib[idxOfTail];
-
-				for (int i = idxOfPeak; i < idxMax; i++){
-					if (errorDistrib[i] < peakTail){
-						idxOfTail = i;
-						valTail = errorDistrib[i];
-						break;
-					}
-				}
-
-				valMin = 1e6;
-				for (int i = idxOfMain; i < idxOfPeak; i++){		// Look between Main and the possible peak
-					if (errorDistrib[i] < valMin){					// for a valley.
-						valMin = errorDistrib[i];
-						idxOfValley = i;
-					}
-				}
-
-				valleyRatio = valMin / valPeak;
-				diffPeakToValley = idxOfPeak - idxOfValley;
-
-				if (valleyRatio < MAX_VALLEY_RATIO &&				// If possible, choose a symmetric tail for valley
-						diffPeakToValley > MAX_PEAK_TO_TAIL_DELAY){
-
-					idxOfValley = idxOfPeak - (idxOfTail - idxOfPeak);
-				}
-			}
-
-			for (int i = 0; i < len; i++){							// Scale errorDistrib to allow older
-				errorDistrib[i] *= RAW_ERROR_DECAY;					// values to decay (halflife 1 hour).
-			}
-
-			shift = 0;
-
-			idxOfMain -= RAW_ERROR_ZERO;
-			idxOfPeak -= RAW_ERROR_ZERO;
-
-			if (idxOfValley != 0){
-				idxOfValley -= RAW_ERROR_ZERO;
-			}
-
-			if (idxOfTail != 0){
-				idxOfTail -= RAW_ERROR_ZERO;
-			}
-
-			if (valPeak > 0.0 &&
-					peakRatio > MIN_PEAK_RATIO &&					// If the peak is sufficiently large and
-					valleyRatio < MAX_VALLEY_RATIO &&				// if a valley is verified and
-					idxOfPeak < MAX_PEAK_DELAY){					// the peak is not too far from zero
-				shift = idxOfPeak;
-
-				if (delayShift != NULL){
-					*delayShift = shift;							// then set delayShift to the relative peak index.
-				}
-				if (minLevelIdx != NULL){
-					*minLevelIdx = idxOfValley;
-				}
-			}
-
-			if (g.showRemoveNoise){
-				if (shift == 0){
-					sprintf(g.msgbuf, "%s: No delay peak. ", caller);
-					bufferStatusMsg(g.msgbuf);
-				}
-				else {
-					sprintf(g.msgbuf, "%s: Delay peak. ", caller);
-					bufferStatusMsg(g.msgbuf);
-				}
-				sprintf(g.msgbuf, "levels: %5.2lf at %d us, %5.2lf at %d us, %5.2lf at %d us, tail: %5.2lf at %d us g.noiseLevel: %d\n",
-						valMain, idxOfMain, valMin, idxOfValley, valPeak, idxOfPeak, valTail, idxOfTail, g.noiseLevel);
-				bufferStatusMsg(g.msgbuf);
-			}
-		}
-
-		errorDistrib[idx] += 1.0;
-	}
-
-	*count += 1;
-}
-
-/**
- * Corrects a delay peak in raw error, if detected, by
- * setting G.sysDelayShift to the detected G.delayShift
- * value.
- *
- * Since a displaced control point is likely if a delay
- * peak persists for longer than MAX_SPIKES then, in that
- * case, delay shifting is discontinued for 10 minutes.
- * That allows enough time for the controller
- * to correct the control point.
- *
- * @param[in] rawError The current raw error value.
- *
- * @returns The rawError value possibly modified
- * to remove a delay shift.
- */
-int correctDelayPeak(int rawError){
-	if (! g.disableDelayShift){
-
-		if (rawError > g.delayMinIdx){
-			g.sysDelayShift = g.delayShift;
-
-			rawError -= g.sysDelayShift;
-
-			g.delayPeakLen += 1;
-			if (g.delayPeakLen == MAX_SPIKES){		// If MAX_SPIKES consequtive delays
-				g.disableDelayShift = true;			// then disable delay shifting.
-				g.disableDelayCount = SECS_PER_10_MIN;
-
-				sprintf(g.logbuf, "Disabled delay shifting.\n");
-				writeToLog(g.logbuf);
-			}
-		}
-		else {
-			g.delayPeakLen = 0;
-		}
-	}
-	else {											// g.disableDelayShift == true
-		if (g.disableDelayCount <= 0){
-			g.disableDelayShift = false;
-			g.delayPeakLen = 0;
-
-			sprintf(g.logbuf, "Re-enabled delay shifting.\n");
-			writeToLog(g.logbuf);
-		}
-
-		g.disableDelayCount -= 1;
-	}
-	return rawError;
-}
-
-/**
  * Removes spikes and jitter from rawError and
  * returns the resulting clamped zeroError.
  *
@@ -650,15 +453,9 @@ int removeNoise(int rawError){
 
 	int zeroError;
 
-//	detectDelayPeak(rawError, g.rawErrorDistrib, &(g.ppsCount), &(g.delayShift), &(g.delayMinIdx), "removeNoise()");
-
 	buildRawErrorDistrib(rawError, g.rawErrorDistrib, &(g.ppsCount));
 
 	g.sysDelayShift = 0;
-
-//	if (g.fixDelayPeak && g.hardLimit == HARD_LIMIT_1){
-//		rawError = correctDelayPeak(rawError);
-//	}
 
 	g.jitter = rawError;
 
@@ -919,8 +716,6 @@ bool detectIntrptDelaySpike(int intrptError){
 int removeIntrptNoise(int intrptError){
 
 	int zeroError;
-
-//	detectDelayPeak(intrptError, g.intrptErrorDistrib, &(g.intrptCount), NULL, NULL, "removeIntrptNoise()");
 
 	buildRawErrorDistrib(intrptError, g.intrptErrorDistrib, &(g.intrptCount));
 
