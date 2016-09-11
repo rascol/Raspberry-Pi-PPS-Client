@@ -51,7 +51,7 @@
 #define INV_GAIN_0 4
 #define INTEGRAL_GAIN 0.63212
 #define SHOW_INTRPT_DATA_INTVL 6
-#define CALIBRATE_PERIOD SECS_PER_MINUTE
+//#define CALIBRATE_PERIOD SECS_PER_MINUTE
 #define INV_DELAY_SAMPLES_PER_MIN (1.0 / (double)SECS_PER_MINUTE)
 #define FREQDIFF_INTRVL 5
 #define INTRPT_MOST_DECAY_RATE 0.975
@@ -234,13 +234,9 @@ struct G {
 
 	unsigned int config_select;
 
-	int seconds;
-	int days;
 	int intervalCount;
 
 	int jitter;
-	int jitterCount;
-	int intrptJitterCount;
 
 	int seq_numRec[SECS_PER_10_MIN];
 
@@ -253,14 +249,17 @@ struct G {
 	double intrptErrorDistrib[ERROR_DISTRIB_LEN];	//!< The intrptError distribution calculated in detectDelayPeak().
 
 	int interruptDistrib[INTRPT_DISTRIB_LEN];
-	int intrptJitterDistrib[INTRPT_DISTRIB_LEN];
-	int delayCount;
-	int delayPeriod;
-	int delay_idx;
+	int interruptCount;
 
 	int sysDelayDistrib[INTRPT_DISTRIB_LEN];
+	int sysDelayCount;
+
 	int jitterDistrib[JITTER_DISTRIB_LEN];
+	int jitterCount;
+
 	int errorDistrib[ERROR_DISTRIB_LEN];
+	int errorCount;
+
 	double freqAllanDev[NUM_5_MIN_INTERVALS];
 	double freqOffsetRec[NUM_5_MIN_INTERVALS];
 	double freqOffsetRec2[SECS_PER_10_MIN];
@@ -322,7 +321,7 @@ struct timespec setSyncDelay(int, int);
 int accessDaemon(int argc, char *argv[]);
 int driver_load(void);
 void driver_unload(void);
-void buildDistrib(int);
+void buildErrorDistrib(int);
 void buildJitterDistrib(int);
 void TERMhandler(int);
 void HUPhandler(int);

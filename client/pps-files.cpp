@@ -29,8 +29,6 @@ const char *jitter_distrib_file = "/var/local/pps-jitter-distrib-forming";		//!<
 const char *log_file = "/var/log/pps-client.log";								//!< Stores activity and errors.
 const char *old_log_file = "/var/log/pps-client.old.log";						//!< Stores activity and errors.
 const char *last_intrpt_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
-const char *last_intrpt_jitter_distrib_file = "/var/local/pps-intrpt-jitter-distrib";
-const char *intrpt_jitter_distrib_file = "/var/local/pps-intrpt-jitter-distrib-forming";
 const char *interrupt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
 const char *sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib-forming";	//!< Stores a forming distribution of sysDelay values.
 const char *last_sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib";		//!< Stores a distribution of sysDelay.
@@ -515,21 +513,22 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 }
 
 /**
- * Writes an accumulating statistical distribution at regular intervals
- * to disk and rolls over the accumulating data to a new file every
- * epochInterval days and begins a new distribution file.
+ * Writes an accumulating statistical distribution to disk and
+ * rolls over the accumulating data to a new file every epoch
+ * counts and begins a new distribution file. An epoch is
+ * 86,400 counts.
  *
  * @param[in] distrib The int array containing the distribution.
  * @param[in] len The length of the array.
  * @param[in] scaleZero The array index corresponding to distribution zero.
- * @param[in] epochInterval The rollover interval in days.
+ * @param[in] count The current number of samples in the distribution.
  * @param[out] last_epoch The saved count of the previous epoch.
  * @param[in] distrib_file The filename of the last completed
  * distribution file.
  * @param[in] last_distrib_file The filename of the currently
  * forming distribution file.
  */
-void writeDistribution(int distrib[], int len, int scaleZero, int epochInterval,
+void writeDistribution(int distrib[], int len, int scaleZero, int count,
 		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
 
 	remove(distrib_file);
@@ -543,7 +542,7 @@ void writeDistribution(int distrib[], int len, int scaleZero, int epochInterval,
 	}
 	close(fd);
 
-	int epoch = g.days / epochInterval;
+	int epoch = count / SECS_PER_DAY;
 	if (epoch != *last_epoch ){
 		*last_epoch = epoch;
 		remove(last_distrib_file);
@@ -558,8 +557,8 @@ void writeDistribution(int distrib[], int len, int scaleZero, int epochInterval,
  * of interrupt delay samples before rolling over a new file.
  */
 void writeInterruptDistribFile(void){
-	if (g.delay_idx == 0 && g.delayCount > 0){
-		writeDistribution(g.interruptDistrib, INTRPT_DISTRIB_LEN, 0, 1,
+	if (g.interruptCount % SECS_PER_MINUTE == 0 && g.seq_num > SETTLE_TIME){
+		writeDistribution(g.interruptDistrib, INTRPT_DISTRIB_LEN, 0, g.interruptCount,
 				&f.lastIntrptFileno, interrupt_distrib_file, last_intrpt_distrib_file);
 	}
 }
@@ -570,9 +569,9 @@ void writeInterruptDistribFile(void){
  * day of sysDelay samples before rolling over a new file.
  */
 void writeSysdelayDistribFile(void){
-	if (g.delay_idx == 0 && g.delayCount == g.delayPeriod && g.hardLimit == HARD_LIMIT_1){
-		writeDistribution(g.sysDelayDistrib, INTRPT_DISTRIB_LEN, 0, 1, &f.lastSysDelayFileno,
-				sysDelay_distrib_file, last_sysDelay_distrib_file);
+	if (g.sysDelayCount % SECS_PER_MINUTE == 0 && g.seq_num > SETTLE_TIME && g.hardLimit == HARD_LIMIT_1){
+		writeDistribution(g.sysDelayDistrib, INTRPT_DISTRIB_LEN, 0, g.sysDelayCount,
+				&f.lastSysDelayFileno, sysDelay_distrib_file, last_sysDelay_distrib_file);
 	}
 }
 
@@ -583,24 +582,10 @@ void writeSysdelayDistribFile(void){
  * rolled over to a new file every 24 hours.
  */
 void writeJitterDistribFile(void){
-	if (g.jitterCount == 0 && g.seq_num > SETTLE_TIME){
+	if (g.jitterCount % SECS_PER_MINUTE == 0 && g.seq_num > SETTLE_TIME){
 		int scaleZero = JITTER_DISTRIB_LEN / 6;
-		writeDistribution(g.jitterDistrib, JITTER_DISTRIB_LEN, scaleZero, 1,
+		writeDistribution(g.jitterDistrib, JITTER_DISTRIB_LEN, scaleZero, g.jitterCount,
 				&f.lastJitterFileno, jitter_distrib_file, last_jitter_distrib_file);
-	}
-}
-
-/**
- * Writes a distribution to disk approximately once a minute
- * containing 60 additional interrupt jitter samples recorded at
- * the occurrance of the interrupt measurement. The distribution
- * is rolled over to a new file every 24 hours.
- */
-void writeIntrptJitterDistribFile(void){
-	if (g.intrptJitterCount == 0 && g.seq_num > SETTLE_TIME){
-		int scaleZero = INTRPT_DISTRIB_LEN / 6;
-		writeDistribution(g.intrptJitterDistrib, INTRPT_DISTRIB_LEN, scaleZero, 1,
-				&f.lastIntrptJitterFileno, intrpt_jitter_distrib_file, last_intrpt_jitter_distrib_file);
 	}
 }
 
@@ -611,10 +596,10 @@ void writeIntrptJitterDistribFile(void){
  * to a new file every 24 hours.
  */
 void writeErrorDistribFile(void){
-	if (g.correctionFifo_idx == 0){
+	if (g.errorCount % SECS_PER_MINUTE == 0 && g.seq_num > SETTLE_TIME){
 		int scaleZero = ERROR_DISTRIB_LEN / 6;
 		writeDistribution(g.errorDistrib, ERROR_DISTRIB_LEN, scaleZero,
-				1, &f.lastErrorFileno, distrib_file, last_distrib_file);
+				g.errorCount, &f.lastErrorFileno, distrib_file, last_distrib_file);
 	}
 }
 
@@ -861,7 +846,6 @@ void processFiles(char *config_str[], char *pbuf, int size){
 
 	if (g.doCalibration && isEnabled(INTERRUPT_DISTRIB, config_str)){
 		writeInterruptDistribFile();
-		writeIntrptJitterDistribFile();
 	}
 
 	if (g.doCalibration && isEnabled(SYSDELAY_DISTRIB, config_str)){
@@ -1675,7 +1659,7 @@ int accessDaemon(int argc, char *argv[]){
  * @param[in] timeCorrection The time correction value to be
  * accumulated to a distribution.
  */
-void buildDistrib(int timeCorrection){
+void buildErrorDistrib(int timeCorrection){
 	int len = ERROR_DISTRIB_LEN - 1;
 	int idx = timeCorrection + len / 6;
 
@@ -1686,6 +1670,8 @@ void buildDistrib(int timeCorrection){
 		idx = len;
 	}
 	g.errorDistrib[idx] += 1;
+
+	g.errorCount += 1;
 }
 
 /**
@@ -1710,9 +1696,9 @@ void buildJitterDistrib(int rawError){
 	g.jitterDistrib[idx] += 1;
 
 	g.jitterCount += 1;
-	if (g.jitterCount == SECS_PER_MINUTE){
-		g.jitterCount = 0;
-	}
+//	if (g.jitterCount == SECS_PER_MINUTE){
+//		g.jitterCount = 0;
+//	}
 }
 
 /**
@@ -1757,43 +1743,7 @@ void buildInterruptDistrib(int intrptDelay){
 	}
 	g.interruptDistrib[idx] += 1;
 
-	g.delay_idx += 1;
-	if (g.delay_idx >= g.delayPeriod){
-		g.delay_idx = 0;
-	}
-
-	if (g.delayCount < g.delayPeriod){
-		g.delayCount += 1;
-	}
-}
-
-/**
- * Constructs a distribution of interrupt jitter that
- * can be saved to disk for analysis.
- *
- * Interrupt jitter is g.intrptError = g.intrptDelay - g.sysDelay.
- * This is the random component of g.intrptDelay. All jitter is
- * collected including delay spikes.
- *
- * @param[in] intrptError The interrupt jitter value
- * to save to the distribution.
- */
-void buildInterruptJitterDistrib(int intrptError){
-	int len = INTRPT_DISTRIB_LEN - 1;
-	int idx = intrptError + len / 6;
-
-	if (idx < 0){
-		idx = 0;
-	}
-	else if (idx > len){
-		idx = len;
-	}
-	g.intrptJitterDistrib[idx] += 1;
-
-	g.intrptJitterCount += 1;
-	if (g.intrptJitterCount == SECS_PER_MINUTE){
-		g.intrptJitterCount = 0;
-	}
+	g.interruptCount += 1;
 }
 
 /**
@@ -1811,6 +1761,8 @@ void buildSysDelayDistrib(int sysDelay){
 		idx = len;
 	}
 	g.sysDelayDistrib[idx] += 1;
+
+	g.sysDelayCount += 1;
 }
 
 /**

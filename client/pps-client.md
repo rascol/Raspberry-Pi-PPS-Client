@@ -3,7 +3,8 @@
 - [Uses](#uses)
 - [Achieving High Accuracy Timekeeping](#achieving-high-accuracy-timekeeping)
   - [Noise](#noise)
-    - [Delay Shifts](#delay-shifts)
+    - [Random Noise] (#random-noise)
+    - [Jitter Spikes](#jitter-spikes)
 - [The pps-client Controller](#the-pps-client-controller)
   - [Feedback Controller](#feedback-controller)
   - [Feedforward Compensator](#feedforward-compensator)
@@ -43,39 +44,40 @@ It might seem that such extreme limiting would remove the desired error signal a
 
 On the other hand, instead of zeroing the sum of negative and positive jitter and thereby allowing the difference to be introduced as noise, once the controller has acquired, hard limiting causes the controller to make the number of positive and negative excursions to be equal around zero. That happens because the clipped positive and negative amplitudes are identical (1 microsecond). Thus, making the sum zero makes the count equal. As a result, the varying magnitude of the jitter around the control point is ignored and the reported time delay of the PPS rising edge adjusts to its median value, i.e, the delay at which there were as many shorter as longer reported delays over the previous minute.
 
-The only (almost insignificant) disadvantage of hard limiting is that it reduces the amount of time correction that can be applied each each second. But that limitation is easily circumvented by allowing the hard limit level to track the amount of required time correction. This insures that the hard limit level does not prevent larger time corrections when they are necessary.
+The only disadvantage of hard limiting is that it reduces the amount of time correction that can be applied each each second. But that limitation is easily circumvented by allowing the hard limit level to track the amount of required time correction. This insures that the hard limit level does not prevent larger time corrections when they are necessary.
 
 As described, hard limiting removes the error that would be introduced by the magnitude of jitter around the control point. However noise that is outside the control region of the controller, that is, noise with a period appreciably longer than one minute would remain. The time delay corresponding to PPS interrupt latency contains noise of that kind which appears as a slow variation in the latency which changes with processor activity. This latency is compensated in pps-client by a variable called `sysDelay`. The `sysDelay` value directly determines the control point of the controller because the time of the rollover of the second is determined as the reported time of the interrupt minus the value of `sysDelay`.
 
 ## Noise {#noise}
 
-The situation with regard to jitter and latency (noise) in the PPS interrupt response is complicated. Not only is it necessary to characterize `sysDelay` but also as much noise as possible must be removed. In order to characterize `sysDelay`, measurements of interrupt latency were made by timing the triggering of the hardware interrupt from a GPIO pin tied across to the GPIO pin that requested the interrupt.  Those measurements revealed that interrupt latency has four distinct components: 
+The situation with regard to jitter and latency (noise) in the PPS interrupt response is complicated. Not only is it necessary to characterize `sysDelay` but also as much noise as possible must be removed. In order to characterize `sysDelay`, measurements of interrupt latency were made by timing the triggering of the hardware interrupt from a GPIO pin tied across to the GPIO pin that requested the interrupt.  Those measurements revealed that interrupt latency has three distinct components: 
 
 1. a constant component corresponding to the minimum time required to process the interrupt interrupt request, 
 
-2. an approximately Gaussian random component introduced by random jitter partially in interrupt response but predominently [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise) in the system clock oscillator and in the PPS signal, 
+2. an approximately Gaussian random component introduced by random jitter partially in interrupt response but predominently [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise) in the system clock oscillator and
 
-3. components consisting of intermittently occurring long sequences of constant latency of unknown origin and 
-
-4. intermittently occurring spikes of long duration latency.
+3. intermittently occurring "spikes" of long duration latency.
 
 The constant and average random components of interrupt latency completely characterize `sysDelay` and are determined by incorporating the interrupt latency measurement into the pps-client software. The pps-client driver that records the reception time of a PPS interrupt also has the ability to measure the initiation and reception times of a test interrupt triggered across a pair of GPIO pins. The time difference in those is used to determine the PPS interrupt latency for a particular RPi 2 and Linux kernel. The median of the latency measurement then becomes the applied `sysDelay` value. This cancels the median of the delay from the PPS rising edge generated by the hard limiting in the controller.
 
-Components (3) and (4) are treated as noise that is to be removed. Component (3) is not always present. Moreover it comes and goes. But when this component is present, it can have a complex structure. Figure 2 is an example of this.
+Component (3) is treated as noise that is to be removed.
 
 <a name="timed-event"></a>
 ![Raw Error Distribution](raw-error-distrib.png) 
 
-Figure 2 is a raw error distribution of PPS delay relative to the `sysDelay` value and captured from the [command line](#command-line) with `pps-client -s "rawError"` and written to the default file, `/var/local/pps-rawError-distrib`. 
+Figure 2 is a raw error distribution of PPS delay relative to the `sysDelay` value and captured from the [command line](#command-line) with `pps-client -s "rawError"` and written to the default file, `/var/local/pps-rawError-distrib`. This can be done at any time but is probably most useful after pps-client has been running for a few hours.
 
-Several recurring constant delay components are evident. After the main PPS peak at zero, there is a peak at 6 usecs, another at 21 usecs and another at 27 usecs. The uniformity of peak shape from one delay location to another is an artifact of flicker noise in the system clock oscillator that is visible when the clock is timing an external event. From Figure 2, this noise has a standard deviation between 1 and 2 microseconds. The delays actually appear to be of constant duration when they occur.
+The figure shows a delay peak at zero (relative to `sysDelay`) followed by infrequent sporadic interrupt delays.The delays are caused by other processes running in the Linux kernel. Even though pps-client is a real-time process, the PPS interrupt does not always receive an immediate response. The situation is much better on the 4.0 kernel than on previous kernels. On real-time configured 3.0 kernels `sysDelay` was on the order of 25 usecs. On the stock 4.0 kernel `sysDelay` has shrunk to about 8 usecs. But delays caused by other running processes continue to be a problem. The [Linus Real-Time Working Group](http://elinux.org/Real_Time_Working_Group) has been making steady progress toward eliminating real-time performance issues of this kind. Hopefully that progress will continue. Clearly, the pps-client controller can [synchronize the time precisely enough](AccuracyVerifyDistrib.png). The current impdediment to precisely timing external events is Linux kernel interrupt latency.
 
-The delays are caused by other processes running in the Linux kernel. Even though pps-client is a real-time process, it does not always receive an immediate response. The situation is much better on the 4.0 kernel than on previous kernels. On real-time configured 3.0 kernels `sysDelay` was on the order of 25 usecs. On the stock 4.0 kernel `sysDelay` has shrunk to about 8 usecs. But delays caused by other running processes continue to be a problem. The [Linus Real-Time Working Group](http://elinux.org/Real_Time_Working_Group) has been making steady progress toward eliminating real-time performance issues of this kind. Hopefully that progress will continue. Clearly, the pps-client controller can [synchronize the time precisely enough](AccuracyVerifyDistrib.png). The current limit to precisely timing external events is Linux kernel interrupt latency.
+### Random Noise {#random-noise}
 
-### Delay Shifts {#delay-shifts}
-The delay at 6 usecs differs from the ones at 21 and 27 usecs in that it was found to be strongly correlated with a similar constant delay in timings made by the [interrupt-timer](#the-interrupt-timer-utility) utility. This indicates that this latency component corresponds to an increase in system delay persisting up to several seconds each time it occurs. Thus it was possible to eliminate it by shifting the jitter delay by the delay of the response peak whenever the jitter delay exceeded the controller `noiseLevel` value that delimits the upper limit of random noise at around 3 usecs.
+The prominant random noise component at zero in Figure 2 is a combination of randomness in the response time of the system to the PPS interruput and flicker noise in the clock oscillator. These random components can be characterized more completely by comparing a jitter distribution and an interrupt delay distribution both collected over about 24 hours.
 
-The remaining peaks at 21 and 27 and others like it probably have sources like the sources of the jitter spikes of component (4). A typical jitter spike is evident in the pps-client status printout shown below which shows low jitter values except for the delay spike in the middle line of the image. 
+Although these separate noise components are not distinguishable in the jitter distribution which is the response to the PPS interrupt, the interrupt delay distribution is a system response to a self-generated interrupt that is measured totally within the system and, consequently, is blind to flicker noise in the system clock oscillator. 
+
+### Jitter Spikes {#jitter-spikes}
+
+A typical jitter spike is evident in the pps-client status printout shown below which shows low jitter values except for the delay spike in the middle line of the image.
 
 ![Jitter Spike in Status Printout](jitter-spike.png)
 
@@ -95,11 +97,9 @@ The `makeTimeCorrection()` routine is the central controller routine and it wait
 
 G.rawError = G.interruptTime - G.sysDelay
 
-Each `G.rawError` is a time measurement corrupted by jitter. Thus the value of `G.rawError` generated each second can be significantly different from the true time correction. To extract the time correction, `G.rawError` is passed into the `removeNoise()` routine which has accumulated a raw jitter distribution in `detectDelayPeak()` which looks for a [second delay peak](#noise) in the distribution. If the jitter distribution does have a second delay peak following the PPS delay peak and if the incoming `G.rawError` exceeds the `G.noiseLevel` threshold then `G.rawError` is shifed by `G.delayShift`, which is the delay difference between the delay peak and the PPS peak. This momentarily rebiases `G.rawError` to the `G.delayShift` value so that processing is done relative to the new control point determined by `G.delayShift`. On average this corrects for the lengthening of the PPS delay caused by the delay peak. At the same time `G.sysDelay` modified by `G.delayShift` is saved to a file by `writeSysDelay()`. The use of this modified `G.sysDelay` value for interrupt timing significantly reduces the width of interrupt time distributions.
+Each `G.rawError` is a time measurement corrupted by jitter. Thus the value of `G.rawError` generated each second can be significantly different from the true time correction. To extract the time correction, `G.rawError` is passed into the `removeNoise()` routine that contains the first noise processing routine, `detectDelaySpike()`, that determines (when `G.rawError` is sufficiently small) is `G.rawError` a spike noise? in which case further processing in the current second is skipped. If it's not spike noise, the average time slew, `G.avgSlew` is updated by `G.rawError`. The `G.avgSlew` value along with the average time correction up to the current second, `G.avgCorrection`, determines the current hard limit value that will be applied in the final noise removal routine, `clampJitter()`. Then `G.rawError` limited by `clampJitter()` is returned from `removeNoise()` as `G.zeroError` which is then modified by the proportional gain value and then sign reversed to generate `G.timeCorrection` for the current second.
 
-The next processing routine `detectDelaySpike()` determines (when `G.rawError` is sufficiently small) is `G.rawError` spike noise? in which case further processing in the current second is skipped. If it's not spike noise, the average time slew, `G.avgSlew` is updated by `G.rawError`. The `G.avgSlew` value along with the average time correction up to the current second, `G.avgCorrection`, determines the current hard limit value that will be applied in the final noise removal routine, `clampJitter()`. Then `G.rawError` limited by `clampJitter()` is returned from `removeNoise()` as `G.zeroError` which is then modified by the proportional gain value and then sign reversed to generate `G.timeCorrection` for the current second.
-
-The sign reversal of `G.timeCorrection` is necessary in order to provide a proportional control step that subtracts the time correction from the current time slew, making a time slew that is too large smaller and vice versa. That happens by passing `G.timeCorrection` to the system `adjtimex()` routine which slews the time by exactly that value unless the magnitude is greater than about 500 usec, in which case the slew adjustment is restricted to 500 usec by `adjtimex()`. This is usually what happens when pps-client starts. After several minutes of 500 usec steps, `G.timeCorrection` will be in a range to allow the integral control step to begin.
+The sign reversal on `G.timeCorrection` is necessary in order to provide a proportional control step that subtracts the time correction from the current time slew, making a time slew that is too large smaller and vice versa. That happens by passing `G.timeCorrection` to the system `adjtimex()` routine which slews the time by exactly that value unless the magnitude is greater than about 500 usec, in which case the slew adjustment is restricted to 500 usec by `adjtimex()`. This is usually what happens when pps-client starts. After several minutes of 500 usec steps, `G.timeCorrection` will be in a range to allow the integral control step to begin.
 
 But before the integral control step can begin, an average of the second-by-second time corrections over the previous minute must be available to form the integral. That average is constructed in the `getAverageCorrection()` routine which sequences the time corrections through a circular buffer `G.correctionFifo` and simultaneously generates a rolling sum in `G.correctionAccum` which is scaled to form a rolling average of time corrections that is returned as `G.avgCorrection` by `getAverageCorrection()` each second. At feedback convergence, the rolling sum of *unit* `G.timeCorrection` values makes `G.avgCorrection` the *median* of `G.timeCorrection` values. 
 

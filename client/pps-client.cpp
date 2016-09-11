@@ -78,7 +78,6 @@ void initialize(bool verbose){
 	g.integralGain = INTEGRAL_GAIN;
 	g.invProportionalGain = INV_GAIN_0;
 	g.hardLimit = HARD_LIMIT_NONE;
-	g.delayPeriod = CALIBRATE_PERIOD;
 	g.doCalibration = true;
 	g.exitOnLostPPS = true;
 	g.fixDelayPeak = true;
@@ -355,11 +354,8 @@ double getAverageCorrection(int timeCorrection){
 
 	double avgCorrection;
 
-	if (g.seq_num > SETTLE_TIME){
-
-		if (g.config_select & ERROR_DISTRIB){
-			buildDistrib(timeCorrection);
-		}
+	if (g.seq_num > SETTLE_TIME && (g.config_select & ERROR_DISTRIB)){
+		buildErrorDistrib(timeCorrection);
 	}
 
 	g.correctionAccum += timeCorrection;			// Add the new timeCorrection into the error accumulator.
@@ -803,21 +799,16 @@ void getInterruptDelay(int pps_fd){
 
 		g.intrptError = g.intrptDelay - g.sysDelay;
 
-		if ((g.config_select & INTERRUPT_DISTRIB) && g.seq_num > SETTLE_TIME){
+		if (g.seq_num > SETTLE_TIME && (g.config_select & INTERRUPT_DISTRIB)){
 			buildInterruptDistrib(g.intrptDelay);
-			buildInterruptJitterDistrib(g.intrptError);
 		}
-		else {
-			g.delayCount = 0;
-		}
-
 
 		int zeroError = removeIntrptNoise(g.intrptError);
 
 		g.delayMedian += (double)zeroError * INV_DELAY_SAMPLES_PER_MIN;
 		g.sysDelay = (int)round(g.delayMedian);
 
-		if (g.activeCount > SETTLE_TIME){
+		if (g.activeCount > SETTLE_TIME && g.hardLimit == HARD_LIMIT_1 && (g.config_select & SYSDELAY_DISTRIB)){
 			buildSysDelayDistrib(g.sysDelay);
 		}
 
@@ -1028,12 +1019,6 @@ void waitForPPS(bool verbose, int pps_fd){
 			}
 
 			writeStatusStrings();
-		}
-
-		g.seconds += 1;
-		if (g.seconds == SECS_PER_DAY){
-			g.days += 1;
-			g.seconds = 0;
 		}
 
 		gettimeofday(&tv1, NULL);
