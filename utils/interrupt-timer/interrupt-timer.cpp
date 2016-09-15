@@ -29,6 +29,7 @@
 #include <time.h>
 #include <sched.h>
 #include <math.h>
+#include <sys/time.h>
 
 #define INTRPT_DISTRIB_LEN 61
 #define SECS_PER_DAY 86400
