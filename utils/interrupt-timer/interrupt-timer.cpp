@@ -40,6 +40,10 @@
 #define FILEBUF_SZ 5000
 #define STRBUF_SZ 200
 
+#define USECS_PER_SEC 1000000
+#define START_SAVE 20
+#define START 10
+
 struct interruptTimerGlobalVars {
 	int outFormat;
 
@@ -413,11 +417,11 @@ int outputSingeEventTime(int tm[], double prob, int idx){
  * date Jan 1, 1970 and saves a distribution
  * of the fractional part of the second.
  */
-int outputRepeatingEventTime(int tm[]){
+int outputRepeatingEventTime(int tm[], int seq_num){
 	char timeStr[50];
 
 	int v = readVerify();
-	if (v == ON_TIME){
+	if (v == ON_TIME && seq_num > START_SAVE){
 		buildInterruptDistrib(tm[1]);
 	}
 	else if (v == DELAYED){
@@ -441,6 +445,43 @@ int outputRepeatingEventTime(int tm[]){
 	}
 
 	return 0;
+}
+
+/**
+ * Sets a nanosleep() time delay equal to the time remaining
+ * in the second from the time recorded as fracSec plus an
+ * adjustment value of timeAt in microseconds. The purpose
+ * of the delay is to put the program to sleep until just
+ * before the time when a interrupt timing will be
+ * delivered by the interrupt-timer device driver.
+ *
+ * @param[in] timeAt The adjustment value.
+ *
+ * @param[in] fracSec The fractional second part of
+ * the system time.
+ *
+ * @returns The length of time to sleep.
+ */
+struct timespec setSyncDelay(int timeAt, int fracSec){
+
+	struct timespec ts;
+
+	int timerVal = USECS_PER_SEC + timeAt - fracSec;
+
+	if (timerVal >= USECS_PER_SEC){
+		ts.tv_sec = 1;
+		ts.tv_nsec = (timerVal - USECS_PER_SEC) * 1000;
+	}
+	else if (timerVal < 0){
+		ts.tv_sec = 0;
+		ts.tv_nsec = (USECS_PER_SEC + timerVal) * 1000;
+	}
+	else {
+		ts.tv_sec = 0;
+		ts.tv_nsec = timerVal * 1000;
+	}
+
+	return ts;
 }
 
 int main(int argc, char *argv[]){
@@ -581,7 +622,16 @@ start:
 
 	struct timespec ts2;
 
+	struct timeval tv1;
+	int wake = 0;
+	int seq_num = 0;
+	int start = START;
+
 	for (;;){
+		if (singleEvent == false && seq_num > start){
+			nanosleep(&ts2, NULL);
+		}
+
 		int dvrv = read(intrpt_fd, (void *)tm, 2 * sizeof(int));
 		if (dvrv > 0){
 			int rv = getSysDelay(&sysDelay);
@@ -600,10 +650,18 @@ start:
 				ts2.tv_nsec = 100000;
 				nanosleep(&ts2, NULL);
 
-				rv = outputRepeatingEventTime(tm);
+				rv = outputRepeatingEventTime(tm, seq_num);
 				if (rv == -1){
 					return 1;
 				}
+
+				if (seq_num >= start){
+					wake = tm[1] - 150;						// Sleep until 150 usec before the expected pulse time
+					gettimeofday(&tv1, NULL);
+					ts2 = setSyncDelay(wake, tv1.tv_usec);
+				}
+
+				seq_num += 1;
 			}
 			else {
 				if (! g.showAllTols){
