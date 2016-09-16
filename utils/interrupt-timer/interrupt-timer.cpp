@@ -640,7 +640,7 @@ start:
 				return 1;
 			}
 			tm[1] -= sysDelay;								// Time in microseconds corrected for system interrupt sysDelay
-			if (tm[1] < 0){									// If negative after correction, fix the time.
+			if (tm[1] < 0){									// If negative after correction, correct the time.
 				tm[1] = 1000000 + tm[1];
 				tm[0] -= 1;
 			}
@@ -657,7 +657,7 @@ start:
 				}
 
 				if (seq_num >= start){
-					wake = tm[1] - 150;						// Sleep until 150 usec before the expected pulse time
+					wake = tm[1] - 150;						// Sleep until 150 usec before the next expected pulse time
 					gettimeofday(&tv1, NULL);
 					ts2 = setSyncDelay(wake, tv1.tv_usec);
 				}

@@ -201,10 +201,14 @@ irqreturn_t timer_interrupt(int irq, void *dev_id)
 {
 	struct timeval tv;
 
+
+
 	do_gettimeofday(&tv);
 
 	timer_buffer[0] = tv.tv_sec;
 	timer_buffer[1] = tv.tv_usec;
+
+
 
 	read_OK = 1;
 	wake_up_interruptible(&timer_queue); 				/* Wake up the reading process now */
@@ -237,7 +241,7 @@ int configureInterruptOn(int gpio_num) {
 
    if (request_irq(timer_irq,
 				   (irq_handler_t) timer_interrupt,
-				   IRQF_TRIGGER_RISING,
+				   IRQF_TRIGGER_RISING | SA_INTERRUPT,
 				   INTERRUPT_NAME,
 				   NULL) != 0) {
 	  printk(KERN_INFO "interrupt-timer: request_irq() failed\n");
