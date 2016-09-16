@@ -912,6 +912,14 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 	return restart;
 }
 
+void lockStackSpace(void){
+	int size = 2000000;
+	char lockedStackSpace[size];
+	for (int i = 0; i < size; i++){
+		lockedStackSpace[i] = 0xff;
+	}
+}
+
 //void reportLeak(const char *msg){
 //	sprintf(g.logbuf, msg);
 //	writeToLog(g.logbuf);
@@ -968,6 +976,9 @@ void waitForPPS(bool verbose, int pps_fd){
 	if (rv == -1){
 		goto end;
 	}
+
+	mlockall(MCL_CURRENT | MCL_FUTURE);
+	lockStackSpace();
 
 	signal(SIGHUP, HUPhandler);			// Handler used to ignore SIGHUP.
 	signal(SIGTERM, TERMhandler);		// Handler for the termination signal.

@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <poll.h>
+#include <sys/mman.h>
 
 #define USECS_PER_SEC 1000000
 #define SECS_PER_MINUTE 60
