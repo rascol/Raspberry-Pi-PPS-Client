@@ -241,7 +241,7 @@ int configureInterruptOn(int gpio_num) {
 
    if (request_irq(timer_irq,
 				   (irq_handler_t) timer_interrupt,
-				   IRQF_TRIGGER_RISING,
+				   IRQF_TRIGGER_RISING | IRQF_NO_THREAD,
 				   INTERRUPT_NAME,
 				   NULL) != 0) {
 	  printk(KERN_INFO "interrupt-timer: request_irq() failed\n");

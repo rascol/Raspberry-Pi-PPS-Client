@@ -418,7 +418,7 @@ int configureInterruptOn(int gpio_num) {
 
 	   if (request_irq(pps_irq1,
 					   (irq_handler_t) pps_interrupt1,
-					   IRQF_TRIGGER_RISING,
+					   IRQF_TRIGGER_RISING | IRQF_NO_THREAD,
 					   INTERRUPT_NAME,
 					   NULL) != 0) {
 		  printk(KERN_INFO "pps-client: request_irq() failed\n");
@@ -436,7 +436,7 @@ int configureInterruptOn(int gpio_num) {
 
 	   if (request_irq(pps_irq2,
 					   (irq_handler_t) pps_interrupt2,
-					   IRQF_TRIGGER_RISING,
+					   IRQF_TRIGGER_RISING | IRQF_NO_THREAD,
 					   INTERRUPT_NAME,
 					   NULL) != 0) {
 		  printk(KERN_INFO "pps-client: request_irq() failed\n");
