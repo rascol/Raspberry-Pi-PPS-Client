@@ -318,12 +318,12 @@ start:
 		return 1;
 	}
 
-	pulseStart1 = g.pulseTime1 - 200;					// This will start the driver about 200 microsecs ahead of the
+	pulseStart1 = g.pulseTime1 - 250;					// This will start the driver about 250 microsecs ahead of the
 														// pulse write time thus allowing about 50 usec coming out of sleep
 														// plus 150 usecs of system response latency. A spin loop in the
 														// driver will chew up the excess time until the write at g.pulseTime1.
 	if (g.pulseTime2 > g.pulseTime1){
-		pulseStart2 = g.pulseTime2 - 200;				// Same for pulseStart2.
+		pulseStart2 = g.pulseTime2 - 250;				// Same for pulseStart2.
 	}
 
 	gettimeofday(&tv1, NULL);
