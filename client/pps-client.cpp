@@ -719,14 +719,6 @@ int removeIntrptNoise(int intrptError){
 		return 0;
 	}
 
-//	if (! g.medianIsSet && g.hardLimit <= HARD_LIMIT_4){	// Re-initialize g.delayMedian
-//		g.medianIsSet = true;								// one time on raw g.intrptDelay
-//		g.delayMedian = g.intrptDelay;						// to speed up g.sysDelay acquisition.
-//
-//		sprintf(g.msgbuf, "One time re-initialize: g.delayMedian set to %d\n", g.intrptDelay);
-//		bufferStatusMsg(g.msgbuf);
-//	}
-
 	zeroError = clampJitter(intrptError);					// Recover the time error by
 															// limiting away the jitter.
 	return zeroError;

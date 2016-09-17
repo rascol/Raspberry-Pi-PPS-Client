@@ -364,7 +364,7 @@ Then interrupt-timer is started in timing collection mode and is allowed to coll
 
 This test as described above was performed with a pair of RPi processors under low system load. RPi-2 was allowed to collect timings over a period of 24 hours with the result shown in Figure 6. The test result is believed to be typical of what will be obtained with similar processors under similar conditions.
 
-![Accuracy Verification](client/figures/InterruptTimerDistrib.png)
+![Accuracy Verification](InterruptTimerDistrib.png)
 
 The distribution shows the average recorded pulse time to be about a half microsecond lower than the ideal time of 800,000 microseconds. As expected, the peak in the timing is broadened by the combined flicker noise in the two RPi system clocks. But the peak is not wide enough to affect the average pulse time deduced from the shape of the main peak. The log plot shows that pulses were received with a delay as much as 28 usecs because of sporadic Linux system interrupt latency.
 

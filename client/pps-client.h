@@ -155,7 +155,6 @@ struct G {
 	int intrptError;								//!< Set equal to "intrptDelay - sysDelay" in getInterruptDelay().
 	unsigned int intrptCount;						//!< Advancing count of intrptErrorDistrib[] entries made by detectDelayPeak().
 	double delayMedian;								//!< Median of G.intrptDelay values calculated in getInterruptDelay().
-//	bool medianIsSet;								//!< Set to "true" when G.delayMedian has been initialized.
 	int	sysDelay;									//!< System time delay between reception and response to an external interrupt.
 
 													//!< Calculated as the one-minute median of G.intrptDelay values in getInterruptDelay().
