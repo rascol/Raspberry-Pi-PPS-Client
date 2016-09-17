@@ -274,7 +274,7 @@ The "`pps-client -v`" command continues to work as described above.
 # Practical Limits to Time Measurement
 ---
 
-While pps-client will synchronize the system clock to a GPS clock with an average error of only one microsecond, there are practical limits imposed by the hardware and the operating system that restrict single-event timing accuracy. The hardware limit is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise), a kind of low frequency noise that is present in all crystal oscillators to varying degrees. The operating system limit is the real-time performance of the Linux OS.
+While pps-client will synchronize the system clock to a GPS clock with an average accuracy of only one microsecond, there are practical limits imposed by the hardware and the operating system that restrict single-event timing accuracy. The hardware limit is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise), a kind of low frequency noise that is present in all crystal oscillators to varying degrees. The operating system limit is the real-time performance of the Linux OS.
 
 ## Flicker Noise
 
@@ -296,9 +296,9 @@ As it maintains clock synchronization, the pps-client daemon continuously measur
 
 This is a spreadsheet plot of the data file `/var/local/pps-jitter-distrib` that was generated when `jitter-distrib=enable` was set in in the pps-client config file, `/etc/pps-client.conf`. 
 
-The shape of the main peak is consistent with clock oscillator flicker noise having a standard deviation of about 1 microsecond. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal introduced by OS latency. There were about 2600 of these out of a total sample population of 86,400. So about 3% of the time Linux system latency delayed the sample and the longest sample was delayed 42 microseconds.
+The shape of the main peak is consistent with clock oscillator flicker noise having a standard deviation of about 1 microsecond. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal introduced by OS latency. There were about 2600 of these out of a total sample population of 86,400. So about 3% of the time Linux system latency delayed the sample by as much as 42 microseconds.
 
-Consequently, the real-time performance of the Linux OS (as of v4.4.14-v7+) limits synchronization accuracy of events on different Raspberry Pi computers to about 50 microseconds in comparison with the potentially achievable accuracy of 5 to 10 microseconds set by flicker noise.
+Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click, the real-time performance of the Linux OS (as of v4.4.14-v7+) limits timing accuracy of external events timed with interrupts to about 50 microseconds.
 
 
 

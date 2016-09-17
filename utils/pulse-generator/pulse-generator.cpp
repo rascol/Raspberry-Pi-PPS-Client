@@ -194,12 +194,14 @@ void writeVerifyVal(int i){
 void writePulseStatus(int readData[], int pulseTime){
 	if (g.badRead){
 		writeVerifyVal(NONE);
+		printf("pulse-gemerator: Bad read from driver\n");
 		return;
 	}
 
 	int pulseEnd = readData[1];
 	if (pulseEnd > pulseTime){
 		writeVerifyVal(DELAYED);
+		printf("Pulse was delayed by system latency.\n");
 	}
 	else {
 		writeVerifyVal(ON_TIME);
@@ -316,31 +318,25 @@ start:
 		return 1;
 	}
 
-	pulseStart1 = g.pulseTime1 - 175;					// This will start the driver about 125 microsecs ahead of the
+	pulseStart1 = g.pulseTime1 - 200;					// This will start the driver about 200 microsecs ahead of the
 														// pulse write time thus allowing about 50 usec coming out of sleep
-														// plus 125 usecs of system response latency. A spin loop in the
+														// plus 150 usecs of system response latency. A spin loop in the
 														// driver will chew up the excess time until the write at g.pulseTime1.
 	if (g.pulseTime2 > g.pulseTime1){
-		pulseStart2 = g.pulseTime2 - 175;				// Same for pulseStart2.
+		pulseStart2 = g.pulseTime2 - 200;				// Same for pulseStart2.
 	}
 
 	gettimeofday(&tv1, NULL);
-	ts2 = setSyncDelay(1000, tv1.tv_usec);				// Sleep until about 1 msec into the second
+	ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);		// Sleep to pulseStart1
 
 	for (;;){
 		nanosleep(&ts2, NULL);
-
-		gettimeofday(&tv1, NULL);
-		ts2.tv_nsec = (pulseStart1 - tv1.tv_usec) * 1000;
-		ts2.tv_sec = 0;
-		nanosleep(&ts2, NULL);							// Sleep to pulseStart1
 
 		writeData[0] = GPIO_A;							// Write to the first GPIO outuput
 		writeData[1] = g.pulseTime1;
 		write(fd, writeData, 2 * sizeof(int));			// Request a write at g.pulseTime1.
 
-		if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time of the write
-			printf("pulse-gemerator: Bad read from driver\n");
+		if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred
 			g.badRead = true;
 		}
 		else {
@@ -354,14 +350,11 @@ start:
 			ts2.tv_sec = 0;
 			nanosleep(&ts2, NULL);						// Sleep to pulseStart2
 
-			gettimeofday(&tv1, NULL);
-
 			writeData[0] = GPIO_B;						// Write to the second GPIO output
 			writeData[1] = g.pulseTime2;
 			write(fd, writeData, 2 * sizeof(int));		// Request a write at pulseTime2.
 
-			if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time of the write.
-				printf("pulse-gemerator: Bad read from driver\n");
+			if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred.
 				g.badRead = true;
 			}
 			else {
@@ -383,7 +376,7 @@ start:
 		g.badRead = false;
 
 		gettimeofday(&tv1, NULL);
-		ts2 = setSyncDelay(1000, tv1.tv_usec);			// Sleep until about 1 msec into the second
+		ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);			// Sleep to pulseStart1
 	}
 
 	close(fd);											// Close the pulse-generator device driver.
