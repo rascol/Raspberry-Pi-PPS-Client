@@ -80,7 +80,6 @@ void initialize(bool verbose){
 	g.hardLimit = HARD_LIMIT_NONE;
 	g.doCalibration = true;
 	g.exitOnLostPPS = true;
-	g.fixDelayPeak = true;
 
 	g.t3.modes = ADJ_FREQUENCY;			// Initialize system clock
 	g.t3.freq = 0;						// frequency offset to zero.
@@ -720,13 +719,13 @@ int removeIntrptNoise(int intrptError){
 		return 0;
 	}
 
-	if (! g.medianIsSet && g.hardLimit <= HARD_LIMIT_4){	// Re-initialize g.delayMedian
-		g.medianIsSet = true;								// one time on raw g.intrptDelay
-		g.delayMedian = g.intrptDelay;						// to speed up g.sysDelay acquisition.
-
-		sprintf(g.msgbuf, "One time re-initialize: g.delayMedian set to %d\n", g.intrptDelay);
-		bufferStatusMsg(g.msgbuf);
-	}
+//	if (! g.medianIsSet && g.hardLimit <= HARD_LIMIT_4){	// Re-initialize g.delayMedian
+//		g.medianIsSet = true;								// one time on raw g.intrptDelay
+//		g.delayMedian = g.intrptDelay;						// to speed up g.sysDelay acquisition.
+//
+//		sprintf(g.msgbuf, "One time re-initialize: g.delayMedian set to %d\n", g.intrptDelay);
+//		bufferStatusMsg(g.msgbuf);
+//	}
 
 	zeroError = clampJitter(intrptError);					// Recover the time error by
 															// limiting away the jitter.

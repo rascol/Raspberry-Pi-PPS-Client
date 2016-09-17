@@ -63,14 +63,12 @@
 
 #define ADJTIMEX_SCALE 65536.0			//!< Frequency scaling required by \b adjtimex().
 
-#define INTERRUPT_LATENCY 16			//!< Default interrupt latency in microseconds.
+#define INTERRUPT_LATENCY 10			//!< Default interrupt latency in microseconds.
 
 #define RAW_ERROR_ZERO  20				//!< Index corresponding to rawError == 0 in detectDelayPeak().
 #define MIN_PEAK_RATIO 0.05				//!< Minimum ratio to detect a second peak in detectDelayPeak().
 #define MAX_VALLEY_RATIO 0.99			//!< Maximum ratio to detect a valley before the second peak in detectDelayPeak().
 #define RAW_ERROR_DECAY 0.98851			//!< Decay rate for rawError samples (1 hour half life)
-#define MAX_PEAK_DELAY 15				//!< Look for a delay peak less than this value. If larger not a delay peak.
-#define MAX_PEAK_TO_TAIL_DELAY 7		//!< Maximum extent of a tail from the peak
 
 #define INTERRUPT_LOST 15				//!< Number of consequtive lost interrupts at which a warning starts
 
@@ -157,7 +155,7 @@ struct G {
 	int intrptError;								//!< Set equal to "intrptDelay - sysDelay" in getInterruptDelay().
 	unsigned int intrptCount;						//!< Advancing count of intrptErrorDistrib[] entries made by detectDelayPeak().
 	double delayMedian;								//!< Median of G.intrptDelay values calculated in getInterruptDelay().
-	bool medianIsSet;								//!< Set to "true" when G.delayMedian has been initialized.
+//	bool medianIsSet;								//!< Set to "true" when G.delayMedian has been initialized.
 	int	sysDelay;									//!< System time delay between reception and response to an external interrupt.
 
 													//!< Calculated as the one-minute median of G.intrptDelay values in getInterruptDelay().
@@ -224,8 +222,6 @@ struct G {
 
 	bool doCalibration;
 	bool showRemoveNoise;
-
-	bool fixDelayPeak;
 
 	int recIndex;
 	int recIndex2;
