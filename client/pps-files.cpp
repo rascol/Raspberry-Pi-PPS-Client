@@ -1675,8 +1675,8 @@ void buildErrorDistrib(int timeCorrection){
 }
 
 /**
- * Constructs a distribution of jitter with zero offset
- * at middle index that can be saved to disk for analysis.
+ * Constructs a distribution of jitter that can be
+ * saved to disk for analysis.
  *
  * All jitter is collected including delay spikes.
  *
@@ -1696,9 +1696,6 @@ void buildJitterDistrib(int rawError){
 	g.jitterDistrib[idx] += 1;
 
 	g.jitterCount += 1;
-//	if (g.jitterCount == SECS_PER_MINUTE){
-//		g.jitterCount = 0;
-//	}
 }
 
 /**

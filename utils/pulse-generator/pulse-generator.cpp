@@ -31,23 +31,176 @@
 #include <fcntl.h>
 
 #define USECS_PER_SEC 1000000
+#define SECS_PER_MINUTE 60
+#define SECS_PER_DAY 86400
 #define ON_TIME 3
 #define DELAYED 1
 #define NONE 2
 #define GPIO_A 0
 #define GPIO_B 1
 
+#define JITTER_DISTRIB_LEN 61
+#define SETTLE_TIME 10
+
 const char *version = "pulse-generator v1.0.0";
 
+const char *p1_distrib_file = "/var/local/pulse1-distrib-forming";
+const char *last_p1_distrib_file = "/var/local/pulse1-distrib";
+
+const char *p2_distrib_file = "/var/local/pulse2-distrib-forming";
+const char *last_p2_distrib_file = "/var/local/pulse2-distrib";
+
 struct pulseGeneratorGlobalVars {
+	int seq_num;
 	char strbuf[200];
+	char msgbuf[200];
 	int pulseTime1;
 	int pulseTime2;
 	bool badRead;
+
+	int p1Count;
+	int p1Distrib[JITTER_DISTRIB_LEN];
+	int lastP1Fileno;
+
+	int p2Count;
+	int p2Distrib[JITTER_DISTRIB_LEN];
+	int lastP2Fileno;
 } g;
 
 const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
 
+/**
+ * Constructs an error message.
+ */
+void couldNotOpenMsgTo(char *msgbuf, const char *filename){
+	strcpy(msgbuf, "ERROR: could not open \"");
+	strcat(msgbuf, filename);
+	strcat(msgbuf, "\": ");
+	strcat(msgbuf, strerror(errno));
+	strcat(msgbuf, "\n");
+}
+
+/**
+ * Opens a file with error printing and sets standard
+ * file permissions for O_CREAT.
+ *
+ * @param[in] filename The file to open.
+ * @param[in] flags The file open flags.
+ *
+ * @returns The file descriptor.
+ */
+int open_logerr(const char* filename, int flags){
+	int fd = open(filename, flags);
+	if (fd == -1){
+		couldNotOpenMsgTo(g.msgbuf, filename);
+		printf(g.msgbuf);
+		return -1;
+	}
+	if ((flags & O_CREAT) == O_CREAT){
+		fchmod(fd, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+	}
+	return fd;
+}
+
+/**
+ * Writes an accumulating statistical distribution to disk and
+ * rolls over the accumulating data to a new file every epoch
+ * counts and begins a new distribution file. An epoch is
+ * 86,400 counts.
+ *
+ * @param[in] distrib The int array containing the distribution.
+ * @param[in] len The length of the array.
+ * @param[in] scaleZero The array index corresponding to distribution zero.
+ * @param[in] count The current number of samples in the distribution.
+ * @param[out] last_epoch The saved count of the previous epoch.
+ * @param[in] distrib_file The filename of the last completed
+ * distribution file.
+ * @param[in] last_distrib_file The filename of the currently
+ * forming distribution file.
+ */
+void writeDistribution(int distrib[], int len, int scaleZero, int count,
+		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
+
+	remove(distrib_file);
+	int fd = open_logerr(distrib_file, O_CREAT | O_WRONLY | O_APPEND);
+	if (fd == -1){
+		return;
+	}
+	for (int i = 0; i < len; i++){
+		sprintf(g.strbuf, "%d %d\n", i-scaleZero, distrib[i]);
+		write(fd, g.strbuf, strlen(g.strbuf));
+	}
+	close(fd);
+
+	int epoch = count / SECS_PER_DAY;
+	if (epoch != *last_epoch ){
+		*last_epoch = epoch;
+		remove(last_distrib_file);
+		rename(distrib_file, last_distrib_file);
+		memset(distrib, 0, len * sizeof(int));
+	}
+}
+
+/**
+ * Writes a distribution to disk approximately once a minute
+ * containing 60 additional jitter samples recorded at the
+ * occurrance of pulse1. The distribution is rolled over to
+ * a new file every 24 hours.
+ */
+void writeP1JitterDistribFile(void){
+	if (g.p1Count % SECS_PER_MINUTE == 0){
+		int scaleZero = JITTER_DISTRIB_LEN / 6;
+		writeDistribution(g.p1Distrib, JITTER_DISTRIB_LEN, scaleZero, g.p1Count,
+				&g.lastP1Fileno, p1_distrib_file, last_p1_distrib_file);
+	}
+}
+
+/**
+ * Writes a distribution to disk approximately once a minute
+ * containing 60 additional jitter samples recorded at the
+ * occurrance of pulse2. The distribution is rolled over to
+ * a new file every 24 hours.
+ */
+void writeP2JitterDistribFile(void){
+	if (g.p2Count % SECS_PER_MINUTE == 0){
+		int scaleZero = JITTER_DISTRIB_LEN / 6;
+		writeDistribution(g.p2Distrib, JITTER_DISTRIB_LEN, scaleZero, g.p2Count,
+				&g.lastP2Fileno, p2_distrib_file, last_p2_distrib_file);
+	}
+}
+
+/**
+ * Constructs a distribution of relative pulse time
+ * relative to pulseVal that can be saved to disk
+ * for analysis.
+ *
+ * @param[in] pulseTime The time value to save to
+ * the distribution.
+ *
+ * @param[in] pulseVal The requested pulse value
+ * used as the time reference.
+ *
+ * @param[in/out] distrib The pulse distribution to create.
+ *
+ * @param[in/out] count The count of recorded pulse times.
+ */
+void buildPulseDistrib(int pulseTime, int pulseVal, int distrib[], int *count){
+	if (g.seq_num <= SETTLE_TIME){
+		return;
+	}
+	int len = JITTER_DISTRIB_LEN - 1;
+	int idx = (pulseTime - pulseVal) + len / 6;
+
+	if (idx < 0){
+		idx = 0;
+	}
+	else if (idx > len){
+		idx = len;
+	}
+	distrib[idx] += 1;
+
+	*count += 1;
+}
 
 /**
  * Reads the major number assigned to pulse-generator
@@ -199,7 +352,7 @@ void writePulseStatus(int readData[], int pulseTime){
 	}
 
 	int pulseEnd = readData[1];
-	if (pulseEnd > pulseTime){
+	if (pulseEnd > pulseTime + 1){
 		writeVerifyVal(DELAYED);
 		printf("Pulse was delayed by system latency.\n");
 	}
@@ -318,12 +471,14 @@ start:
 		return 1;
 	}
 
-	pulseStart1 = g.pulseTime1 - 250;					// This will start the driver about 250 microsecs ahead of the
+	int latency = 200;
+
+	pulseStart1 = g.pulseTime1 - latency;				// This will start the driver about 250 microsecs ahead of the
 														// pulse write time thus allowing about 50 usec coming out of sleep
 														// plus 150 usecs of system response latency. A spin loop in the
 														// driver will chew up the excess time until the write at g.pulseTime1.
 	if (g.pulseTime2 > g.pulseTime1){
-		pulseStart2 = g.pulseTime2 - 250;				// Same for pulseStart2.
+		pulseStart2 = g.pulseTime2 - latency;			// Same for pulseStart2.
 	}
 
 	gettimeofday(&tv1, NULL);
@@ -341,6 +496,7 @@ start:
 		}
 		else {
 			pulseEnd1 = readData[1];
+			buildPulseDistrib(pulseEnd1, g.pulseTime1, g.p1Distrib, &g.p1Count);
 		}
 
 		if (g.pulseTime2 > g.pulseTime1){				// If there is a pulseTime2, generate a second pulse.
@@ -359,6 +515,7 @@ start:
 			}
 			else {
 				pulseEnd2 = readData[1];
+				buildPulseDistrib(pulseEnd2, g.pulseTime2, g.p2Distrib, &g.p2Count);
 			}
 
 			writePulseStatus(readData, g.pulseTime2);
@@ -374,6 +531,12 @@ start:
 		}
 
 		g.badRead = false;
+
+		g.seq_num += 1;
+		writeP1JitterDistribFile();
+		if (g.pulseTime2 > g.pulseTime1){
+			writeP2JitterDistribFile();
+		}
 
 		gettimeofday(&tv1, NULL);
 		ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);			// Sleep to pulseStart1
