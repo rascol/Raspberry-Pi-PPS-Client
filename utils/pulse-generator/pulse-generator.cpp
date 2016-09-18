@@ -29,6 +29,7 @@
 #include <sched.h>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #define USECS_PER_SEC 1000000
 #define SECS_PER_MINUTE 60
