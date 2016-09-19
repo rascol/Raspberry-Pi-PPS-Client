@@ -1434,19 +1434,26 @@ void showStatusEachSecond(void){
 				break;
 			}
 
+			read(fd, paramsBuf, sz);
+			close(fd);
+
 			if (sz > 0){
-				read(fd, paramsBuf, sz);
 
 				paramsBuf[sz]= '\0';
 
-				seqNum = getSeqNum(paramsBuf);
-
-				if (seqNum != lastSeqNum){
+				int clen = strcspn(paramsBuf, "0123456789");
+				if (clen > 0){									// Is an info message line.
 					printf(paramsBuf);
 				}
-				lastSeqNum = seqNum;
+				else {											// Is a standard status line.
+					seqNum = getSeqNum(paramsBuf);
+
+					if (seqNum != lastSeqNum){
+						printf(paramsBuf);
+					}
+					lastSeqNum = seqNum;
+				}
 			}
-			close(fd);
 		}
 
 		gettimeofday(&tv1, NULL);
