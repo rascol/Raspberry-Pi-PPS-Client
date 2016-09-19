@@ -68,7 +68,7 @@ struct pulseGeneratorGlobalVars {
 	int lastP2Fileno;
 } g;
 
-const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
+//const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
 
 /**
  * Constructs an error message.
@@ -337,29 +337,29 @@ struct timespec setSyncDelay(int timeAt, int fracSec){
 	return ts2;
 }
 
-void writeVerifyVal(int i){
-	int fd = open(pulse_verify_file, O_CREAT | O_WRONLY | O_TRUNC);
-	fchmod(fd, 644);
-	sprintf(g.strbuf, "%d", i);
-	write(fd, g.strbuf, strlen(g.strbuf)+1);
-	close(fd);
-}
+//void writeVerifyVal(int i){
+//	int fd = open(pulse_verify_file, O_CREAT | O_WRONLY | O_TRUNC);
+//	fchmod(fd, 644);
+//	sprintf(g.strbuf, "%d", i);
+//	write(fd, g.strbuf, strlen(g.strbuf)+1);
+//	close(fd);
+//}
 
 void writePulseStatus(int readData[], int pulseTime){
 	if (g.badRead){
-		writeVerifyVal(NONE);
+//		writeVerifyVal(NONE);
 		printf("pulse-gemerator: Bad read from driver\n");
 		return;
 	}
 
 	int pulseEnd = readData[1];
 	if (pulseEnd > pulseTime + 1){
-		writeVerifyVal(DELAYED);
-		printf("Pulse was delayed by system latency.\n");
+//		writeVerifyVal(DELAYED);
+		printf("pulse-gemerator: Omitting pulse delayed by latency.\n");
 	}
-	else {
-		writeVerifyVal(ON_TIME);
-	}
+//	else {
+//		writeVerifyVal(ON_TIME);
+//	}
 }
 
 /**
@@ -474,7 +474,7 @@ start:
 
 	int latency = 200;
 
-	pulseStart1 = g.pulseTime1 - latency;				// This will start the driver about 250 microsecs ahead of the
+	pulseStart1 = g.pulseTime1 - latency;				// This will start the driver about 200 microsecs ahead of the
 														// pulse write time thus allowing about 50 usec coming out of sleep
 														// plus 150 usecs of system response latency. A spin loop in the
 														// driver will chew up the excess time until the write at g.pulseTime1.
@@ -540,7 +540,7 @@ start:
 		}
 
 		gettimeofday(&tv1, NULL);
-		ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);			// Sleep to pulseStart1
+		ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);	// Sleep to pulseStart1
 	}
 
 	close(fd);											// Close the pulse-generator device driver.

@@ -150,23 +150,26 @@ void generate_pulse(int timeout, int *gpio_out)
 	pulseTime[0] = tv.tv_sec;				// Record time of rising edge
 	pulseTime[1] = tv.tv_usec;
 
-	gpio_set_value(*gpio_out, 1);
+	if (pulseTime[1] == timeout){			// Omit pulse if pulseTime[1] > timeout
 
-	timeout += 10;
+		gpio_set_value(*gpio_out, 1);
 
-	do {									// Spin until time of day >= timeout
-		do_gettimeofday(&tv);
+		timeout += 10;
 
-		time = tv.tv_usec;
-		if (time < lastTime){				// If the second rolled over,
-			time += 1000000;				// extend the time value.
-		}
+		do {								// Spin until time of day >= timeout
+			do_gettimeofday(&tv);
 
-		lastTime = time;
+			time = tv.tv_usec;
+			if (time < lastTime){			// If the second rolled over,
+				time += 1000000;			// extend the time value.
+			}
 
-	} while (time < timeout);
+			lastTime = time;
 
-	gpio_set_value(*gpio_out, 0);
+		} while (time < timeout);
+
+		gpio_set_value(*gpio_out, 0);
+	}
 }
 
 /**

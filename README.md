@@ -286,8 +286,6 @@ Flicker noise sets the absolute limit on the accuracy of the system clock. This 
 
 The Linux OS was not designed to be a real-time operating system. Nevertheless, there is considerable interest in upgrading it to provide real-time performance. Consequently, real-time performance improved significantly between versions 3 and 4. As a result of that, median system latency in responding to an external interrupt on the RPi ARM processor is currently about 8 microseconds - down from about 25 microseconds in Linux 3. As yet, however, there are still processes that need more time to release the OS to other real-time processes. 
 
-At present, Linux OS latency sets the absolute limit on both the ability to precisely time single events and the ability to synchronize events on separate computers.
-
 ## Measurements of Noise and Latency
 
 As it maintains clock synchronization, the pps-client daemon continuously measures the interrupt delay and jitter of the PPS source. This jitter is predominantly a combination flicker noise in the clock oscillator and OS response latency. A typical jitter plot recorded second by second over 24 hours is shown in Figure 3.

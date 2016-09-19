@@ -68,7 +68,7 @@ struct interruptTimerGlobalVars {
 
 const char *timer_distrib_file = "/var/local/timer-distrib-forming";
 const char *last_timer_distrib_file = "/var/local/timer-distrib";
-const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
+//const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
 
 const char *version = "interrupt-timer v1.0.0";
 const char *timefmt = "%F %H:%M:%S";
@@ -273,25 +273,25 @@ int getSysDelay(int *sysDelay){
 	return 0;
 }
 
-/**
- * Reads and returns the pulse verify value
- * saved by pulse-generator that announces
- * the status of the generated pulse:
- * ON_TIME, DELAYED or NONE.
- */
-int readVerify(void){
-	int val;
-
-	int fd = open(pulse_verify_file, O_RDONLY);
-	if (fd == -1){
-		return fd;
-	}
-
-	read(fd, g.strbuf, 10);
-	sscanf(g.strbuf, "%d", &val);
-	close(fd);
-	return val;
-}
+///**
+// * Reads and returns the pulse verify value
+// * saved by pulse-generator that announces
+// * the status of the generated pulse:
+// * ON_TIME, DELAYED or NONE.
+// */
+//int readVerify(void){
+//	int val;
+//
+//	int fd = open(pulse_verify_file, O_RDONLY);
+//	if (fd == -1){
+//		return fd;
+//	}
+//
+//	read(fd, g.strbuf, 10);
+//	sscanf(g.strbuf, "%d", &val);
+//	close(fd);
+//	return val;
+//}
 
 /**
  * Calculates the tolerance on an interrupt
@@ -421,20 +421,24 @@ int outputSingeEventTime(int tm[], double prob, int idx){
 int outputRepeatingEventTime(int tm[], int seq_num){
 	char timeStr[50];
 
-	int v = readVerify();
-	if (v == ON_TIME && seq_num > START_SAVE){
-		buildInterruptDistrib(tm[1]);
-	}
-	else if (v == DELAYED){
-		printf("interrupt-timer: Skipping delayed pulse from pulse-generator.\n");
-	}
-	else if (v == NONE){
-		printf("interrupt-timer: Skipping pulse not verified.\n");
-	}
-	else if (v == FILE_NOT_FOUND){
-		printf("interrupt-timer Error: Verify file not found.\n");
-		return -1;
-	}
+//	int v = readVerify();
+//	if (v == ON_TIME && seq_num > START_SAVE){
+
+
+	buildInterruptDistrib(tm[1]);
+
+
+//	}
+//	else if (v == DELAYED){
+//		printf("interrupt-timer: Skipping delayed pulse from pulse-generator.\n");
+//	}
+//	else if (v == NONE){
+//		printf("interrupt-timer: Skipping pulse not verified.\n");
+//	}
+//	else if (v == FILE_NOT_FOUND){
+//		printf("interrupt-timer Error: Verify file not found.\n");
+//		return -1;
+//	}
 
 	if (g.outFormat == 0){						// Print in date-time format
 		strftime(timeStr, 50, timefmt, localtime((const time_t*)(&tm[0])));
@@ -640,16 +644,16 @@ start:
 				return 1;
 			}
 			tm[1] -= sysDelay;								// Time in microseconds corrected for system interrupt sysDelay
-			if (tm[1] < 0){									// If negative after correction, correct the time.
+			if (tm[1] < 0){									// If negative after correction, extend the time.
 				tm[1] = 1000000 + tm[1];
 				tm[0] -= 1;
 			}
 
 			if (singleEvent == false){
 
-				ts2.tv_sec = 0;								// Allow time for pulse-generator to write the verify file.
-				ts2.tv_nsec = 100000;
-				nanosleep(&ts2, NULL);
+//				ts2.tv_sec = 0;								// Allow time for pulse-generator to write the verify file.
+//				ts2.tv_nsec = 100000;
+//				nanosleep(&ts2, NULL);
 
 				rv = outputRepeatingEventTime(tm, seq_num);
 				if (rv == -1){
