@@ -353,9 +353,9 @@ void writePulseStatus(int readData[], int pulseTime){
 	}
 
 	int pulseEnd = readData[1];
-	if (pulseEnd > pulseTime + 1){
+	if (pulseEnd > pulseTime){
 //		writeVerifyVal(DELAYED);
-		printf("pulse-gemerator: Omitting pulse delayed by latency.\n");
+		printf("pulse-gemerator: Omitting pulse delayed by system latency.\n");
 	}
 //	else {
 //		writeVerifyVal(ON_TIME);
@@ -500,6 +500,8 @@ start:
 			buildPulseDistrib(pulseEnd1, g.pulseTime1, g.p1Distrib, &g.p1Count);
 		}
 
+		writePulseStatus(readData, g.pulseTime1);
+
 		if (g.pulseTime2 > g.pulseTime1){				// If there is a pulseTime2, generate a second pulse.
 
 			gettimeofday(&tv1, NULL);
@@ -525,8 +527,6 @@ start:
 			printf("%s %d %d\n", timeStr, pulseEnd1, pulseEnd2);
 		}
 		else {
-			writePulseStatus(readData, g.pulseTime1);
-
 			strftime(timeStr, 100, timefmt, localtime((const time_t*)(&(readData[0]))));
 			printf("%s %d\n", timeStr, pulseEnd1);
 		}

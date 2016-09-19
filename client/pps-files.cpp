@@ -1433,10 +1433,10 @@ void showStatusEachSecond(void){
 				close(fd);
 				break;
 			}
-			read(fd, paramsBuf, sz);
-			close(fd);
 
 			if (sz > 0){
+				read(fd, paramsBuf, sz);
+
 				paramsBuf[sz]= '\0';
 
 				seqNum = getSeqNum(paramsBuf);
@@ -1446,6 +1446,7 @@ void showStatusEachSecond(void){
 				}
 				lastSeqNum = seqNum;
 			}
+			close(fd);
 		}
 
 		gettimeofday(&tv1, NULL);
