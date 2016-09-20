@@ -51,7 +51,7 @@ For a detailed description of the pps-client controller and accuracy testing run
 # Hardware Requirements
 ---
 
-1. A Raspberry Pi 2 Model B or later.
+1. A Raspberry Pi 2 or Pi 3.
 
 2. A GPS module that provides a PPS output. Development was done with the [Adafruit Ultimate GPS module](http://www.adafruit.com/product/746). Others providing compatible logic levels will also work.
 
@@ -63,7 +63,7 @@ For a detailed description of the pps-client controller and accuracy testing run
 ---
 ## The Raspian OS
 
-Versions of Linux kernel 4.1 and later are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file. However, we will not support versions of the Linux kernel earlier than v4.1 simply because real time performance is significantly worse on earlier kernels.
+Versions of Linux kernel 4.1 and later are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file. However, versions of the Linux kernel earlier than v4.1 are not supported because real time performance is significantly worse on earlier kernels.
 
 ## The NTP daemon
 
@@ -84,7 +84,7 @@ $ sudo ./pps-client-4.4.14-v7+
 ```
 The pps-client version must match the version of the Linux kernel on the RPi. The kernel version can be determined by running `uname -r` on an RPi terminal. Version matching is necessary because pps-client contains a kernel driver and all kernel drivers are compiled against a specific version of the Linux kernel and can only run on that kernel version.
 
-A few different Linux kernels are currently supported and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. Fortunately that will not happen unless you run `sudo rpi-update`. However, kernel development is proceeding very rapidly right now. Noticeable improvements occur from release to release. Our experience has been that is worthwhile to keep the kernel updated. The hope is that if there is enough interest in this project, the driver will be accepted into mainline in the upstream kernel and the version problem will go away.
+A few different Linux kernels are currently supported and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. Fortunately that will not happen unless you run `sudo rpi-update`. However, kernel development is proceeding very rapidly right now. Noticeable improvements occur from release to release. Our experience has been that is worthwhile to keep the kernel updated. The hope is that if there is enough interest in this project, the driver will be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
 # Uninstalling
 ---
@@ -288,7 +288,7 @@ The Linux OS was not designed to be a real-time operating system. Nevertheless, 
 
 ## Measurements of Noise and Latency
 
-As it maintains clock synchronization, the pps-client daemon continuously measures the interrupt delay and jitter of the PPS source. This jitter is predominantly a combination flicker noise in the clock oscillator and OS response latency. A typical jitter plot recorded second by second over 24 hours is shown in Figure 3.
+As it maintains clock synchronization, the pps-client daemon continuously measures the interrupt delay and jitter of the PPS source. This jitter is predominantly a combination flicker noise in the clock oscillator and OS response latency. A jitter plot recorded second by second over 24 hours on a Raspberry Pi 2 Model B is shown in Figure 3.
 
 <center><img src="/images/pps-jitter-distrib.png" alt="Jitter Distribution" style="width: 634px;"/></center>
 
@@ -296,7 +296,7 @@ This is a spreadsheet plot of the data file `/var/local/pps-jitter-distrib` that
 
 The shape of the main peak is consistent with clock oscillator flicker noise having a standard deviation of about 1 microsecond. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal introduced by OS latency. There were about 2600 of these out of a total sample population of 86,400. So about 3% of the time Linux system latency delayed the sample by as much as 42 microseconds.
 
-Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click, the real-time performance of the Linux OS (as of v4.4.14-v7+) limits timing accuracy of external events timed with interrupts to about 50 microseconds.
+Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click, the real-time performance of the Linux OS (as of v4.4.14-v7+) limits timing accuracy of external events to about 50 microseconds.
 
 
 

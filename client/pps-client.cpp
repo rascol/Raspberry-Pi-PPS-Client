@@ -855,9 +855,6 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 
 	bool restart = false;
 
-//	struct timeval tv2, tv1;
-//	gettimeofday(&tv2, NULL);
-
 	ssize_t rv = read(pps_fd, (void *)g.tm, 2 * sizeof(int));
 
 	g.interruptLost = false;
@@ -876,16 +873,6 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 		g.t.tv_usec = g.tm[1];
 
 		makeTimeCorrection(g.t, pps_fd);
-
-//		gettimeofday(&tv1, NULL);
-//		__suseconds_t strt = tv2.tv_usec;
-//		__suseconds_t end = tv1.tv_usec;
-//		if (strt > 500000){
-//			strt = -(1000000 - strt);
-//		}
-//		int ex_t = end - strt;
-//		printf("Execution start: %ld duration: %d\n", strt, ex_t);
-
 
 		if ((! g.isAcquiring && g.seq_num >= SECS_PER_MINUTE)		// If time slew on startup is too large
 				|| (g.isAcquiring && g.hardLimit > HARD_LIMIT_1024	// or if g.avgSlew becomes too large

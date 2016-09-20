@@ -52,7 +52,6 @@
 #define INV_GAIN_0 4
 #define INTEGRAL_GAIN 0.63212
 #define SHOW_INTRPT_DATA_INTVL 6
-//#define CALIBRATE_PERIOD SECS_PER_MINUTE
 #define INV_DELAY_SAMPLES_PER_MIN (1.0 / (double)SECS_PER_MINUTE)
 #define FREQDIFF_INTRVL 5
 #define INTRPT_MOST_DECAY_RATE 0.975
@@ -82,7 +81,7 @@
 #define SLEW_LEN 10						//!< The slew accumulator (slewAccum) update interval
 #define SLEW_MAX 65						//!< Jitter slew value below which the controller will begin to frequency lock.
 
-#define FUDGE 1							//!< Accurate time calibration required PPS latency to be longer than
+#define FUDGE 0							//!< Accurate time calibration required PPS latency to be longer than
 										//!< measured interrupt latency by this amount (micoseconds).
 #define MAX_LINE_LEN 50
 #define STRBUF_SZ 500
@@ -156,7 +155,6 @@ struct G {
 	unsigned int intrptCount;						//!< Advancing count of intrptErrorDistrib[] entries made by detectDelayPeak().
 	double delayMedian;								//!< Median of G.intrptDelay values calculated in getInterruptDelay().
 	int	sysDelay;									//!< System time delay between reception and response to an external interrupt.
-
 													//!< Calculated as the one-minute median of G.intrptDelay values in getInterruptDelay().
 
 	int rawError;									//!< Set equal to G.interruptTime - G.sysDelay in makeTimeCorrection().

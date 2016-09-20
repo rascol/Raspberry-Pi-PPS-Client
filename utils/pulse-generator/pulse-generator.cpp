@@ -68,8 +68,6 @@ struct pulseGeneratorGlobalVars {
 	int lastP2Fileno;
 } g;
 
-//const char *pulse_verify_file = "/mnt/usbstorage/PulseVerify";
-
 /**
  * Constructs an error message.
  */
@@ -337,29 +335,16 @@ struct timespec setSyncDelay(int timeAt, int fracSec){
 	return ts2;
 }
 
-//void writeVerifyVal(int i){
-//	int fd = open(pulse_verify_file, O_CREAT | O_WRONLY | O_TRUNC);
-//	fchmod(fd, 644);
-//	sprintf(g.strbuf, "%d", i);
-//	write(fd, g.strbuf, strlen(g.strbuf)+1);
-//	close(fd);
-//}
-
 void writePulseStatus(int readData[], int pulseTime){
 	if (g.badRead){
-//		writeVerifyVal(NONE);
 		printf("pulse-gemerator: Bad read from driver\n");
 		return;
 	}
 
 	int pulseEnd = readData[1];
 	if (pulseEnd > pulseTime){
-//		writeVerifyVal(DELAYED);
 		printf("pulse-gemerator: Omitting pulse delayed by system latency.\n");
 	}
-//	else {
-//		writeVerifyVal(ON_TIME);
-//	}
 }
 
 /**
