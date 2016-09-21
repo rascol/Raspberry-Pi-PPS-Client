@@ -255,9 +255,6 @@ int clampJitter(int rawError){
 	if (rawError > g.hardLimit){
 		zeroError = g.hardLimit;
 	}
-	else if (rawError < -g.hardLimit){
-		zeroError = -g.hardLimit;
-	}
 
 	return zeroError;
 }
