@@ -78,13 +78,25 @@ This is necessary if you want to install pps-client as a system service.
 # Installing
 ---
 
-The pps-client has a few versions of the installer for kernels currently in use on Raspian Jessy. Copy the appropriate one to the RPi and run it from a terminal:
-```
-$ sudo ./pps-client-4.4.14-v7+
-```
-The pps-client version must match the version of the Linux kernel on the RPi. The kernel version can be determined by running `uname -r` on an RPi terminal. Version matching is necessary because pps-client contains a kernel driver and all kernel drivers are compiled against a specific version of the Linux kernel and can only run on that kernel version.
+The pps-client has a few pre-compiled Linux 4 versions of the installer on the server. The pps-client version must match the version of the Linux kernel on your RPi. Version matching is necessary because pps-client contains a kernel driver that will only be recognized by the matching Linux kernel version.
 
-A few different Linux kernels are currently supported and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. Fortunately that will not happen unless you run `sudo rpi-update`. However, kernel development is proceeding very rapidly right now. Noticeable improvements occur from release to release. Our experience has been that is worthwhile to keep the kernel updated. The hope is that if there is enough interest in this project, the driver will be accepted into mainline in the upstream kernel and the versioning problem will go away.
+The kernel version of your RPi can be found by running `uname -r` from a connected terminal. The first two numbers in the kernel version on your RPi must match those in the pps-client installer that you select. If the third number mismatches that means the kernel version on your RPi is not the latest bugfix version of the Linux kernel in that series. In that case, you will need to update the kernel on your RPi.
+
+Bugfix kernel updates within the same kernel series, as for example from version `4.1.19` to `4.1.21`, are unlikely to affect the operation of software already installed on your RPi. But in the off chance that you run into a problem later, the kernel you replaced has been saved so you can always revert to it.
+
+If you need to update your kernel, then on your RPi install `rpi-update` with
+```
+$ sudo apt-get install rpi-update
+```
+Then run `rpi-update` as follows with the second number of the kernel on your RPi substituted for `X`,
+```
+$ sudo BRANCH=rpi-4.X.y rpi-update
+```
+To finish the install, copy the appropriate installer to your RPi and run it 
+```
+$ sudo ./[your-pps-client-installer]
+```
+A few different Linux kernels are currently supported and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. Fortunately that will not automatically happen unless you run `sudo rpi-update`. However, kernel development is proceeding very rapidly right now. Noticeable improvements occur from release to release. Our experience has been that is worthwhile to keep the kernel updated. The hope is that if there is enough interest in this project, the driver will be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
 # Uninstalling
 ---
@@ -98,7 +110,7 @@ $ sudo pps-client-remove
 ---
 On a reinstall, first uninstall as [described above](#unstalling).
 
-If you want to keep your current pps-client configuration file rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. For example, you could preserve it by doing something like,
+If you modified your current `/etc/pps-client.conf` and want to keep it then rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. For example, you could preserve it by doing something like,
 ```
 $ sudo mv /ect/pps-client.conf /etc/pps-client.conf.orig
 ```
@@ -110,8 +122,7 @@ $ sudo mv /etc/pps-client.conf.orig  /ect/pps-client.conf
 ---
 Because pps-client contains a Linux kernel driver, building pps-client requires that a compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client. The pps-client project can be built directly on the RPi or on a Linux workstation with a cross-compiler. Building on the RPi is slower but more reliable. In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi.
 
-The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. If you are unable to match your kernel version to the source found [here](https://github.com/raspberrypi/linux) instructions for doing a complete kernel install can be found [here](https://www.raspberrypi.org/documentation/linux/kernel/building.md). Otherwise follow the steps below.
-
+The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver.
 
 If you don't have git,
 ```
@@ -120,9 +131,18 @@ $ sudo apt-get install git
 
 ## Locate the Kernel Source
 
-First determine the Linux kernel version on your RPi with `uname -r`. Then from a browser go to https://github.com/raspberrypi/linux. Look at the `makefile` in the files list. The merge comment will give the version (`Linux 4.4.14` at the time this README was written). If this agrees with the version of your RPi you have the kernel source page you need. You will use this source page in the build steps below.
+First determine the Linux kernel version on your RPi with `uname -r` from a terminal. 
 
-If the current Linux version is more recent than your own, browse to https://github.com/raspberrypi/linux/commits/rpi-4.4.y. Search down though the commit list until you find the commit for the Linux version of your RPi. Select its commit number. That will take you to a the commit page. Select the `Browse Files` button at the top right. That will open the source tree page that you need. Copy its URL. For example, https://github.com/raspberrypi/linux/tree/ba760d4302e4fce130007b8bdbce7fcafc9bd9a9 , is the kernel source page for `Linux 4.4.13`.
+Then from a browser go to, for example, https://github.com/raspberrypi/linux/commits/rpi-4.4.y (the second number must agree with your Linux version). Scroll down the page and click on the Linux commit entry (`Linux 4.4.21` in this example). That will take you to the latest commit page. Click on the `Browse files` tab on the right side. That will take you to the source page you need in the build steps below.
+
+The third number, `y`, in the Linux version identifies bugfix updates. If that number in the page you found above is later than the version on your RPi then before you use the downloaded kernel you will need to update your kernel to the latest bugfix update. Bugfix updates are unlikely to adversely affect the operation of software already on your RPi. But if you later run into a problem, the kernel you replace has been saved so you can always revert to it.
+
+To update your RPi kernel you will need to use the `rpi-update` utility. If necessary install it with `sudo apt-get install rpi-update`.
+
+Then update to the latest bugfix for your kernel version with (replace `X` with the number from your kernel)
+```
+$ sudo BRANCH=rpi-4.X.y rpi-update
+```
 
 ## Building on the RPi
 
@@ -145,7 +165,7 @@ $ cd linux
 $ KERNEL=kernel7
 $ make bcm2709_defconfig
 ```
-Compile the kernel (takes about half an hour):
+Compile the kernel (takes about half an hour on Pi 2, about 20 minutes on Pi 3):
 ```
 $ make -j4 zImage
 ```

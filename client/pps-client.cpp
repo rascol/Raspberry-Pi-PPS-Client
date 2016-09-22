@@ -196,9 +196,6 @@ bool detectDelaySpike(int rawError){
 			isDelaySpike = false;					// suspend even if spikes continue.
 		}
 	}
-	else if (g.hardLimit == HARD_LIMIT_1 && rawError <= -g.noiseLevel){
-		isDelaySpike = true;						// Remove negative spikes introduced by the PPS source.
-	}
 	else {
 		isDelaySpike = false;
 
@@ -255,6 +252,9 @@ int clampJitter(int rawError){
 	if (rawError > g.hardLimit){
 		zeroError = g.hardLimit;
 	}
+	else if (rawError < -g.hardLimit){
+		zeroError = -g.hardLimit;
+	}
 
 	return zeroError;
 }
@@ -277,7 +277,7 @@ void makeAverageIntegral(double avgCorrection){
 
 	int indexOffset = SECS_PER_MINUTE - NUM_INTEGRALS;
 
-	if (g.correctionFifo_idx >= indexOffset){
+	if (g.correctionFifo_idx >= indexOffset){					// Over the last NUM_INTEGRALS seconds in each minute
 
 		int i = g.correctionFifo_idx - indexOffset;
 		if (i == 0){
