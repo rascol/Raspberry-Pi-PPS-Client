@@ -599,7 +599,7 @@ start:
 			nanosleep(&ts2, NULL);
 		}
 
-		int dvrv = read(intrpt_fd, (void *)tm, 2 * sizeof(int));
+		int dvrv = read(intrpt_fd, (void *)tm, 2 * sizeof(int));  // Read the time the interrupt occurred.
 		if (dvrv > 0){
 			int rv = getSysDelay(&sysDelay);
 			if (rv == -1){
@@ -654,11 +654,11 @@ start:
 			}
 
 			if (seq_num >= start){
-				seq_num += 1;
-				wake = tm[1] - 150;						// Sleep until 150 usec before the next expected pulse time
+				wake = tm[1] - 150;				// Sleep until 150 usec before the next expected pulse time
 				gettimeofday(&tv1, NULL);
 				ts2 = setSyncDelay(wake, tv1.tv_usec);
 			}
+			seq_num += 1;
 		}
 	}
 	close(intrpt_fd);
