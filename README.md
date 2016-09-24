@@ -2,7 +2,7 @@
 
 <center><img src="/images/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" style="width: 400px;"/></center>
 
-The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi 2 that synchronizes the Raspberry Pi 2 system clock to a GPS time clock. 
+The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi that synchronizes the Raspberry Pi system clock to a GPS time clock. 
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -78,7 +78,7 @@ This is necessary if you want to install pps-client as a system service.
 # Installing
 ---
 
-The pps-client has a few pre-compiled Linux 4 versions of the installer on the server. The pps-client version must match the version of the Linux kernel on your RPi. Version matching is necessary because pps-client contains a kernel driver that will only be recognized by the matching Linux kernel version.
+The pps-client has a few pre-compiled Linux 4 versions of the installer on the server. The pps-client version must match the version of the Linux kernel on your RPi. Version matching is necessary because pps-client contains a kernel driver that will only be recognized by the matching version of the Linux kernel.
 
 The kernel version of your RPi can be found by running `uname -r` from a connected terminal. The first two numbers in the kernel version on your RPi must match those in the pps-client installer that you select. If the third number mismatches that means the kernel version on your RPi is not the latest bugfix version of the Linux kernel in that series. In that case, you will need to update the kernel on your RPi.
 
@@ -294,7 +294,7 @@ The "`pps-client -v`" command continues to work as described above.
 # Practical Limits to Time Measurement
 ---
 
-While pps-client will synchronize the system clock to a GPS clock with an average accuracy of only one microsecond, there are practical limits imposed by the hardware and the operating system that restrict single-event timing accuracy. The hardware limit is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise), a kind of low frequency noise that is present in all crystal oscillators to varying degrees. The operating system limit is the real-time performance of the Linux OS.
+While pps-client will synchronize the system clock to a GPS clock with an average accuracy of one microsecond, there are practical limits imposed by the hardware and the operating system that restrict single-event timing accuracy. The hardware limit is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise), a kind of low frequency noise that is present in all crystal oscillators to varying degrees. The operating system limit is the real-time performance of the Linux OS.
 
 ## Flicker Noise
 

@@ -617,14 +617,6 @@ start:
 				if (rv == -1){
 					return 1;
 				}
-
-				if (seq_num >= start){
-					wake = tm[1] - 150;						// Sleep until 150 usec before the next expected pulse time
-					gettimeofday(&tv1, NULL);
-					ts2 = setSyncDelay(wake, tv1.tv_usec);
-				}
-
-				seq_num += 1;
 			}
 			else {
 				if (! g.showAllTols){
@@ -659,6 +651,13 @@ start:
 			}
 			if (g.seconds % SECS_PER_DAY == 0){
 				g.days += 1;
+			}
+
+			if (seq_num >= start){
+				seq_num += 1;
+				wake = tm[1] - 150;						// Sleep until 150 usec before the next expected pulse time
+				gettimeofday(&tv1, NULL);
+				ts2 = setSyncDelay(wake, tv1.tv_usec);
 			}
 		}
 	}
