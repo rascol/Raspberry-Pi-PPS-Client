@@ -947,6 +947,7 @@ void waitForPPS(bool verbose, int pps_fd){
 	char *pbuf = NULL;
 	timeCheckParams tcp;
 	int restart = 0;
+	int stksz = 0;
 
 	pbuf = new char[CONFIG_FILE_SZ];
 	initialize(verbose);
@@ -963,7 +964,7 @@ void waitForPPS(bool verbose, int pps_fd){
 	}
 
 	mlockall(MCL_CURRENT | MCL_FUTURE);
-	int stksz = lockStackSpace(2000000);
+	stksz = lockStackSpace(2000000);
 	if (stksz != 2000000){
 		sprintf(g.logbuf, "Insufficient locked stack space.\n");
 		writeToLog(g.logbuf);
