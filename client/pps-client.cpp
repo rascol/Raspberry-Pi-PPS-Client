@@ -887,12 +887,22 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 	return restart;
 }
 
-void lockStackSpace(void){
-	int size = 2000000;
+/**
+ * Writes to a large block of stack space with
+ * the given size so that mlockall() will shield
+ * this amount of space from page faults that
+ * could affect timing.
+ */
+int lockStackSpace(int size){
+	int rv = 0;
 	char lockedStackSpace[size];
 	for (int i = 0; i < size; i++){
-		lockedStackSpace[i] = 0xff;
+		lockedStackSpace[i] = 1;
 	}
+	for (int i = 0; i < size; i++){
+		rv += lockedStackSpace[i];
+	}
+	return rv;
 }
 
 //void reportLeak(const char *msg){
@@ -953,7 +963,12 @@ void waitForPPS(bool verbose, int pps_fd){
 	}
 
 	mlockall(MCL_CURRENT | MCL_FUTURE);
-	lockStackSpace();
+	int stksz = lockStackSpace(2000000);
+	if (stksz != 2000000){
+		sprintf(g.logbuf, "Insufficient locked stack space.\n");
+		writeToLog(g.logbuf);
+		goto end;
+	}
 
 	signal(SIGHUP, HUPhandler);			// Handler used to ignore SIGHUP.
 	signal(SIGTERM, TERMhandler);		// Handler for the termination signal.
@@ -1079,7 +1094,7 @@ int main(int argc, char *argv[])
 
 	struct sched_param param;						// Process must be run as root
 	param.sched_priority = 99;						// to get real-time priority.
-	sched_setscheduler(0, SCHED_RR, &param);		// Otherwise, this has no effect.
+	sched_setscheduler(0, SCHED_FIFO, &param);		// SCHED_FIFO: Don't yield to scheduler until ready.
 
 	if (waitForNTPServers() <= 0){					// Try to get accessible NTP servers
 		sprintf(g.logbuf, "Warning: Starting pps-client without NTP.\n");
