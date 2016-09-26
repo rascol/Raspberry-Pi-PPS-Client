@@ -1052,7 +1052,7 @@ void waitForPPS(bool verbose, int pps_fd){
 	}
 
 	stksz = checkStackUsed(maxStksz);
-	sprintf(g.logbuf, "pps-client stack used: %d of maximum: \n", stksz, maxStksz);
+	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, maxStksz);
 	writeToLog(g.logbuf);
 
 end:
