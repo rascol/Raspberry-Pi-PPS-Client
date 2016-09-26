@@ -982,6 +982,10 @@ void waitForPPS(bool verbose, int pps_fd){
 		goto end;
 	}
 
+	stksz = checkStackUsed(2000000 - 10);
+	sprintf(g.logbuf, "pps-client stack initially used: %d\n", stksz);
+	writeToLog(g.logbuf);
+
 	signal(SIGHUP, HUPhandler);			// Handler used to ignore SIGHUP.
 	signal(SIGTERM, TERMhandler);		// Handler for the termination signal.
 
