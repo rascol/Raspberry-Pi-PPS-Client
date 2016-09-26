@@ -905,6 +905,17 @@ int lockStackSpace(int size){
 	return rv;
 }
 
+int checkStackUsed(int size){
+	char lockedStackSpace[size];
+	int i = 0;
+	for (i = size-1; i >= 0; i--){
+		if (lockedStackSpace[i] != 1){
+			break;
+		}
+	}
+	return i;
+}
+
 //void reportLeak(const char *msg){
 //	sprintf(g.logbuf, msg);
 //	writeToLog(g.logbuf);
@@ -1027,6 +1038,10 @@ void waitForPPS(bool verbose, int pps_fd){
 
 		ts2 = setSyncDelay(timePPS, tv1.tv_usec);
 	}
+
+	stksz = checkStackUsed(2000000);
+	sprintf(g.logbuf, "pps-client stack used: %d\n", stksz);
+	writeToLog(g.logbuf);
 
 end:
 	freeSNTPThreads(&tcp);
