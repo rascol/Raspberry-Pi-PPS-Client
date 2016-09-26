@@ -908,7 +908,7 @@ int lockStackSpace(int size){
 int checkStackUsed(int size){
 	char lockedStackSpace[size];
 	int i = 0;
-	for (i = size-1; i >= 0; i--){
+	for (i = size-1; i > 0; i--){
 		if (lockedStackSpace[i] != 1){
 			break;
 		}
@@ -982,7 +982,7 @@ void waitForPPS(bool verbose, int pps_fd){
 		goto end;
 	}
 
-	stksz = checkStackUsed(2000000 - 10);
+	stksz = checkStackUsed(2000000);
 	sprintf(g.logbuf, "pps-client stack initially used: %d\n", stksz);
 	writeToLog(g.logbuf);
 
@@ -1043,7 +1043,7 @@ void waitForPPS(bool verbose, int pps_fd){
 		ts2 = setSyncDelay(timePPS, tv1.tv_usec);
 	}
 
-	stksz = checkStackUsed(2000000 - 10);
+	stksz = checkStackUsed(2000000);
 	sprintf(g.logbuf, "pps-client stack used: %d\n", stksz);
 	writeToLog(g.logbuf);
 
