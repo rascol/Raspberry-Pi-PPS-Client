@@ -888,10 +888,13 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 }
 
 /**
- * Writes to a large block of stack space with
- * the given size so that mlockall() will shield
- * this amount of space from page faults that
+ * Writes to a block of stack space of the
+ * given size so that mlockall() will shield
+ * this amount of stack from page faults that
  * could affect timing.
+ *
+ * @param [in] size Then number of bytes to write.
+ * @returns The number of bytes written to.
  */
 int lockStackSpace(int size){
 	int rv = 0;
@@ -905,6 +908,14 @@ int lockStackSpace(int size){
 	return rv;
 }
 
+/**
+ * Gets the largest amount of stack actually
+ * used while the program was running out of
+ * a possible stack of the given size.
+ *
+ * @param [in] size The number of stack bytes to check.
+ * @returns Number of bytes of stack used.
+ */
 int checkStackUsed(int size){
 	char lockedStackSpace[size];
 	int i = 0;
@@ -959,7 +970,7 @@ void waitForPPS(bool verbose, int pps_fd){
 	timeCheckParams tcp;
 	int restart = 0;
 	int stksz = 0;
-	int maxStksz = 2000000;
+	int maxStksz = 10000;
 
 	pbuf = new char[CONFIG_FILE_SZ];
 	initialize(verbose);
@@ -982,10 +993,6 @@ void waitForPPS(bool verbose, int pps_fd){
 		writeToLog(g.logbuf);
 		goto end;
 	}
-
-	stksz = checkStackUsed(maxStksz);
-	sprintf(g.logbuf, "pps-client stack initially used: %d\n", stksz);
-	writeToLog(g.logbuf);
 
 	signal(SIGHUP, HUPhandler);			// Handler used to ignore SIGHUP.
 	signal(SIGTERM, TERMhandler);		// Handler for the termination signal.
@@ -1045,7 +1052,7 @@ void waitForPPS(bool verbose, int pps_fd){
 	}
 
 	stksz = checkStackUsed(maxStksz);
-	sprintf(g.logbuf, "pps-client stack used: %d\n", stksz);
+	sprintf(g.logbuf, "pps-client stack used: %d of maximum: \n", stksz, maxStksz);
 	writeToLog(g.logbuf);
 
 end:
