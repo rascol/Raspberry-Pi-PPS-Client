@@ -11,7 +11,7 @@ all: interrupt-timer
 interrupt-timer: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: G++ Linker'
-	g++ -o "interrupt-timer" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -static -o "interrupt-timer" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

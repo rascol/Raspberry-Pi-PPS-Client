@@ -11,7 +11,7 @@ all: pulse-generator
 pulse-generator: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: G++ Linker'
-	g++ -o "pulse-generator" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -static -o "pulse-generator" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

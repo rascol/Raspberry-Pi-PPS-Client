@@ -12,6 +12,7 @@ endif
 
 EXTRA_CFLAGS += $(DEBFLAGS)
 EXTRA_CFLAGS += -I..
+EXTRA_CFLAGS += -static
 
 ifneq ($(KERNELRELEASE),)
 
