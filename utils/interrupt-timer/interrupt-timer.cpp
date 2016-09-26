@@ -464,7 +464,7 @@ int main(int argc, char *argv[]){
 
 	struct sched_param param;								// Process must be run as
 	param.sched_priority = 99;								// root to change priority.
-	sched_setscheduler(0, SCHED_FIFO, &param);				// Else, this has no effect.
+	sched_setscheduler(0, SCHED_FIFO, &param);
 
 	if (argc > 1){
 		if (strcmp(argv[1], "load-driver") == 0){

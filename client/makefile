@@ -13,7 +13,7 @@ all: pps-client
 pps-client: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: G++ Linker'
-	$(CROSS_COMPILE)g++ -pthread -L/usr/local/lib -o "pps-client" $(OBJS) $(USER_OBJS) $(LIBS)
+	$(CROSS_COMPILE)g++ -static -pthread -L/usr/local/lib -o "pps-client" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
