@@ -908,12 +908,12 @@ int lockStackSpace(int size){
 int checkStackUsed(int size){
 	char lockedStackSpace[size];
 	int i = 0;
-	for (i = size-1; i >= 0; i--){
+	for (i = 0; i < size; i++){
 		if (lockedStackSpace[i] != 1){
 			break;
 		}
 	}
-	return i + 1;
+	return size - i;
 }
 
 //void reportLeak(const char *msg){
@@ -959,7 +959,7 @@ void waitForPPS(bool verbose, int pps_fd){
 	timeCheckParams tcp;
 	int restart = 0;
 	int stksz = 0;
-	int maxStksz = 10000000;
+	int maxStksz = 2000000;
 
 	pbuf = new char[CONFIG_FILE_SZ];
 	initialize(verbose);
