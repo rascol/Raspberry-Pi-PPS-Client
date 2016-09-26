@@ -1039,7 +1039,7 @@ void waitForPPS(bool verbose, int pps_fd){
 		ts2 = setSyncDelay(timePPS, tv1.tv_usec);
 	}
 
-	stksz = checkStackUsed(2000000);
+	stksz = checkStackUsed(2000000 - 10);
 	sprintf(g.logbuf, "pps-client stack used: %d\n", stksz);
 	writeToLog(g.logbuf);
 
