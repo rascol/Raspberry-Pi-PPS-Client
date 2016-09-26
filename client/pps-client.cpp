@@ -969,8 +969,6 @@ void waitForPPS(bool verbose, int pps_fd){
 	char *pbuf = NULL;
 	timeCheckParams tcp;
 	int restart = 0;
-	int stksz = 0;
-	int maxStksz = 10000;
 
 	pbuf = new char[CONFIG_FILE_SZ];
 	initialize(verbose);
@@ -983,14 +981,6 @@ void waitForPPS(bool verbose, int pps_fd){
 
 	rv = allocInitializeSNTPThreads(&tcp);
 	if (rv == -1){
-		goto end;
-	}
-
-	mlockall(MCL_CURRENT | MCL_FUTURE);
-	stksz = lockStackSpace(maxStksz);
-	if (stksz != maxStksz){
-		sprintf(g.logbuf, "Insufficient locked stack space.\n");
-		writeToLog(g.logbuf);
 		goto end;
 	}
 
@@ -1050,11 +1040,6 @@ void waitForPPS(bool verbose, int pps_fd){
 
 		ts2 = setSyncDelay(timePPS, tv1.tv_usec);
 	}
-
-	stksz = checkStackUsed(maxStksz);
-	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, maxStksz);
-	writeToLog(g.logbuf);
-
 end:
 	freeSNTPThreads(&tcp);
 end1:
@@ -1120,7 +1105,19 @@ int main(int argc, char *argv[])
 	}
 						// pid == 0 for the child process which now will run this code as a daemon.
 
+	int stksz = 0;
+	int maxStksz = 150000;
 	struct sched_param param;						// Process must be run as root
+
+	mlockall(MCL_CURRENT | MCL_FUTURE);
+
+	stksz = lockStackSpace(maxStksz);
+	if (stksz != maxStksz){
+		sprintf(g.logbuf, "Insufficient locked stack space.\n");
+		writeToLog(g.logbuf);
+		goto end0;
+	}
+
 	param.sched_priority = 99;						// to get real-time priority.
 	sched_setscheduler(0, SCHED_FIFO, &param);		// SCHED_FIFO: Don't yield to scheduler until ready.
 
@@ -1164,14 +1161,19 @@ int main(int argc, char *argv[])
 
 	sprintf(g.logbuf, "pps-client exiting.\n");
 	writeToLog(g.logbuf);
+
 end2:
 	system("rm /var/run/pps-client.pid");			// Remove PID file with system() which blocks until
 end1:												// rm completes keeping shutdown correcty sequenced.
 	enableNTP();
 
 	sleep(5);										// Wait for the driver to close.
-	driver_unload();								// Driver is unloaded last to avoid system
-end0:												// inability to unload it because the driver
-	return rv;										// is still active.
+	driver_unload();								// Driver is unloaded last to avoid system inability
+													// to unload it because the driver is still active.
+	stksz = checkStackUsed(maxStksz);
+	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, maxStksz);
+	writeToLog(g.logbuf);
+end0:
+	return rv;
 }
 
