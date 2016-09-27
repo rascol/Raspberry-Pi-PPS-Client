@@ -192,7 +192,7 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	sprintf(num, "%d", id);						//    "/run/shm/sntp_outn" with n the id val.
 
 	char *cmd = buf;							// Construct a command string:
-	strcpy(cmd, "sntp ");						//    "sntp <server_name> > /run/shm/sntp_outn"
+	strcpy(cmd, "sntp ");						//    "sntp [server_name] > /run/shm/sntp_outn"
 	strcat(cmd, server);
 	strcat(cmd, " > ");
 	strcat(cmd, filename);

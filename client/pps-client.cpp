@@ -1023,7 +1023,7 @@ void waitForPPS(bool verbose, int pps_fd){
 				break;
 			}
 
-			if (g.seq_num < 1500)			// test: run makeSNTPTimeQuery() only once to check for mem leaks.
+//			if (g.seq_num < 1500)			// test: run makeSNTPTimeQuery() only once to check for mem leaks.
 			makeSNTPTimeQuery(&tcp);
 
 			if (! g.interruptLost && ! g.isDelaySpike){
