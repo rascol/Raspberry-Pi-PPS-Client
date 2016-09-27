@@ -1023,6 +1023,7 @@ void waitForPPS(bool verbose, int pps_fd){
 				break;
 			}
 
+			if (g.seq_num < 1500)			// test: run makeSNTPTimeQuery() only once to check for mem leaks.
 			makeSNTPTimeQuery(&tcp);
 
 			if (! g.interruptLost && ! g.isDelaySpike){
@@ -1106,7 +1107,7 @@ int main(int argc, char *argv[])
 						// pid == 0 for the child process which now will run this code as a daemon.
 
 	int stksz = 0;
-	int maxStksz = 150000;
+	int maxStksz = 200000;
 	struct sched_param param;						// Process must be run as root
 
 	mlockall(MCL_CURRENT | MCL_FUTURE);
