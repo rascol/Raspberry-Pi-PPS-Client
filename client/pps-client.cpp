@@ -1106,18 +1106,18 @@ int main(int argc, char *argv[])
 	}
 						// pid == 0 for the child process which now will run this code as a daemon.
 
-	int stksz = 0;
-	int maxStksz = 200000;
+//	int stksz = 0;
+//	int maxStksz = 200000;
 	struct sched_param param;						// Process must be run as root
 
-	mlockall(MCL_CURRENT | MCL_FUTURE);
-
-	stksz = lockStackSpace(maxStksz);
-	if (stksz != maxStksz){
-		sprintf(g.logbuf, "Insufficient locked stack space.\n");
-		writeToLog(g.logbuf);
-		goto end0;
-	}
+//	mlockall(MCL_CURRENT | MCL_FUTURE);
+//
+//	stksz = lockStackSpace(maxStksz);
+//	if (stksz != maxStksz){
+//		sprintf(g.logbuf, "Insufficient locked stack space.\n");
+//		writeToLog(g.logbuf);
+//		goto end0;
+//	}
 
 	param.sched_priority = 99;						// to get real-time priority.
 	sched_setscheduler(0, SCHED_FIFO, &param);		// SCHED_FIFO: Don't yield to scheduler until ready.
@@ -1171,9 +1171,9 @@ end1:												// rm completes keeping shutdown correcty sequenced.
 	sleep(5);										// Wait for the driver to close.
 	driver_unload();								// Driver is unloaded last to avoid system inability
 													// to unload it because the driver is still active.
-	stksz = checkStackUsed(maxStksz);
-	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, maxStksz);
-	writeToLog(g.logbuf);
+//	stksz = checkStackUsed(maxStksz);
+//	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, maxStksz);
+//	writeToLog(g.logbuf);
 end0:
 	return rv;
 }
