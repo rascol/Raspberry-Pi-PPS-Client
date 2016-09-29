@@ -1075,10 +1075,10 @@ int main(int argc, char *argv[])
 	int ppid, pps_fd;
 	bool verbose = false;
 
-	struct rlimit rlp;
-	rlp.rlim_cur = 16384;
-	rlp.rlim_max = 16384;
-	rv = setrlimit(RLIMIT_STACK, &rlp);
+//	struct rlimit rlp;
+//	rlp.rlim_cur = 16384;
+//	rlp.rlim_max = 16384;
+//	rv = setrlimit(RLIMIT_STACK, &rlp);
 
 	if (argc > 1){
 		if (strcmp(argv[1], "-v") == 0){
@@ -1115,12 +1115,12 @@ int main(int argc, char *argv[])
 
 	mlockall(MCL_CURRENT | MCL_FUTURE);
 
-	stksz = lockStackSpace(16384);
-	if (stksz != 16384){
-		sprintf(g.logbuf, "Insufficient locked stack space.\n");
-		writeToLog(g.logbuf);
-		goto end0;
-	}
+//	stksz = lockStackSpace(16384);
+//	if (stksz != 16384){
+//		sprintf(g.logbuf, "Insufficient locked stack space.\n");
+//		writeToLog(g.logbuf);
+//		goto end0;
+//	}
 
 	param.sched_priority = 99;						// to get real-time priority.
 	sched_setscheduler(0, SCHED_FIFO, &param);		// SCHED_FIFO: Don't yield to scheduler until sleep.
@@ -1174,9 +1174,9 @@ end1:												// rm completes keeping shutdown correcty sequenced.
 	sleep(5);										// Wait for the driver to close.
 	driver_unload();								// Driver is unloaded last to avoid system inability
 													// to unload it because the driver is still active.
-	stksz = checkStackUsed(16384);
-	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, PTHREAD_STACK_SZ);
-	writeToLog(g.logbuf);
+//	stksz = checkStackUsed(16384);
+//	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, PTHREAD_STACK_SZ);
+//	writeToLog(g.logbuf);
 end0:
 	return rv;
 }
