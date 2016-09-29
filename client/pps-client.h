@@ -37,6 +37,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
 
 #define PTHREAD_STACK_SZ 16384
 #define USECS_PER_SEC 1000000

@@ -493,7 +493,7 @@ int allocInitializeSNTPThreads(timeCheckParams *tcp){
 		return -1;
 	}
 
-	rv = pthread_attr_setstacksize(&(tcp->attr), 16384);
+	rv = pthread_attr_setstacksize(&(tcp->attr), PTHREAD_STACK_SZ);
 	if (rv != 0){
 		sprintf(g.logbuf, "Can't set pthread_attr_setstacksize(): %s\n", strerror(errno));
 		writeToLog(g.logbuf);

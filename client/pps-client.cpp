@@ -890,8 +890,8 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 /**
  * Writes to a block of stack space of the
  * given size so that mlockall() will shield
- * this amount of stack from page faults that
- * could affect timing.
+ * at least this amount of stack from page
+ * faults that could affect timing.
  *
  * @param [in] size Then number of bytes to write.
  * @returns The number of bytes written to.
@@ -1075,6 +1075,11 @@ int main(int argc, char *argv[])
 	int ppid, pps_fd;
 	bool verbose = false;
 
+	struct rlimit rlp;
+	rlp.rlim_cur = 16384;
+	rlp.rlim_max = 16384;
+	rv = setrlimit(RLIMIT_STACK, &rlp);
+
 	if (argc > 1){
 		if (strcmp(argv[1], "-v") == 0){
 			verbose = true;
@@ -1110,8 +1115,8 @@ int main(int argc, char *argv[])
 
 	mlockall(MCL_CURRENT | MCL_FUTURE);
 
-	stksz = lockStackSpace(PTHREAD_STACK_SZ);
-	if (stksz != PTHREAD_STACK_SZ){
+	stksz = lockStackSpace(16384);
+	if (stksz != 16384){
 		sprintf(g.logbuf, "Insufficient locked stack space.\n");
 		writeToLog(g.logbuf);
 		goto end0;
@@ -1169,7 +1174,7 @@ end1:												// rm completes keeping shutdown correcty sequenced.
 	sleep(5);										// Wait for the driver to close.
 	driver_unload();								// Driver is unloaded last to avoid system inability
 													// to unload it because the driver is still active.
-	stksz = checkStackUsed(PTHREAD_STACK_SZ);
+	stksz = checkStackUsed(16384);
 	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, PTHREAD_STACK_SZ);
 	writeToLog(g.logbuf);
 end0:
