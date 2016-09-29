@@ -1111,7 +1111,7 @@ int main(int argc, char *argv[])
 	mlockall(MCL_CURRENT | MCL_FUTURE);
 
 	stksz = lockStackSpace(PTHREAD_STACK_SZ);
-	if (stksz != maxStksz){
+	if (stksz != PTHREAD_STACK_SZ){
 		sprintf(g.logbuf, "Insufficient locked stack space.\n");
 		writeToLog(g.logbuf);
 		goto end0;
