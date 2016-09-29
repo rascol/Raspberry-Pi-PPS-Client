@@ -260,7 +260,7 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	int tz;
 	float delta;
 	double dtime;
-									// If the message format was as expected start decoding.
+												// Start decoding.
 	memset(&tm, 0, sizeof(struct tm));
 
 	// For example: 2016-02-01 16:28:54.146050 (+0500) -0.01507
@@ -269,7 +269,7 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 			&tm.tm_hour, &tm.tm_min, &tm.tm_sec,
 			&fracSec, &tz, &delta);
 
-	if (delta >= 500000){						// This round the seconds by
+	if (delta >= 500000){						// This rounds the seconds by
 		tm.tm_sec += 1;							// accounting for fractional seconds.
 	}
 
@@ -493,7 +493,7 @@ int allocInitializeSNTPThreads(timeCheckParams *tcp){
 		return -1;
 	}
 
-	rv = pthread_attr_setstacksize(&(tcp->attr), PTHREAD_STACK_SZ);
+	rv = pthread_attr_setstacksize(&(tcp->attr), PTHREAD_STACK_REQUIRED);
 	if (rv != 0){
 		sprintf(g.logbuf, "Can't set pthread_attr_setstacksize(): %s\n", strerror(errno));
 		writeToLog(g.logbuf);

@@ -887,46 +887,6 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 	return restart;
 }
 
-/**
- * Writes to a block of stack space of the
- * given size so that mlockall() will shield
- * at least this amount of stack from page
- * faults that could affect timing.
- *
- * @param [in] size Then number of bytes to write.
- * @returns The number of bytes written to.
- */
-int lockStackSpace(int size){
-	int rv = 0;
-	char lockedStackSpace[size];
-	for (int i = 0; i < size; i++){
-		lockedStackSpace[i] = 1;
-	}
-	for (int i = 0; i < size; i++){
-		rv += lockedStackSpace[i];
-	}
-	return rv;
-}
-
-/**
- * Gets the largest amount of stack actually
- * used while the program was running out of
- * a possible stack of the given size.
- *
- * @param [in] size The number of stack bytes to check.
- * @returns Number of bytes of stack used.
- */
-int checkStackUsed(int size){
-	char lockedStackSpace[size];
-	int i = 0;
-	for (i = 0; i < size; i++){
-		if (lockedStackSpace[i] != 1){
-			break;
-		}
-	}
-	return size - i;
-}
-
 //void reportLeak(const char *msg){
 //	sprintf(g.logbuf, msg);
 //	writeToLog(g.logbuf);
@@ -1075,11 +1035,6 @@ int main(int argc, char *argv[])
 	int ppid, pps_fd;
 	bool verbose = false;
 
-//	struct rlimit rlp;
-//	rlp.rlim_cur = 16384;
-//	rlp.rlim_max = 16384;
-//	rv = setrlimit(RLIMIT_STACK, &rlp);
-
 	if (argc > 1){
 		if (strcmp(argv[1], "-v") == 0){
 			verbose = true;
@@ -1110,17 +1065,9 @@ int main(int argc, char *argv[])
 	}
 						// pid == 0 for the child process which now will run this code as a daemon.
 
-	int stksz = 0;
 	struct sched_param param;						// Process must be run as root
 
 	mlockall(MCL_CURRENT | MCL_FUTURE);
-
-//	stksz = lockStackSpace(16384);
-//	if (stksz != 16384){
-//		sprintf(g.logbuf, "Insufficient locked stack space.\n");
-//		writeToLog(g.logbuf);
-//		goto end0;
-//	}
 
 	param.sched_priority = 99;						// to get real-time priority.
 	sched_setscheduler(0, SCHED_FIFO, &param);		// SCHED_FIFO: Don't yield to scheduler until sleep.
@@ -1173,10 +1120,6 @@ end1:												// rm completes keeping shutdown correcty sequenced.
 
 	sleep(5);										// Wait for the driver to close.
 	driver_unload();								// Driver is unloaded last to avoid system inability
-													// to unload it because the driver is still active.
-//	stksz = checkStackUsed(16384);
-//	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, PTHREAD_STACK_SZ);
-//	writeToLog(g.logbuf);
 end0:
 	return rv;
 }
