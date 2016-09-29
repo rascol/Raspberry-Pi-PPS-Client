@@ -1023,7 +1023,6 @@ void waitForPPS(bool verbose, int pps_fd){
 				break;
 			}
 
-//			if (g.seq_num < 1500)			// test: run makeSNTPTimeQuery() only once to check for mem leaks.
 			makeSNTPTimeQuery(&tcp);
 
 			if (! g.interruptLost && ! g.isDelaySpike){
@@ -1106,21 +1105,20 @@ int main(int argc, char *argv[])
 	}
 						// pid == 0 for the child process which now will run this code as a daemon.
 
-//	int stksz = 0;
-//	int maxStksz = 200000;
+	int stksz = 0;
 	struct sched_param param;						// Process must be run as root
 
-//	mlockall(MCL_CURRENT | MCL_FUTURE);
-//
-//	stksz = lockStackSpace(maxStksz);
-//	if (stksz != maxStksz){
-//		sprintf(g.logbuf, "Insufficient locked stack space.\n");
-//		writeToLog(g.logbuf);
-//		goto end0;
-//	}
+	mlockall(MCL_CURRENT | MCL_FUTURE);
+
+	stksz = lockStackSpace(PTHREAD_STACK_SZ);
+	if (stksz != maxStksz){
+		sprintf(g.logbuf, "Insufficient locked stack space.\n");
+		writeToLog(g.logbuf);
+		goto end0;
+	}
 
 	param.sched_priority = 99;						// to get real-time priority.
-	sched_setscheduler(0, SCHED_FIFO, &param);		// SCHED_FIFO: Don't yield to scheduler until ready.
+	sched_setscheduler(0, SCHED_FIFO, &param);		// SCHED_FIFO: Don't yield to scheduler until sleep.
 
 	if (waitForNTPServers() <= 0){					// Try to get accessible NTP servers
 		sprintf(g.logbuf, "Warning: Starting pps-client without NTP.\n");
@@ -1171,9 +1169,9 @@ end1:												// rm completes keeping shutdown correcty sequenced.
 	sleep(5);										// Wait for the driver to close.
 	driver_unload();								// Driver is unloaded last to avoid system inability
 													// to unload it because the driver is still active.
-//	stksz = checkStackUsed(maxStksz);
-//	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, maxStksz);
-//	writeToLog(g.logbuf);
+	stksz = checkStackUsed(PTHREAD_STACK_SZ);
+	sprintf(g.logbuf, "pps-client stack used: %d of maximum: %d\n", stksz, PTHREAD_STACK_SZ);
+	writeToLog(g.logbuf);
 end0:
 	return rv;
 }

@@ -38,6 +38,7 @@
 #include <poll.h>
 #include <sys/mman.h>
 
+#define PTHREAD_STACK_SZ 16384
 #define USECS_PER_SEC 1000000
 #define SECS_PER_MINUTE 60
 #define SECS_PER_5_MIN 300

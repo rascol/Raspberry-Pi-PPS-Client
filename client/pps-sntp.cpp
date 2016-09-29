@@ -199,7 +199,7 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	strcat(cmd, num);
 
 	system(cmd);								// Issue the command:
-												// system may block until the server returns.
+												// system() will block until sntp returns or times out.
 	char *fname = buf;
 	strcpy(fname, filename);
 	strcat(fname, num);
@@ -452,9 +452,7 @@ void makeSNTPTimeQuery(timeCheckParams *tcp){
 			sprintf(g.msgbuf, "Server %d is busy.\n", idx);
 			bufferStatusMsg(g.msgbuf);
 		}
-
-		if ( ! f.threadIsBusy[idx]){
-
+		else {
 			sprintf(g.msgbuf, "Requesting time from Server %d\n", idx);
 			bufferStatusMsg(g.msgbuf);
 
@@ -494,10 +492,15 @@ int allocInitializeSNTPThreads(timeCheckParams *tcp){
 		writeToLog(g.logbuf);
 		return -1;
 	}
-	else {
-		rv = pthread_attr_setdetachstate(&(tcp->attr), PTHREAD_CREATE_DETACHED);
+
+	rv = pthread_attr_setstacksize(&(tcp->attr), 16384);
+	if (rv != 0){
+		sprintf(g.logbuf, "Can't set pthread_attr_setstacksize(): %s\n", strerror(errno));
+		writeToLog(g.logbuf);
+		return -1;
 	}
 
+	rv = pthread_attr_setdetachstate(&(tcp->attr), PTHREAD_CREATE_DETACHED);
 	if (rv != 0){
 		sprintf(g.logbuf, "Can't set pthread_attr_t object state: %s\n", strerror(errno));
 		writeToLog(g.logbuf);
