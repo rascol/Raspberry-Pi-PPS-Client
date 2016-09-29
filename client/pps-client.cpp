@@ -983,15 +983,15 @@ void waitForPPS(bool verbose, int pps_fd){
 				break;
 			}
 
-			makeSNTPTimeQuery(&tcp);
-
 			if (! g.interruptLost && ! g.isDelaySpike){
-				processFiles(configVals, pbuf, CONFIG_FILE_SZ);
-
 				if (g.doCalibration && g.hardLimit == HARD_LIMIT_1){
 					getInterruptDelay(pps_fd);
 				}
+
+				processFiles(configVals, pbuf, CONFIG_FILE_SZ);
 			}
+
+			makeSNTPTimeQuery(&tcp);
 
 			writeStatusStrings();
 		}
