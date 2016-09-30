@@ -188,6 +188,8 @@ All trapped errors are reported to the log file `/var/log/pps-client.log`. In ad
 
 # Testing {#testing}
 
+Before performing any test, make sure that the test environment is clean. At a minimum, *reboot the `RPi`s that are being used in the tests*. This can eliminate a lot of unnecessary problems.
+
 The simplest test is to run pps-client and verify with the status printout that the controller locks to the PPS signal to a precision of one microsecond. From a terminal, that can be done at any time while pps-client is running with,
 
     $ pps-client -v

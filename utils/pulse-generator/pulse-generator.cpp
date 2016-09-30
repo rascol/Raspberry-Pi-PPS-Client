@@ -470,16 +470,14 @@ start:
 	gettimeofday(&tv1, NULL);
 	ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);		// Sleep to pulseStart1
 
-	int reqtime = 0;									// test
-
 	for (;;){
 		nanosleep(&ts2, NULL);
 
 		writeData[0] = GPIO_A;							// Identify the first GPIO outuput
-		writeData[1] = g.pulseTime1;
+		writeData[1] = g.pulseTime1;					// and the pulse time.
 		write(fd, writeData, 2 * sizeof(int));			// Request a write at g.pulseTime1.
 
-		if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred
+		if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred.
 			g.badRead = true;
 		}
 		else {
@@ -494,13 +492,10 @@ start:
 			gettimeofday(&tv1, NULL);
 			ts2.tv_nsec = (pulseStart2 - tv1.tv_usec) * 1000;
 			ts2.tv_sec = 0;
-			nanosleep(&ts2, NULL);						// Sleep to pulseStart2
-
-			gettimeofday(&tv1, NULL);						// test
-			reqtime = tv1.tv_usec;							// test
+			nanosleep(&ts2, NULL);						// Sleep to pulseStart2.
 
 			writeData[0] = GPIO_B;						// Identify the second GPIO output
-			writeData[1] = g.pulseTime2;
+			writeData[1] = g.pulseTime2;				// and the pulse time.
 			write(fd, writeData, 2 * sizeof(int));		// Request a write at pulseTime2.
 
 			if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred.
@@ -514,8 +509,7 @@ start:
 			writePulseStatus(readData, g.pulseTime2);
 
 			strftime(timeStr, 100, timefmt, localtime((const time_t*)(&(readData[0]))));
-			printf("%s %d %d request time: %d\n", timeStr, pulseEnd1, pulseEnd2, reqtime);
-//			printf("%s %d %d\n", timeStr, pulseEnd1, pulseEnd2);
+			printf("%s %d %d\n", timeStr, pulseEnd1, pulseEnd2);
 		}
 		else {
 			strftime(timeStr, 100, timefmt, localtime((const time_t*)(&(readData[0]))));
@@ -531,7 +525,7 @@ start:
 		}
 
 		gettimeofday(&tv1, NULL);
-		ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);	// Sleep to pulseStart1
+		ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);	// Sleep to pulseStart1.
 	}
 
 	close(fd);											// Close the pulse-generator device driver.
