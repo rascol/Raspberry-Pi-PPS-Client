@@ -470,10 +470,12 @@ start:
 	gettimeofday(&tv1, NULL);
 	ts2 = setSyncDelay(pulseStart1, tv1.tv_usec);		// Sleep to pulseStart1
 
+	int reqtime = 0;									// test
+
 	for (;;){
 		nanosleep(&ts2, NULL);
 
-		writeData[0] = GPIO_A;							// Write to the first GPIO outuput
+		writeData[0] = GPIO_A;							// Identify the first GPIO outuput
 		writeData[1] = g.pulseTime1;
 		write(fd, writeData, 2 * sizeof(int));			// Request a write at g.pulseTime1.
 
@@ -494,7 +496,10 @@ start:
 			ts2.tv_sec = 0;
 			nanosleep(&ts2, NULL);						// Sleep to pulseStart2
 
-			writeData[0] = GPIO_B;						// Write to the second GPIO output
+			gettimeofday(&tv1, NULL);						// test
+			reqtime = tv1.tv_usec;							// test
+
+			writeData[0] = GPIO_B;						// Identify the second GPIO output
 			writeData[1] = g.pulseTime2;
 			write(fd, writeData, 2 * sizeof(int));		// Request a write at pulseTime2.
 
@@ -509,7 +514,8 @@ start:
 			writePulseStatus(readData, g.pulseTime2);
 
 			strftime(timeStr, 100, timefmt, localtime((const time_t*)(&(readData[0]))));
-			printf("%s %d %d\n", timeStr, pulseEnd1, pulseEnd2);
+			printf("%s %d %d request time: %d\n", timeStr, pulseEnd1, pulseEnd2, reqtime);
+//			printf("%s %d %d\n", timeStr, pulseEnd1, pulseEnd2);
 		}
 		else {
 			strftime(timeStr, 100, timefmt, localtime((const time_t*)(&(readData[0]))));
