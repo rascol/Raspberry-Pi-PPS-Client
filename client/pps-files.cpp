@@ -1780,7 +1780,7 @@ int getDelayIndex(int sysDelay){
 			}
 		}
 		else {
-			g.delayLabel = g.sysDelay;
+			g.delayLabel[i] = g.sysDelay;
 			break;
 		}
 	}
