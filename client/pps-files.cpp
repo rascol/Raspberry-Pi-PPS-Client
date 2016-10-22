@@ -553,7 +553,7 @@ void writeDistribution(int distrib[], int len, int scaleZero, int count,
 	}
 }
 
-void writeMultipleDistrib(int label[], int distrib[NUM_PARAMS][], int len, int scaleZero, int count,
+void writeMultipleDistrib(int label[], int distrib[][INTRPT_DISTRIB_LEN], int len, int scaleZero, int count,
 		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
 
 	remove(distrib_file);
