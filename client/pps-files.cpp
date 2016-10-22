@@ -562,7 +562,17 @@ void writeMultipleDistrib(int label[], int distrib[][INTRPT_DISTRIB_LEN], int le
 		return;
 	}
 
-	sprintf(g.strbuf, "%d %d %d %d %d %d\n", 0, label[0], label[1], label[2], label[3], label[4]);
+	int totals[NUM_PARAMS] = {0};
+	for (int i = 0; i < INTRPT_DISTRIB_LEN; i++){
+		for (int j = 0; j < NUM_PARAMS; j++){
+			totals[j] += distrib[j][i];
+		}
+	}
+
+	sprintf(g.strbuf, "%s %d %d %d %d %d\n", "sysDelay:", label[0], label[1], label[2], label[3], label[4]);
+	write(fd, g.strbuf, strlen(g.strbuf));
+
+	sprintf(g.strbuf, "%s %d %d %d %d %d\n", "totals:", totals[0], totals[1], totals[2], totals[3], totals[4]);
 	write(fd, g.strbuf, strlen(g.strbuf));
 
 	for (int i = 0; i < len; i++){
