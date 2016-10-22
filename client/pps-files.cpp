@@ -28,8 +28,11 @@ const char *last_jitter_distrib_file = "/var/local/pps-jitter-distrib";			//!< S
 const char *jitter_distrib_file = "/var/local/pps-jitter-distrib-forming";		//!< Stores a forming distribution of offset corrections.
 const char *log_file = "/var/log/pps-client.log";								//!< Stores activity and errors.
 const char *old_log_file = "/var/log/pps-client.old.log";						//!< Stores activity and errors.
+const char *sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib-forming";	//!< Stores a forming distribution of sysDelay values.
+//const char *last_int_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
+//const char *interrupt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
 const char *last_intrpt_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
-const char *interrupt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
+const char *intrpt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
 const char *sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib-forming";	//!< Stores a forming distribution of sysDelay values.
 const char *last_sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib";		//!< Stores a distribution of sysDelay.
 const char *pidFilename = "/var/run/pps-client.pid";							//!< Stores the PID of pps-client.
@@ -551,15 +554,54 @@ void writeDistribution(int distrib[], int len, int scaleZero, int count,
 	}
 }
 
+void writeMultipleDistrib(int label[], int distrib[][], int len, int scaleZero, int count,
+		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
+
+	remove(distrib_file);
+	int fd = open_logerr(distrib_file, O_CREAT | O_WRONLY | O_APPEND);
+	if (fd == -1){
+		return;
+	}
+
+	sprintf(g.strbuf, "%d %d %d %d %d %d\n", 0, label[0], label[1], label[2], label[3], label[4]);
+	write(fd, g.strbuf, strlen(g.strbuf));
+
+	for (int i = 0; i < len; i++){
+		sprintf(g.strbuf, "%d %d %d %d %d %d\n", i-scaleZero, distrib[0][i], distrib[1][i], distrib[2][i], distrib[3][i], distrib[4][i]);
+		write(fd, g.strbuf, strlen(g.strbuf));
+	}
+	close(fd);
+
+	int epoch = count / SECS_PER_DAY;
+	if (epoch != *last_epoch ){
+		*last_epoch = epoch;
+		remove(last_distrib_file);
+		rename(distrib_file, last_distrib_file);
+		memset(distrib, 0, len * sizeof(int));
+	}
+}
+
+///**
+// * Writes a distribution to disk containing 60 additional calibration
+// * interrupt delays approximately every minute. Collects one day
+// * of interrupt delay samples before rolling over a new file.
+// */
+//void writeInterruptDistribFile(void){
+//	if (g.interruptCount % SECS_PER_MINUTE == 0 && g.seq_num > SETTLE_TIME){
+//		writeDistribution(g.interruptDistrib, INTRPT_DISTRIB_LEN, 0, g.interruptCount,
+//				&f.lastIntrptFileno, interrupt_distrib_file, last_int_distrib_file);
+//	}
+//}
+
 /**
  * Writes a distribution to disk containing 60 additional calibration
  * interrupt delays approximately every minute. Collects one day
  * of interrupt delay samples before rolling over a new file.
  */
-void writeInterruptDistribFile(void){
+void writeIntrptDistribFile(void){
 	if (g.interruptCount % SECS_PER_MINUTE == 0 && g.seq_num > SETTLE_TIME){
-		writeDistribution(g.interruptDistrib, INTRPT_DISTRIB_LEN, 0, g.interruptCount,
-				&f.lastIntrptFileno, interrupt_distrib_file, last_intrpt_distrib_file);
+		writeMultipleDistrib(g.delayLabel, g.intrptDistrib, INTRPT_DISTRIB_LEN, 0, g.interruptCount,
+				&f.lastIntrptFileno, intrpt_distrib_file, last_intrpt_distrib_file);
 	}
 }
 
@@ -845,7 +887,8 @@ void processFiles(char *config_str[], char *pbuf, int size){
 	}
 
 	if (g.doCalibration && isEnabled(INTERRUPT_DISTRIB, config_str)){
-		writeInterruptDistribFile();
+//		writeInterruptDistribFile();
+		writeIntrptDistribFile();
 	}
 
 	if (g.doCalibration && isEnabled(SYSDELAY_DISTRIB, config_str)){
@@ -1729,6 +1772,22 @@ void HUPhandler(int sig){
 	signal(SIGHUP, SIG_IGN);
 }
 
+int getDelayIndex(int sysDelay){
+	int i = 0;
+	for (i = 0; i < NUM_PARAMS; i++){
+		if (g.delayLabel[i] != 0){
+			if (g.sysDelay == g.delayLabel[i]){
+				break;
+			}
+		}
+		else {
+			g.delayLabel = g.sysDelay;
+			break;
+		}
+	}
+	return i;
+}
+
 /**
  * Accumulates a distribution of interrupt delay.
  *
@@ -1746,7 +1805,10 @@ void buildInterruptDistrib(int intrptDelay){
 	if (idx < 0){
 		idx = 0;
 	}
-	g.interruptDistrib[idx] += 1;
+//	g.interruptDistrib[idx] += 1;
+
+	int j = getDelayIndex(g.sysDelay);
+	g.intrptDistrib[j][idx] += 1;
 
 	g.interruptCount += 1;
 }

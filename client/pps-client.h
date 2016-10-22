@@ -82,8 +82,6 @@
 #define SLEW_LEN 10						//!< The slew accumulator (slewAccum) update interval
 #define SLEW_MAX 65						//!< Jitter slew value below which the controller will begin to frequency lock.
 
-#define FUDGE 0							//!< Accurate time calibration required PPS latency to be longer than
-										//!< measured interrupt latency by this amount (micoseconds).
 #define MAX_LINE_LEN 50
 #define STRBUF_SZ 500
 #define LOGBUF_SZ 500
@@ -91,6 +89,7 @@
 #define SNTP_MSG_SZ 110
 #define CONFIG_FILE_SZ 10000
 
+#define NUM_PARAMS 5
 #define ERROR_DISTRIB_LEN 121
 #define JITTER_DISTRIB_LEN 121
 #define INTRPT_DISTRIB_LEN 121
@@ -242,6 +241,9 @@ struct G {
 	unsigned int lastActiveCount;
 
 	double intrptErrorDistrib[ERROR_DISTRIB_LEN];	//!< The intrptError distribution calculated in detectDelayPeak().
+
+	int intrptDistrib[NUM_PARAMS][INTRPT_DISTRIB_LEN];
+	int delayLabel[NUM_PARAMS];
 
 	int interruptDistrib[INTRPT_DISTRIB_LEN];
 	int interruptCount;

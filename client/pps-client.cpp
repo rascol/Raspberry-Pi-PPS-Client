@@ -567,7 +567,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 
 	g.interruptTime = getFractionalSeconds(pps_t);
 
-	g.rawError = g.interruptTime - (g.sysDelay + FUDGE);// References the controller to g.sysDelay which sets the time
+	g.rawError = g.interruptTime - g.sysDelay;			// References the controller to g.sysDelay which sets the time
 														// of the PPS rising edge to zero at the start of each second.
 	g.zeroError = removeNoise(g.rawError);
 

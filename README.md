@@ -30,40 +30,52 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides synchronization precision of 1 microsecond and an average timekeeping accuracy of 1 microsecond. This is demonstrated by the data shown below.
+The pps-client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average accuracy of 2 microseconds. This has been verified on ten Raspberry Pi 3 test units.
 
-The data was captured over a 24 hour period from a Raspberry Pi 2 running Raspian with a 4.4.14-v7+ Linux kernel. Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
+Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
 <center><img src="/images/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
 
-Figure 2 shows the system clock frequency set by the controller which held the Allan deviation of the frequency relative to the control point to less than 0.07 parts per million in each minute over the same period.
+This data was captured from a Raspberry Pi 3 running Raspian with a 4.4.14-v7+ Linux kernel. The time corrections required to keep the rollover of the second synchronized to the rising edge of the PPS signal never exceeded 1 microsecond in this 24 hour period. This was true for all test units.
 
-Although the clock frequency was free to drift between each 1 minute correction, the average Allan deviation of 0.020 ppm over this 24 hour period indicates that it is very unlikely that the clock ever drifted more than about 0.1 ppm from the control point. This corresponds to a time drift of less than 100 nanoseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsec per sec.) The controller adjusted the frequency offset against temperature changes to the value that kept the system clock synchronized to the PPS to within a fraction of a microsecond.
+Figure 2 shows the system clock frequency set by the controller and the resulting [Allan deviation](https://en.wikipedia.org/wiki/Allan_variance) for the test unit with the largest error of the ten that were tested.
 
 <center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
 
-The combination of time slew adjustments never exceeding 1 microsecond each second and time drift never exceeding about 100 nanoseconds each second demonstrates a timekeeping control precision of 1 microsecond over this 24 hour period. Testing has determined that average absolute accuracy is also within 1 microsecond.
+Although the clock frequency drifted slightly between each frequency correction, the maximum Allan deviation of 0.045 ppm over this 24 hour period shows it to be unlikely that the clock ever drifted more than 0.100 ppm from the control point. That corresponds to a time drift of less than 0.1 microseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsec per sec.) Consequently, the controller continuously adjusted the frequency offset against temperature changes to the value that kept the system clock synchronized to the PPS to within a fraction of a microsecond.
 
-However, there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [](#practical-limits-to-time-measurement).
+Since the time slew adjustments necessary to keep the system time synchronized to the PPS never exceeded 1 microsecond each second and the time drift never exceeded 0.1 microsecond each second, the timekeeping control **precision** illustrated in Figure 3 was 1 microsecond over this 24 hour period for all test units. 
+
+As shown in Figure 3, timekeeping **accuracy** is the time offset at the rollover of the second which is also the offset between the true time and the measured time at any point in time.
+
+<center><img src="/images/time.png" alt="Interpretation of accuracy and precision" style=""/></center>
+
+Figure 4 is the distribution of measured times relative to a true time of 800,000 microseconds into each second for a typical Raspberry Pi 3 from the units tested.
+
+<center><img src="/images/InterruptTimerDistrib.png" alt="Time Parameters" style=""/></center>
+
+The peak of the distribution in Figure 4 is about 0.28 microsecond below 800,000 microseconds, showing the average accuracy of the this RPi to be much better than 1 microsecond. The peak was not in error by more than 0.6 microseconds for any of the test units.
+
+Figure 4 also shows that there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [](#practical-limits-to-time-measurement).
 
 For a detailed description of the pps-client controller and accuracy testing run Doxygen to generate the documentation or visit the [PPS-Client-Pages](https://rascol.github.io/Raspberry-Pi-PPS-Client) website.
 
 # Hardware Requirements
 ---
 
-1. A Raspberry Pi 2 or Pi 3.
+1. A Raspberry Pi 3 or Pi 2 Model B. All data included in this file is for Raspberry Pi 3. Please note that jitter and noise are larger in the Raspberry Pi 2 than in the Raspberry Pi 3.
 
-2. A GPS module that provides a PPS output. Development was done with the [Adafruit Ultimate GPS module](http://www.adafruit.com/product/746). Others providing compatible logic levels will also work.
+2. A GPS module that provides a PPS output. Development was done with the [Adafruit Ultimate GPS module](http://www.adafruit.com/product/746). Others providing compatible logic levels can also be used.
 
 3. A wired connection from a PPS source with 3.3 Volt logic outputs to GPIO 4 (pin 7) on the RPi header.
 
-4. A wired connection from GPIO_17 (pin 11) to GPIO_22 (pin 15) to support self calibration (Note the yellow jumper in the photo above).
+4. An optional wired connection from GPIO_17 (pin 11) to GPIO_22 (pin 15) to support self calibration (Note the yellow jumper in the photo above).
  
 # Software Requirements
 ---
 ## The Raspian OS
 
-Versions of Linux kernel 4.1 and later are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file. However, versions of the Linux kernel earlier than v4.1 are not supported because real time performance is significantly worse on earlier kernels.
+Versions of Linux kernel 4.1 and later are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file.
 
 ## The NTP daemon
 
@@ -80,9 +92,9 @@ This is necessary if you want to install pps-client as a system service.
 
 The pps-client has a few pre-compiled Linux 4 versions of the installer on the server. The pps-client version must match the version of the Linux kernel on your RPi. Version matching is necessary because pps-client contains a kernel driver that will only be recognized by the matching version of the Linux kernel.
 
-The kernel version of your RPi can be found by running `uname -r` from a connected terminal. The first two numbers in the kernel version on your RPi must match those in the pps-client installer that you select. If the third number mismatches that means the kernel version on your RPi is not the latest bugfix version of the Linux kernel in that series. In that case, you will need to update the kernel on your RPi.
+The kernel version of your RPi can be found by running `uname -r` from a connected terminal. The first two numbers in the kernel version on your RPi must match those in the pps-client installer that you select. If the third number mismatches that means the kernel version on your RPi is not the latest bugfix version of the Linux kernel in that series. In that case, you will need to update the kernel on your RPi to that version.
 
-Bugfix kernel updates within the same kernel series, as for example from version `4.1.19` to `4.1.21`, are unlikely to affect the operation of software already installed on your RPi. But in the off chance that you run into a problem later, the kernel you replaced has been saved so you can always revert to it.
+Bugfix kernel updates within the same kernel series, as for example from version `4.1.19` to `4.1.21`, are unlikely to adversely affect the operation of software already installed on your RPi. But in the exceptional case that you run into a problem later, the kernel you replaced has been saved on your RPi so you can always revert to it.
 
 If you need to update your kernel, then on your RPi install `rpi-update` with
 ```
@@ -96,7 +108,7 @@ To finish the install, copy the appropriate installer to your RPi and run it
 ```
 $ sudo ./[your-pps-client-installer]
 ```
-A few different Linux kernels are currently supported and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. Fortunately that will not automatically happen unless you run `sudo rpi-update`. However, kernel development is proceeding very rapidly right now. Noticeable improvements occur from release to release. Our experience has been that is worthwhile to keep the kernel updated. The hope is that if there is enough interest in this project, the driver will be accepted into mainline in the upstream kernel and the versioning problem will go away.
+Installers for a few different Linux kernels are currently on the server and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. That will not automatically happen unless you run `rpi-update`. If there is enough interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
 # Uninstalling
 ---
@@ -108,7 +120,8 @@ $ sudo pps-client-remove
 ```
 # Reinstalling
 ---
-On a reinstall, first uninstall as [described above](#unstalling).
+
+On a reinstall, first uninstall as [described above](#unstalling). But please consider this:
 
 If you modified your current `/etc/pps-client.conf` and want to keep it then rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. For example, you could preserve it by doing something like,
 ```
@@ -116,8 +129,9 @@ $ sudo mv /ect/pps-client.conf /etc/pps-client.conf.orig
 ```
 and then, after installing pps-client,
 ```
-$ sudo mv /etc/pps-client.conf.orig  /ect/pps-client.conf
+$ sudo cp /etc/pps-client.conf.orig  /ect/pps-client.conf
 ```
+
 # Building from Source
 ---
 Because pps-client contains a Linux kernel driver, building pps-client requires that a compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client. The pps-client project can be built directly on the RPi or on a Linux workstation with a cross-compiler. Building on the RPi is slower but more reliable. In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi.
@@ -131,15 +145,15 @@ $ sudo apt-get install git
 
 ## Locate the Kernel Source
 
-First determine the Linux kernel version on your RPi with `uname -r` from a terminal. 
+First determine the Linux kernel version by running `uname -r` from a terminal on your RPi. 
 
-Then from a browser go to, for example, https://github.com/raspberrypi/linux/commits/rpi-4.4.y (the second number must agree with your Linux version). Scroll down the page and click on the Linux commit entry (`Linux 4.4.21` in this example). That will take you to the latest commit page. Click on the `Browse files` tab on the right side. That will take you to the source page you need in the build steps below.
+Then from a browser go to, for example, https://github.com/raspberrypi/linux/commits/rpi-4.4.y (the second number must agree with your Linux kernel version). Scroll down the page and click on the Linux commit entry (`Linux 4.4.21` in this example). That will take you to the latest commit page. Click on the `Browse files` tab on the right side. That will take you to the source page you need in the build steps below.
 
-The third number, `y`, in the Linux version identifies bugfix updates. If that number in the page you found above is later than the version on your RPi then before you use the downloaded kernel you will need to update your kernel to the latest bugfix update. Bugfix updates are unlikely to adversely affect the operation of software already on your RPi. But if you later run into a problem, the kernel you replace has been saved so you can always revert to it.
+The third number, `y`, in the Linux version identifies bugfix updates. If that number in the page you found above is later than the version on your RPi then before you use the downloaded kernel you will need to update your kernel to that bugfix update. Bugfix updates are unlikely to adversely affect the operation of software already on your RPi. But if you later run into a problem, the kernel you replaced has been saved on your RPi so you can always revert to it.
 
 To update your RPi kernel you will need to use the `rpi-update` utility. If necessary install it with `sudo apt-get install rpi-update`.
 
-Then update to the latest bugfix for your kernel version with (replace `X` with the number from your kernel)
+Then update to the latest bugfix for your kernel version with (replace `X` with the corresponding number from your kernel)
 ```
 $ sudo BRANCH=rpi-4.X.y rpi-update
 ```
@@ -194,7 +208,7 @@ You might want to create a folder to hold the kernel and tools. For example,
 $ mkdir ~/rpi
 $ cd ~/rpi
 ```
-On a workstation you will need the cross-compiler:
+On a workstation you will need the latest version of the cross-compiler:
 ```
 $ git clone https://github.com/raspberrypi/tools
 ```
@@ -239,7 +253,7 @@ That completes the pps-client installation.
 # Running pps-client
 ---
 
-The pps-client requires that a PPS hardware signal is available from a GPS module. Once the GPS is connected and the PPS output is present on GPIO 4 you can do a quick try-out with,
+The pps-client requires that a PPS hardware signal is available from a GPS module and all wired connections for the GPS module [are in place](#hardware-requirements). Once the GPS is connected and the PPS output is present on GPIO 4 you can do a quick try-out with,
 ```
 $ sudo pps-client
 ```
@@ -247,7 +261,7 @@ That installs pps-client as a daemon. To watch the controller acquire you can su
 ```
 $ pps-client -v
 ```
-That runs a secondary copy of pps-client that just displays a status printout that the pps-client daemon continuously generates. When pps-client starts up you can expect to see something like the following in the status printout:
+That runs a secondary copy of pps-client that just displays a status printout that the pps-client daemon continuously generates and saves to a memory file. When pps-client starts up you can expect to see something like the following in the status printout:
 
 <center><img src="/images/StatusPrintoutOnStart.png" alt="Status Printout on Startup" style="width: 634px;"/></center>
 
@@ -262,7 +276,7 @@ It can take as long as 20 minutes for pps-client to fully acquire the first time
 These are the parameters shown in the status printout:
 
  * First two columns - date and time of the rising edge of the PPS signal.
- * Third column - the total number of PPS interrupts received since pps-client was started.
+ * Third column - the sequence count, i.e., the total number of PPS interrupts received since pps-client was started.
  * jitter - the time deviation in microseconds recorded at the reception of the PPS interrupt.
  * freqOffset - the frequency offset of the system clock in parts per million of the system clock frequency.
  * avgCorrection - the time corrections (in microseconds) averaged over the previous minute.
@@ -294,7 +308,7 @@ The "`pps-client -v`" command continues to work as described above.
 # Practical Limits to Time Measurement
 ---
 
-While pps-client will synchronize the system clock to a GPS clock with an average accuracy of one microsecond, there are practical limits imposed by the hardware and the operating system that restrict single-event timing accuracy. The hardware limit is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise), a kind of low frequency noise that is present in all crystal oscillators to varying degrees. The operating system limit is the real-time performance of the Linux OS.
+While pps-client will synchronize the system clock to a GPS clock with an average accuracy of two microseconds, there are practical limits imposed by the hardware and the operating system that limit single-event timing accuracy. The hardware limit is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise), a kind of low frequency noise that is present in all crystal oscillators. The operating system limit is the real-time performance of the Linux OS.
 
 ## Flicker Noise
 
@@ -304,19 +318,19 @@ Flicker noise sets the absolute limit on the accuracy of the system clock. This 
 
 ## Linux OS Real-Time Latency
 
-The Linux OS was not designed to be a real-time operating system. Nevertheless, there is considerable interest in upgrading it to provide real-time performance. Consequently, real-time performance improved significantly between versions 3 and 4. As a result of that, median system latency in responding to an external interrupt on the RPi ARM processor is currently about 8 microseconds - down from about 25 microseconds in Linux 3. As yet, however, there are still processes that need more time to release the OS to other real-time processes. 
+The Linux OS was not designed to be a real-time operating system. Nevertheless, there is considerable interest in upgrading it to provide real-time performance. Consequently, real-time performance improved significantly between versions 3 and 4. As a result of that, median system latency in responding to an external interrupt on the RPi ARM processor is currently about 6 microseconds - down from about 23 microseconds in Linux 3. As yet, however, there are still processes that need more time to release the OS to other real-time processes. 
 
 ## Measurements of Noise and Latency
 
-As it maintains clock synchronization, the pps-client daemon continuously measures the interrupt delay and jitter of the PPS source. This jitter is predominantly a combination flicker noise in the clock oscillator and OS response latency. A jitter plot recorded second by second over 24 hours on a Raspberry Pi 2 Model B is shown in Figure 3.
+As it maintains clock synchronization, the pps-client daemon continuously measures the interrupt delay and jitter of the PPS source. This jitter is predominantly a combination flicker noise in the clock oscillator and OS response latency. A jitter plot recorded second by second over 24 hours on a Raspberry Pi 3 Model B is shown in Figure 3.
 
-<center><img src="/images/pps-jitter-distrib.png" alt="Jitter Distribution" style="width: 634px;"/></center>
+<center><img src="/images/pps-jitter-distrib.png" alt="Jitter Distribution" style=""/></center>
 
 This is a spreadsheet plot of the data file `/var/local/pps-jitter-distrib` that was generated when `jitter-distrib=enable` was set in in the pps-client config file, `/etc/pps-client.conf`. 
 
-The shape of the main peak is consistent with clock oscillator flicker noise having a standard deviation of about 1 microsecond. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal introduced by OS latency. There were about 2600 of these out of a total sample population of 86,400. So about 3% of the time Linux system latency delayed the sample by as much as 42 microseconds.
+The shape of the main peak is consistent with clock oscillator flicker noise having a standard deviation of about 0.8 microsecond. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal introduced by OS latency. There were about 1500 of these out of a total sample population of 86,400. So about 1.7% of the time Linux system latency delayed the sample as much as 15 microseconds.
 
-Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click, the real-time performance of the Linux OS (as of v4.4.14-v7+) limits timing accuracy of external events to about 50 microseconds.
+Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click to a few microseconds, the real-time performance of the Linux OS (as of v4.4.14-v7+) sets the timing accuracy of external events to about 20 microseconds.
 
 
 

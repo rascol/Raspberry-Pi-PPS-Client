@@ -531,6 +531,7 @@ int main(int argc, char *argv[]){
 		printf("  sudo interrupt-timer load-driver <gpio-number>\n");
 		printf("where gpio-number is the GPIO of the pin on which\n");
 		printf("the interrupt will be captured.\n\n");
+/*
 		printf("After loading the driver, calling interrupt-timer\n");
 		printf("causes it to wait for interrupts then output the\n");
 		printf("date-time when each occurs. The following command\n");
@@ -545,6 +546,7 @@ int main(int argc, char *argv[]){
 		printf("time is within the estimated tolerance. If the value\n");
 		printf("is zero or not provided, a range of tolerances and\n");
 		printf("probabilites is generated.\n\n");
+*/
 		printf("The program will exit on ctrl-c or when no interrupts\n");
 		printf("are received within 5 minutes. When done, unload the \n");
 		printf("driver with,\n");
