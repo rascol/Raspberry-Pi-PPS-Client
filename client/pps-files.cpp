@@ -28,7 +28,6 @@ const char *last_jitter_distrib_file = "/var/local/pps-jitter-distrib";			//!< S
 const char *jitter_distrib_file = "/var/local/pps-jitter-distrib-forming";		//!< Stores a forming distribution of offset corrections.
 const char *log_file = "/var/log/pps-client.log";								//!< Stores activity and errors.
 const char *old_log_file = "/var/log/pps-client.old.log";						//!< Stores activity and errors.
-const char *sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib-forming";	//!< Stores a forming distribution of sysDelay values.
 //const char *last_int_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
 //const char *interrupt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
 const char *last_intrpt_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
@@ -554,7 +553,7 @@ void writeDistribution(int distrib[], int len, int scaleZero, int count,
 	}
 }
 
-void writeMultipleDistrib(int label[], int distrib[][], int len, int scaleZero, int count,
+void writeMultipleDistrib(int label[], int distrib[NUM_PARAMS][], int len, int scaleZero, int count,
 		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
 
 	remove(distrib_file);
