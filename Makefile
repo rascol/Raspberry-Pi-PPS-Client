@@ -28,15 +28,7 @@ all:
 	cd ./tmp && $(MAKE) all
 	cp ./tmp/pps-client-make-install ./installer/pps-client-make-install
 	find ./tmp -type f -delete
-	
-#	cd ./utils && $(MAKE) all
-#	cp ./utils/interrupt-timer ./pkg/interrupt-timer
-	
-#	cp -r ./utils/driver/. ./tmp
-#	cd ./tmp && $(MAKE) all
-#	cp ./tmp/interrupt-timer.ko ./pkg/interrupt-timer.ko
-#	find ./tmp -type f -delete
-	
+		
 	cp -r ./utils/interrupt-timer/. ./tmp
 	cd ./tmp && $(MAKE) all
 	cp ./tmp/interrupt-timer ./pkg/interrupt-timer
@@ -55,6 +47,11 @@ all:
 	cp -r ./utils/pulse-generator/driver/. ./tmp		
 	cd ./tmp && $(MAKE) all
 	cp ./tmp/pulse-generator.ko ./pkg/pulse-generator.ko
+	find ./tmp -type f -delete
+	
+	cp -r ./utils/NormalDistribParams/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/NormalDistribParams ./pkg/NormalDistribParams
 	find ./tmp -type f -delete
 	
 	cp ./README.md ./pkg/README.md
@@ -81,6 +78,7 @@ clean:
 	cd ./driver && $(MAKE) clean
 	cd ./utils/interrupt-timer && $(MAKE) clean
 	cd ./utils/pulse-generator && $(MAKE) clean
+	cd ./utils/NormalDistribParams && $(MAKE) clean
 		
 	rm ./installer/pps-client-install-hd
 	rm ./installer/pps-client-make-install

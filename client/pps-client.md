@@ -23,7 +23,8 @@
     - [Testing Accuracy](#testing-accuracy)
       - [Test Setup](#test-setup)
       - [Test Results](#test-results)
-
+- [Trouble Shooting](#trouble-shooting)
+- [Known Bugs](#known-bugs)
 # Uses {#uses}
 
 The pps-client source code is the reference design for a general technique that provides high accuracy timekeeping. It was implemented on a relatively slow ARM processor which should illustrate that a similar software solution can be successful on almost any application processor.
@@ -451,5 +452,17 @@ The results collected for all ten units are shown in the table below. The indica
     RPi3#10 -0.21  +/-0.01    0.916 +/-0.003
 
 In order to estimate the amount of random variation in the offsets, RPi3#5 which had the maximum offset was tested 10 times over as many days. That result is shown in the next table.
+
+# Trouble Shooting {#trouble-shooting}
+
+Occasionally, things will go wrong on install, startup or shutdown of pps-client. 
+
+On install, this can happen if a new Linux kernel has just been installed but pps-client was not removed before the new kernel was installed. In this case, attempting to install or remove pps-client will result in error messages to the effect that certain files can't be found, usually because the 
+    
+    /lib/modules/`uname -r`/kernel/drivers/misc
+
+directory name has been changed to correspond to the new Linux kernel and the old pps-client files got left in the old directory.
+
+# Known Bugs {#known-bugs}
 
 
