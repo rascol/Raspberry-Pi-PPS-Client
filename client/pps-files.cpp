@@ -28,8 +28,6 @@ const char *last_jitter_distrib_file = "/var/local/pps-jitter-distrib";			//!< S
 const char *jitter_distrib_file = "/var/local/pps-jitter-distrib-forming";		//!< Stores a forming distribution of offset corrections.
 const char *log_file = "/var/log/pps-client.log";								//!< Stores activity and errors.
 const char *old_log_file = "/var/log/pps-client.old.log";						//!< Stores activity and errors.
-//const char *last_int_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
-//const char *interrupt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
 const char *last_intrpt_distrib_file = "/var/local/pps-intrpt-distrib";			//!< Stores the completed distribution of offset corrections.
 const char *intrpt_distrib_file = "/var/local/pps-intrpt-distrib-forming";	//!< Stores a forming distribution of offset corrections.
 const char *sysDelay_distrib_file = "/var/local/pps-sysDelay-distrib-forming";	//!< Stores a forming distribution of sysDelay values.
@@ -520,7 +518,7 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
  * counts and begins a new distribution file. An epoch is
  * 86,400 counts.
  *
- * @param[in] distrib The int array containing the distribution.
+ * @param[in] distrib The array containing the distribution.
  * @param[in] len The length of the array.
  * @param[in] scaleZero The array index corresponding to distribution zero.
  * @param[in] count The current number of samples in the distribution.
@@ -553,6 +551,27 @@ void writeDistribution(int distrib[], int len, int scaleZero, int count,
 	}
 }
 
+/**
+ * Writes multiple distributions with a separate
+ * distribution in each column of the file after
+ * the first for each sysDelay value that occurs.
+ *
+ * The first line of the file lists the sysDelay
+ * values as column headings. The second line of
+ * the file lists the column total samples.
+ *
+ * Rolls over the accumulating data to a new file
+ * every epoch counts and begins a new distribution
+ * file. An epoch is 86,400 counts.
+ *
+ * @param[in] label The sysDelay values for each column.
+ * @param[in] distrib The arrays containing the distributions.
+ * @param[in] scaleZero The array index corresponding to distribution zero.
+ * @param[in] count The current total number of samples in the distributions.
+ * @param[out] last_epoch The saved count of the previous epoch.
+ * @param[in] distrib_file The filename of the last completed distribution file.
+ * @param[in] last_distrib_file The filename of the currently forming file.
+ */
 void writeMultipleDistrib(int label[], int distrib[][INTRPT_DISTRIB_LEN], int len, int scaleZero, int count,
 		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
 
@@ -590,22 +609,14 @@ void writeMultipleDistrib(int label[], int distrib[][INTRPT_DISTRIB_LEN], int le
 	}
 }
 
-///**
-// * Writes a distribution to disk containing 60 additional calibration
-// * interrupt delays approximately every minute. Collects one day
-// * of interrupt delay samples before rolling over a new file.
-// */
-//void writeInterruptDistribFile(void){
-//	if (g.interruptCount % SECS_PER_MINUTE == 0 && g.seq_num > SETTLE_TIME){
-//		writeDistribution(g.interruptDistrib, INTRPT_DISTRIB_LEN, 0, g.interruptCount,
-//				&f.lastIntrptFileno, interrupt_distrib_file, last_int_distrib_file);
-//	}
-//}
-
 /**
- * Writes a distribution to disk containing 60 additional calibration
- * interrupt delays approximately every minute. Collects one day
- * of interrupt delay samples before rolling over a new file.
+ * Writes a multiple distribution to disk containing 60 additional
+ * calibration interrupt delays approximately every minute. One is
+ * generated for each diffent sysDelay that occurs over the test
+ * period.
+ *
+ * Collects one day of interrupt delay samples before rolling over
+ * a new file.
  */
 void writeIntrptDistribFile(void){
 	if (g.interruptCount % SECS_PER_MINUTE == 0 && g.seq_num > SETTLE_TIME){
@@ -896,7 +907,6 @@ void processFiles(char *config_str[], char *pbuf, int size){
 	}
 
 	if (g.doCalibration && isEnabled(INTERRUPT_DISTRIB, config_str)){
-//		writeInterruptDistribFile();
 		writeIntrptDistribFile();
 	}
 
@@ -1781,16 +1791,25 @@ void HUPhandler(int sig){
 	signal(SIGHUP, SIG_IGN);
 }
 
+/**
+ * Generates an unordered list of unique sysDelay
+ * values in the g.delayLabel array and returns
+ * the index in the array of any sysDelay value.
+ *
+ * @param[in] sysDelay The value.
+ * @returns The index of the sysDelay value in the
+ * delayLabel array.
+ */
 int getDelayIndex(int sysDelay){
 	int i = 0;
 	for (i = 0; i < NUM_PARAMS; i++){
 		if (g.delayLabel[i] != 0){
-			if (g.sysDelay == g.delayLabel[i]){
+			if (sysDelay == g.delayLabel[i]){
 				break;
 			}
 		}
 		else {
-			g.delayLabel[i] = g.sysDelay;
+			g.delayLabel[i] = sysDelay;
 			break;
 		}
 	}
@@ -1814,7 +1833,6 @@ void buildInterruptDistrib(int intrptDelay){
 	if (idx < 0){
 		idx = 0;
 	}
-//	g.interruptDistrib[idx] += 1;
 
 	int j = getDelayIndex(g.sysDelay);
 	g.intrptDistrib[j][idx] += 1;

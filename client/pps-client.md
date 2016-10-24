@@ -19,6 +19,7 @@
   - [Accuracy Validation](#accuracy-validation)
     - [The pulse-generator Utility](#the-pulse-generator-utility)
     - [The interrupt-timer Utility](#the-interrupt-timer-utility)
+    - [The NormalDistribParams Utility](#normaldistribparams-utility)
     - [Testing Accuracy](#testing-accuracy)
       - [Test Setup](#test-setup)
       - [Test Results](#test-results)
@@ -368,13 +369,27 @@ t_{r0} = t_{m0} - d_{sys}
 
 But since the [feedforward compensator](#feedforward-compensator) determines the value of \f$d_{sys}\f$ and the feedback controller forces \f$t_{r0}\f$ to be zero then the only question is did the feedforward compensator determine the correct value for \f$d_{sys}\f$? If it did then the reported value of the time of the interrupt \f$t_r\f$ in the first equation should be the true time of the interrupt relative to the PPS. That is exactly what accuracy testing establishes.
 
+### The NormalDistribParams Utility {#normaldistribparams-utility}
+
+The distributions obtained in testing pps-client are usually quite narrow which makes it difficult to estimate offset errors and standard deviations. The `NormalDistribParams` program makes it possible to directly compute these values from the binned values of a sample distribution. The program fits an ideal normal distribution to the three binned sample values that wrap around the peak of the distribution. While it is always possible to fit a normal distribution to any pair of sample points, only one specific normal distibution will fit three sample points. If the sample distribution is not normal, there will be a conformance error in the fit. This conformance error is a measure of the reliability of the calculated ideal mean and SD as they applies to the sample distribution.
+
+The program can be used to determine mean and SD for any of the sample distributions collected in testing pps-client. For example, the jitter distribtion in Figure 2a was evaluated for mean and standard deviation by providing the sample numbers for the sample bins around zero like this,
+
+    RPi-1:~ $ NormalDistribParams 14759 -1 46830 0 15506 1
+    Relative to an ideal normal distribution:
+    mean:  0.010593 error: 0.101348
+    stddev: 0.665868 error: 0.001647
+    Simulation error: 0.000020
+
+In this example, sample numbers were internally normalized to a default total sample size of 86,400. But an arbitrary sample size can be provided as an additional entry following the sample counts and bin locations. To keep data entry as simple as possible, sample bin locations must be relative to zero. For bin locations relative to some other number just treat that number as zero and adjacent bin locations as relative to zero. More information can be obtained by running the program without command line arguments.
+
 ### Testing Accuracy {#testing-accuracy}
 
-To minimize the effects of flicker noise and latency, accuracy testing consists of making a large number of independent time interval measurements and then statistically evaluating the results. This circumvents flicker noise in the oscillators of both the RPi unit under test and the RPi unit used to provide timing pulses. 
+To minimize the effects of flicker noise and latency, accuracy testing consists of making a large number of independent time interval measurements and then statistically evaluating the results. That circumvents flicker noise in the oscillators of both the RPi unit under test and the RPi unit used to provide timing pulses. 
 
 The pulse-generator utility runs in two-pulse mode on an RPi identified as RPi-1 that is connected to a GPS receiver providing the PPS signal. The pulse-generator on RPi-1 provides both Pulse 1 as the PPS signal to RPi-2 and Pulse 2 as the pulse to be timed. The interrupt-timer utility is used on the RPi-2 to time the reception of Pulse 2.
 
-Timing pulses are received each second by interrupt-timer on RPi-2. Validation is successful if the average time of reception of Pulse 2 is equal to the time difference between the times of Pulse 2 and Pulse 1 (requested on RPi-1) with sufficiently small error.
+Timing pulses are received each second by interrupt-timer on RPi-2. Validation is successful if the average time of reception of Pulse 2 is equal to the time difference between the times of Pulse 2 and Pulse 1 (generated on RPi-1) with sufficiently small error.
 
 In order to get low-latency timings it was necessary for interrupt-timer to sleep until just before the expected time of arrival of Pulse 2. So that technique is built into interrupt-timer. Timings that did not use this technique contained noticeably more sporadic system interrupt latency.
 
@@ -413,10 +428,28 @@ The test is completed when the the `timer-distrib` file, containing the distribt
 
 #### Test Results {#test-results}
 
-This test as described above was performed with a pair of RPi processors under low system load. RPi-2 was allowed to collect timings over a period of 24 hours with the result shown in Figure 6. The test result is believed to be typical of what will be obtained with similar processors under similar conditions.
+This test as described above was performed on ten Raspberry Pi 3 processors under low system load. Timings were collected over a period of 24 hours with typical results like that shown in Figure 6.
 
-![Accuracy Verification](InterruptTimerDistrib.png)
+![System Clock Accuracy](InterruptTimerDistrib.png)
 
-The distribution shows the average recorded pulse time to be about 0.6 microsecond lower than the ideal time of 800,000 microseconds. As expected, the peak in the timing has been broadened by the combined flicker noise in the two RPi system clocks to about 1.2 microseconds SD. But the peak is not wide enough to affect the average pulse time deduced from the shape of the main peak. The log plot shows that pulses were received with a delay as much as 28 usecs because of sporadic Linux system interrupt latency.
+The distribution shows the average recorded pulse time to be about 0.6 microsecond lower than the ideal time of 800,000 microseconds. The log plot shows that for this unit pulses were received with a delay as much as 28 usecs because of sporadic Linux system interrupt latency.
+
+The results collected for all ten units are shown in the table below. The indicated tolerances are the conformance errors to an ideal normal distribution provided by the `NormalDistribParams` program. In no case did the average clock offset exceed 1 microsecond.
+
+    --- System Clock Error (microseconds) ---
+    UNIT#      offset             stddev
+    -----------------------------------------
+    RPi3#1  -0.65  +/-0.025   1.26  +/-0.02
+    RPi3#2  -0.16  +/-0.01    1.005 +/-0.002
+    RPi3#3  -0.29  +/-0.01    1.029 +/-0.003
+    RPi3#4  -0.398 +/-0.002   0.969 +/-0.001
+    RPi3#5  -0.598 +/-0.003   1.049 +/-0.003
+    RPi3#6  -0.419 +/-0.0     1.088 +/-0.0
+    RPi3#7  -0.16  +/-0.02    1.043 +/-0.003
+    RPi3#8   0.21  +/-0.06    0.998 +/-0.01
+    RPi3#9  -0.22  +/-0.01    1.081 +/-0.003
+    RPi3#10 -0.21  +/-0.01    0.916 +/-0.003
+
+In order to estimate the amount of random variation in the offsets, RPi3#5 which had the maximum offset was tested 10 times over as many days. That result is shown in the next table.
 
 

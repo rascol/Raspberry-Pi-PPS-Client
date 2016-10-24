@@ -27,6 +27,13 @@
 
 const char *version = "pps-client-stop v1.0.0";
 
+/**
+ * Looks for "pps_client" in the list printed
+ * by the lsmod system command.
+ *
+ * @returns "true" if "pps_client" is in the
+ * lsmod list, else "false"
+ */
 bool driverIsLoaded(void){
 	struct stat sbuf;
 	const char *filename = "/run/shm/pps-msg";
@@ -87,8 +94,9 @@ int main(void){
 
 	printf("Closing pps-client.\n");
 
-	for (int i = 0; i < 15; i++){			// Wait for driver to unload
+	for (int i = 0; i < 30; i++){			// Wait for driver to unload
 		sleep(1);
+		printf(".");
 		if (! driverIsLoaded()){
 			return 0;
 		}
@@ -98,8 +106,8 @@ end:
 		return 0;
 	}
 
+	system("rmmod -w pps-client");
 	system("rm -f /dev/pps-client");
-	system("rmmod pps-client");
 
 	return 0;
 }
