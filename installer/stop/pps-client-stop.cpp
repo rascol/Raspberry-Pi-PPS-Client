@@ -96,7 +96,8 @@ int main(void){
 
 	for (int i = 0; i < 30; i++){			// Wait for driver to unload
 		sleep(1);
-		printf(".");
+		fprintf(stdout,".");
+		fflush(stdout);
 		if (! driverIsLoaded()){
 			return 0;
 		}
