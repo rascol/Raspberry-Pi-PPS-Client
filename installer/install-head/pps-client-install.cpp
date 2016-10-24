@@ -189,6 +189,10 @@ int main(int argc, char *argv[]){
 	strcat(cmd, "/kernel/drivers/misc/pulse-generator.ko");
 	system(cmd);
 
+	printf("Moving NormalDistribParams to /usr/sbin/NormalDistribParams\n");
+	system("mv ./pkg/NormalDistribParams /usr/sbin/NormalDistribParams");
+	system("chmod +x /usr/sbin/NormalDistribParams");
+
 	printf("Moving README.md to /usr/share/doc/pps-client/README.md\n");
 	system("mkdir /usr/share/doc/pps-client");
 	system("mv ./pkg/README.md /usr/share/doc/pps-client/README.md");
