@@ -99,6 +99,7 @@ int main(void){
 		fprintf(stdout,".");
 		fflush(stdout);
 		if (! driverIsLoaded()){
+			fprintf(stdout,"\n");
 			return 0;
 		}
 	}
