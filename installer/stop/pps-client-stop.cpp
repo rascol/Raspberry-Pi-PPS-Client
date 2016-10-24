@@ -92,7 +92,8 @@ int main(void){
 
 	system(cmd);
 
-	printf("Closing pps-client.\n");
+	fprintf(stdout, "Closing pps-client");
+	fflush(stdout);
 
 	for (int i = 0; i < 30; i++){			// Wait for driver to unload
 		sleep(1);
