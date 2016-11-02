@@ -63,7 +63,7 @@
 
 #define ADJTIMEX_SCALE 65536.0			//!< Frequency scaling required by \b adjtimex().
 
-#define INTERRUPT_LATENCY 10			//!< Default interrupt latency in microseconds.
+#define INTERRUPT_LATENCY 6				//!< Default interrupt latency assigned to sysDelay (microseconds).
 
 #define RAW_ERROR_ZERO  20				//!< Index corresponding to rawError == 0 in detectDelayPeak().
 #define MIN_PEAK_RATIO 0.05				//!< Minimum ratio to detect a second peak in detectDelayPeak().
@@ -113,6 +113,7 @@
 #define SYSDELAY_DISTRIB 32
 #define EXIT_LOST_PPS 64
 #define SHOW_REMOVE_NOISE 128
+#define SYSDELAY_VALUE 256
 
 /*
  * Struct for passing arguments to and from threads
@@ -133,7 +134,6 @@ struct timeCheckParams {
 /*
  * Struct for program-wide global variables.
  */
-
 struct G {
 	bool isVerbose;									//!< Enables continuous printing of state status params when "true".
 

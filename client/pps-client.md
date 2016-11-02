@@ -23,8 +23,7 @@
     - [Testing Accuracy](#testing-accuracy)
       - [Test Setup](#test-setup)
       - [Test Results](#test-results)
-- [Trouble Shooting](#trouble-shooting)
-- [Known Bugs](#known-bugs)
+
 # Uses {#uses}
 
 The pps-client source code is the reference design for a general technique that provides high accuracy timekeeping. It was implemented on a relatively slow ARM processor which should illustrate that a similar software solution can be successful on almost any application processor.
@@ -372,15 +371,15 @@ But since the [feedforward compensator](#feedforward-compensator) determines the
 
 ### The NormalDistribParams Utility {#normaldistribparams-utility}
 
-The distributions obtained in testing pps-client are usually quite narrow which makes it difficult to estimate offset errors and standard deviations. The `NormalDistribParams` program makes it possible to directly compute these values from the binned values of a sample distribution. The program fits an ideal normal distribution to the three binned sample values that wrap around the peak of the distribution. While it is always possible to fit a normal distribution to any pair of sample points, only one specific normal distibution will fit three sample points. If the sample distribution is not normal, there will be a conformance error in the fit. This conformance error is a measure of the reliability of the calculated ideal mean and SD as they applies to the sample distribution.
+The distributions obtained in testing pps-client are usually narrow which makes it difficult to estimate offset errors and standard deviations. The `NormalDistribParams` program makes it possible to directly compute these values from the binned values of a sample distribution. The program fits an ideal normal distribution to the three binned sample values that wrap around the peak of the distribution. While it is always possible to fit a normal distribution to any pair of sample points, only one specific normal distibution will fit three sample points. Moreover only specific combinations of three sample points will fit a normal distribution with a specific sample size. If the sample distribution is not normal, there will be a conformance error which is largest in the fit of the mean. The conformance error in the mean is a measure of the reliability of the calculated values of both ideal mean and ideal SD as they apply to the sample distribution.
 
 The program can be used to determine mean and SD for any of the sample distributions collected in testing pps-client. For example, the jitter distribtion in Figure 2a was evaluated for mean and standard deviation by providing the sample numbers for the sample bins around zero like this,
 
-    RPi-1:~ $ NormalDistribParams 14759 -1 46830 0 15506 1
+    RPi-1:~ $ NormalDistribParams 14759 -1 56810 0 14759 1
     Relative to an ideal normal distribution:
-    mean:  0.010593 error: 0.101348
-    stddev: 0.665868 error: 0.001647
-    Simulation error: 0.000020
+    mean:  0.000009 error: 0.003814
+    stddev: 0.526684 error: 0.000006
+    Simulation error: 0.000016
 
 In this example, sample numbers were internally normalized to a default total sample size of 86,400. But an arbitrary sample size can be provided as an additional entry following the sample counts and bin locations. To keep data entry as simple as possible, sample bin locations must be relative to zero. For bin locations relative to some other number just treat that number as zero and adjacent bin locations as relative to zero. More information can be obtained by running the program without command line arguments.
 
@@ -435,34 +434,22 @@ This test as described above was performed on ten Raspberry Pi 3 processors unde
 
 The distribution shows the average recorded pulse time to be about 0.6 microsecond lower than the ideal time of 800,000 microseconds. The log plot shows that for this unit pulses were received with a delay as much as 28 usecs because of sporadic Linux system interrupt latency.
 
-The results collected for all ten units are shown in the table below. The indicated tolerances are the conformance errors to an ideal normal distribution provided by the `NormalDistribParams` program. In no case did the average clock offset exceed 1 microsecond.
+The results collected for all ten units are shown in the table below. The indicated tolerances are the conformance errors to an ideal normal distribution provided by the `NormalDistribParams` utility. In no case did the average clock offset exceed 1 microsecond.
 
     --- System Clock Error (microseconds) ---
     UNIT#      offset             stddev
     -----------------------------------------
-    RPi3#1  -0.65  +/-0.025   1.26  +/-0.02
+    RPi3#1  -0.76  +/-0.01    1.00  +/-0.01
     RPi3#2  -0.16  +/-0.01    1.005 +/-0.002
     RPi3#3  -0.29  +/-0.01    1.029 +/-0.003
     RPi3#4  -0.398 +/-0.002   0.969 +/-0.001
     RPi3#5  -0.598 +/-0.003   1.049 +/-0.003
     RPi3#6  -0.419 +/-0.0     1.088 +/-0.0
     RPi3#7  -0.16  +/-0.02    1.043 +/-0.003
-    RPi3#8   0.21  +/-0.06    0.998 +/-0.01
+    RPi3#8   0.21  +/-0.06    1.00  +/-0.01
     RPi3#9  -0.22  +/-0.01    1.081 +/-0.003
     RPi3#10 -0.21  +/-0.01    0.916 +/-0.003
 
-In order to estimate the amount of random variation in the offsets, RPi3#5 which had the maximum offset was tested 10 times over as many days. That result is shown in the next table.
-
-# Trouble Shooting {#trouble-shooting}
-
-Occasionally, things will go wrong on install, startup or shutdown of pps-client. 
-
-On install, this can happen if a new Linux kernel has just been installed but pps-client was not removed before the new kernel was installed. In this case, attempting to install or remove pps-client will result in error messages to the effect that certain files can't be found, usually because the 
-    
-    /lib/modules/`uname -r`/kernel/drivers/misc
-
-directory name has been changed to correspond to the new Linux kernel and the old pps-client files got left in the old directory.
-
-# Known Bugs {#known-bugs}
+In order to estimate the amount of random variation in the offsets, RPi3#1 which had the maximum offset was tested 10 times over as many days. That result is shown in the next table.
 
 

@@ -74,7 +74,8 @@ const char *valid_config[] = {
 		"interrupt-distrib",
 		"sysdelay-distrib",
 		"exit-lost-pps",
-		"show-remove-noise"
+		"show-remove-noise",
+		"sysdelay-value"
 };
 
 /**
@@ -921,10 +922,10 @@ void processFiles(char *config_str[], char *pbuf, int size){
 		g.showRemoveNoise = false;
 	}
 
-//	double value;
-//	if (configHasValue(SET_GAIN, config_str, &value)){
-//		integralGain1 = value;
-//	}
+	int value;
+	if (configHasValue(SYSDELAY_VALUE, config_str, &value)){
+		g.sysDelay = value;
+	}
 
 	processWriteRequest();
 

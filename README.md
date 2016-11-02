@@ -42,7 +42,7 @@ Figure 2 shows the system clock frequency set by the controller and the resultin
 
 <center><img src="/images/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
 
-Although the clock frequency drifted slightly between each frequency correction, the maximum Allan deviation of 0.045 ppm over this 24 hour period shows it to be unlikely that the clock ever drifted more than 0.100 ppm from the control point. That corresponds to a time drift of less than 0.1 microseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsec per sec.) Consequently, the controller continuously adjusted the frequency offset against temperature changes to the value that kept the system clock synchronized to the PPS to within a fraction of a microsecond.
+Although the clock frequency drifted slightly between each frequency correction, the maximum Allan deviation of 0.045 ppm over this 24 hour period shows it to be unlikely that the clock ever drifted more than 0.100 ppm from the control point. That corresponds to a time drift of less than 0.1 microseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsecond per sec.)
 
 Since the time slew adjustments necessary to keep the system time synchronized to the PPS never exceeded 1 microsecond each second and the time drift never exceeded 0.1 microsecond each second, the timekeeping control **precision** illustrated in Figure 3 was 1 microsecond over this 24 hour period for all test units. 
 
@@ -104,9 +104,9 @@ Then run `rpi-update` as follows with the second number of the kernel on your RP
 ```
 $ sudo BRANCH=rpi-4.X.y rpi-update
 ```
-To finish the install, copy the appropriate installer to your RPi and run it 
+To finish the install, copy the appropriate installer to your RPi and run it. (Type the command below exactly as shown (using **backslashes** which cause the backslashes and text between to be replaced with the correct kernel version).
 ```
-$ sudo ./[your-pps-client-installer]
+$ sudo ./pps-client-`uname -r`
 ```
 Installers for a few different Linux kernels are currently on the server and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. That will not automatically happen unless you run `rpi-update`. If there is enough interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
@@ -189,13 +189,13 @@ $ cd ..
 $ git clone --depth=1 https://github.com/rascol/PPS-Client
 $ cd PPS-Client
 ```
-Now (assuming that the kernel source version is 4.4.14) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
+Now make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type the commands below exactly as shown (using **backslashes** which cause the backslashes and text between to be replaced with the correct kernel version).
 ```
-$ make KERNELDIR=~/rpi/linux KERNELVERS=4.4.14-v7+
+$ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
 ```
-That will build the installer, `pps-client-4.4.14-v7+`. Run it on the RPi as root:
+That will build the installer. Run it on the RPi as root:
 ```
-$ sudo ./pps-client-4.4.14-v7+
+$ sudo ./pps-client-`uname -r`
 ```
 That completes the pps-client installation.
 
@@ -312,17 +312,17 @@ While pps-client will synchronize the system clock to a GPS clock with an averag
 
 ## Flicker Noise
 
-The Raspberry Pi is an ARM processor that generates all internal timing with a conventional integrated circuit oscillator timed by an external crystal. Consequently the RPi is subject to crystal oscillator flicker noise. In the case of the RPi, flicker noise appears as a random deviation from true GPS time of up to several microseconds. Even though flicker noise is always present, it is not evident when timing intervals between events occurring in software running on the same system. It becomes evident only when timing events external to the processor or between two systems. 
+The Raspberry Pi is an ARM processor that generates all internal timing with a conventional integrated circuit oscillator timed by an external crystal. Consequently the RPi is subject to crystal oscillator flicker noise. In the case of the RPi, flicker noise appears as a random deviation of system time from the PPS signal of up to several microseconds. Even though flicker noise is always present, it is not evident when timing intervals between events occurring in software running on the same system. It only becomes evident when timing events external to the processor or between two systems. 
 
 Flicker noise sets the absolute limit on the accuracy of the system clock. This is true not only of the RPi ARM processor but also of all conventional application processors.
 
 ## Linux OS Real-Time Latency
 
-The Linux OS was not designed to be a real-time operating system. Nevertheless, there is considerable interest in upgrading it to provide real-time performance. Consequently, real-time performance improved significantly between versions 3 and 4. As a result of that, median system latency in responding to an external interrupt on the RPi ARM processor is currently about 6 microseconds - down from about 23 microseconds in Linux 3. As yet, however, there are still processes that need more time to release the OS to other real-time processes. 
+The Linux OS was not designed to be a real-time operating system. Nevertheless, there is considerable interest in upgrading it to provide real-time performance. Consequently, real-time performance improved significantly between versions 3 and 4. As a result of that, median system latency in responding to an external interrupt on the RPi ARM processor is currently about 6 microseconds - down from about 23 microseconds in Linux 3. As yet, however, longer sporadic delays occur frequently. 
 
 ## Measurements of Noise and Latency
 
-As it maintains clock synchronization, the pps-client daemon continuously measures the interrupt delay and jitter of the PPS source. This jitter is predominantly a combination flicker noise in the clock oscillator and OS response latency. A jitter plot recorded second by second over 24 hours on a Raspberry Pi 3 Model B is shown in Figure 3.
+As it maintains clock synchronization, the pps-client daemon continuously measures jitter and interrupt delay. Jitter is predominantly a combination flicker noise in the clock oscillator and OS response latency. A jitter plot recorded second by second over 24 hours on a Raspberry Pi 3 Model B is shown in Figure 3.
 
 <center><img src="/images/pps-jitter-distrib.png" alt="Jitter Distribution" style=""/></center>
 
