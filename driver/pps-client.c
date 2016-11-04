@@ -548,7 +548,7 @@ int getCalibrateState(const char *filename){
 
 	while (c != 0){
 		rv = file_read(filp, ofs, buf, 150);
-		if (buf[0] != (unsigned char)'#'){
+		if (buf[0] != '#'){
 			if (kstrncmp(buf, "calibrate=enable", 16) == 0){
 				calibrate = 1;
 				break;
