@@ -537,7 +537,7 @@ int getCalibrateState(const char *filename){
 	int calibrate = 0;
 	struct file* filp = NULL;
 	int rv, i;
-	unsigned char *buf[150];
+	unsigned char buf[150];
 	unsigned long long ofs = 0;
 	unsigned char c = '\n';
 
