@@ -98,6 +98,7 @@
 #define INTERRUPT_NAME "pps-client"
 
 const char *version = "pps-client-driver v1.0.0";
+const char *configFile = "/etc/pps-client.conf";
 
 static int major = 0;							/* dynamic by default */
 module_param(major, int, 0);					/* but can be specified at load time */
@@ -523,6 +524,51 @@ void file_close(struct file* file) {
     filp_close(file, NULL);
 }
 
+int kstrncmp(char *str1, char *str2, int n){
+	for (int i = 0; i < n; i++){
+	    if (str1[i] != str2[i])
+	        return (str1[i] - str2[i]);
+	}
+	return (0);
+}
+
+int getCalibrateState(const char *filename){
+	int calibrate = 0;
+	struct file* filp = NULL;
+	int rv;
+	char *buf[150];
+	unsigned long long ofs = 0;
+	unsigned char c = '\n';
+
+	filp = file_open(filename, O_RDONLY, NULL);
+	if (filp == NULL){
+		return 0;
+	}
+
+	while (c != 0){
+		rv = file_read(filp, ofs, buf, 150);
+		if (buf[0] != '#'){
+			if (kstrncmp(buf, "calibrate=enable", 16) == 0){
+				calibrate = 1;
+				break;
+			}
+		}
+		int i;
+		for (i = 0; i < 150; i++){
+			c = buf[i];
+			if (c == 0 || c == '\n'){
+				break;
+			}
+		}
+		if (c == 0){
+			break;
+		}
+		ofs += i + 1;
+	}
+
+	file_close(filp);
+	return calibrate;
+}
 
 int pps_init(void)
 {
@@ -556,22 +602,22 @@ int pps_init(void)
 
 	/*
 	 * GPIO_22 and GPIO_17 are used only if self-calibration is active.
-	 * If not, we don't want to configure these.
+	 * If not, we don't want to tie up these GPIO pins.
 	*/
 
-	if (configureInterruptOn(GPIO_22) == -1){
-		printk(KERN_INFO "pps-client: failed installation\n");
-		pps_cleanup();
-		return -1;
+	if (getCalibrateState(configFile) == 1){
+		if (configureInterruptOn(GPIO_22) == -1){
+			printk(KERN_INFO "pps-client: failed installation\n");
+			pps_cleanup();
+			return -1;
+		}
+
+		if (configureWriteOn(GPIO_17) == -1){
+			printk(KERN_INFO "pps-client: failed installation\n");
+			pps_cleanup();
+			return -1;
+		}
 	}
-
-	if (configureWriteOn(GPIO_17) == -1){
-		printk(KERN_INFO "pps-client: failed installation\n");
-		pps_cleanup();
-		return -1;
-	}
-
-
 
 	printk(KERN_INFO "pps-client: installed\n");
 
