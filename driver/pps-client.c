@@ -524,8 +524,9 @@ void file_close(struct file* file) {
     filp_close(file, NULL);
 }
 
-int kstrncmp(char *str1, char *str2, int n){
-	for (int i = 0; i < n; i++){
+int kstrncmp(const char *str1, const char *str2, int n){
+	int i;
+	for (i = 0; i < n; i++){
 	    if (str1[i] != str2[i])
 	        return (str1[i] - str2[i]);
 	}
@@ -535,25 +536,24 @@ int kstrncmp(char *str1, char *str2, int n){
 int getCalibrateState(const char *filename){
 	int calibrate = 0;
 	struct file* filp = NULL;
-	int rv;
-	char *buf[150];
+	int rv, i;
+	unsigned char *buf[150];
 	unsigned long long ofs = 0;
 	unsigned char c = '\n';
 
-	filp = file_open(filename, O_RDONLY, NULL);
+	filp = file_open(filename, O_RDONLY, 0);
 	if (filp == NULL){
 		return 0;
 	}
 
 	while (c != 0){
 		rv = file_read(filp, ofs, buf, 150);
-		if (buf[0] != '#'){
+		if (buf[0] != (unsigned char)'#'){
 			if (kstrncmp(buf, "calibrate=enable", 16) == 0){
 				calibrate = 1;
 				break;
 			}
 		}
-		int i;
 		for (i = 0; i < 150; i++){
 			c = buf[i];
 			if (c == 0 || c == '\n'){
