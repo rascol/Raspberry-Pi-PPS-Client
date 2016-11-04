@@ -95,7 +95,7 @@ int main(void){
 	fprintf(stdout, "Closing pps-client");
 	fflush(stdout);
 
-	for (int i = 0; i < 30; i++){			// Wait for driver to unload
+	for (int i = 0; i < 60; i++){			// Wait for driver to unload
 		sleep(1);
 		fprintf(stdout,".");
 		fflush(stdout);
@@ -109,7 +109,7 @@ end:
 		return 0;
 	}
 
-	system("rmmod -w pps-client");
+	system("rmmod pps-client");
 	system("rm -f /dev/pps-client");
 
 	return 0;
