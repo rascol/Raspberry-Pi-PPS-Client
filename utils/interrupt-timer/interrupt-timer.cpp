@@ -459,6 +459,7 @@ int main(int argc, char *argv[]){
 	bool singleEvent = false;
 	bool argRecognized = false;
 	bool showAllTols = false;
+	bool noWait = false;
 	double probability = 0.0;
 	double probs[] = {0.9, 0.95, 0.99, 0.995, 0.999};
 
@@ -521,6 +522,9 @@ int main(int argc, char *argv[]){
 				argRecognized = true;
 				continue;
 			}
+			if (strcmp(argv[i], "-n") == 0){
+				noWait = true;
+			}
 		}
 
 		if (argRecognized){
@@ -531,13 +535,17 @@ int main(int argc, char *argv[]){
 		printf("  sudo interrupt-timer load-driver <gpio-number>\n");
 		printf("where gpio-number is the GPIO of the pin on which\n");
 		printf("the interrupt will be captured.\n\n");
-/*
 		printf("After loading the driver, calling interrupt-timer\n");
 		printf("causes it to wait for interrupts then output the\n");
-		printf("date-time when each occurs. The following command\n");
-		printf("arg modifies the format of the date-time output:\n");
-		printf("  -s Outputs seconds since the epoch.\n");
-		printf("otherwise outputs in date format (default).\n\n");
+		printf("date-time when each occurs with options set by the\n");
+		printf("following command line args:\n");
+		printf("  -s Outputs time in seconds since the Linux epoch.\n");
+		printf("otherwise outputs in date format (default).\n");
+		printf("  -n removes the default sleep masking on repetitive\n");
+		printf("events.\n\n");
+/*
+
+
 		printf("Specifying a probability causes interrupt-timer to\n");
 		printf("function as a single event timer that outputs both an\n");
 		printf("event time and an estimated tolerance on that time:\n");
@@ -597,7 +605,7 @@ start:
 	int start = START;
 
 	for (;;){
-		if (singleEvent == false && seq_num > start){
+		if (noWait == false && singleEvent == false && seq_num > start){
 			nanosleep(&ts2, NULL);
 		}
 
@@ -655,7 +663,7 @@ start:
 				g.days += 1;
 			}
 
-			if (seq_num >= start){
+			if (noWait == false && seq_num >= start){
 				wake = tm[1] - 150;				// Sleep until 150 usec before the next expected pulse time
 				gettimeofday(&tv1, NULL);
 				ts2 = setSyncDelay(wake, tv1.tv_usec);
