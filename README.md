@@ -104,7 +104,7 @@ Then run `rpi-update` as follows with the second number of the kernel on your RP
 ```
 $ sudo BRANCH=rpi-4.X.y rpi-update
 ```
-To finish the install, copy the appropriate installer to your RPi and run it. (Type the command below exactly as shown (using **backslashes** which cause the backslashes and text between to be replaced with the correct kernel version).
+To finish the install, copy the appropriate installer to your RPi and run it. (Type the command below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
 ```
 $ sudo ./pps-client-`uname -r`
 ```
@@ -189,7 +189,7 @@ $ cd ..
 $ git clone --depth=1 https://github.com/rascol/PPS-Client
 $ cd PPS-Client
 ```
-Now make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type the commands below exactly as shown (using **backslashes** which cause the backslashes and text between to be replaced with the correct kernel version).
+Now make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
 ```
 $ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
 ```

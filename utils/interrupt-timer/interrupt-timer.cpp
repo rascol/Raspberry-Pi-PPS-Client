@@ -524,6 +524,7 @@ int main(int argc, char *argv[]){
 			}
 			if (strcmp(argv[i], "-n") == 0){
 				noWait = true;
+				argRecognized = true;
 			}
 		}
 
@@ -542,21 +543,15 @@ int main(int argc, char *argv[]){
 		printf("  -s Outputs time in seconds since the Linux epoch.\n");
 		printf("otherwise outputs in date format (default).\n");
 		printf("  -n removes the default sleep masking on repetitive\n");
-		printf("events.\n\n");
-/*
-
-
-		printf("Specifying a probability causes interrupt-timer to\n");
-		printf("function as a single event timer that outputs both an\n");
-		printf("event time and an estimated tolerance on that time:\n");
-		printf("  -p [probability]\n");
-		printf("where that is the probability (<= 0.999) that the\n");
-		printf("time is within the estimated tolerance. If the value\n");
-		printf("is zero or not provided, a range of tolerances and\n");
-		printf("probabilites is generated.\n\n");
-*/
+		printf("events.\n");
+		printf("  -p [probability] causes interrupt-timer to time\n");
+		printf("single events and output both the event time and a\n");
+		printf("time range where the requested probability is the\n");
+		printf("probability (<= 0.999) that the event time is within\n");
+		printf("that range. If a probability value is zero or missing,\n");
+		printf("a list of time ranges and probabilities is generated.\n\n");
 		printf("The program will exit on ctrl-c or when no interrupts\n");
-		printf("are received within 5 minutes. When done, unload the \n");
+		printf("are received within 5 minutes. When done, unload the\n");
 		printf("driver with,\n");
 		printf("  sudo interrupt-timer unload-driver\n");
 

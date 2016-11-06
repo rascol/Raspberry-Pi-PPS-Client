@@ -949,9 +949,12 @@ void waitForPPS(bool verbose, int pps_fd){
 	sprintf(g.logbuf, "pps-client v%s is starting ...\n", version);
 	writeToLog(g.logbuf);
 										// Set up a one-second delay loop that stays in synch by
-	timePPS = -150;		    			// continuously re-timing to before the roll-over of the second.
+//	timePPS = -150;		    			// continuously re-timing to before the roll-over of the second.
 										// This allows for a delay of about 50 microseconds coming out
 										// of sleep plus interrupt latencies up to 100 microseconds.
+
+	timePPS = -900000;					// test long wait
+
 	gettimeofday(&tv1, NULL);
 	ts2 = setSyncDelay(timePPS, tv1.tv_usec);
 

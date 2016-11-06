@@ -39,7 +39,8 @@
 #define NONE 2
 #define GPIO_A 0
 #define GPIO_B 1
-
+#define WRITE_DELAY 3			// Delay between write request and assertion
+								// of output pin for Raspberry Pi 3.
 #define JITTER_DISTRIB_LEN 61
 #define SETTLE_TIME 10
 
@@ -407,13 +408,16 @@ int main(int argc, char *argv[]){
 		}
 		if (strcmp(argv[1], "-p") == 0 && argc == 3){
 			sscanf(argv[2], "%d", &g.pulseTime1);
+			g.pulseTime1 -= WRITE_DELAY;
 			if (g.pulseTime1 >= 0){
 				goto start;
 			}
 		}
 		if (strcmp(argv[1], "-p") == 0 && argc == 4){
 			sscanf(argv[2], "%d", &g.pulseTime1);
+			g.pulseTime1 -= WRITE_DELAY;
 			sscanf(argv[3], "%d", &g.pulseTime2);
+			g.pulseTime2 -= WRITE_DELAY;
 
 			if (g.pulseTime1 >= 0 && g.pulseTime2 > 0){
 				goto start;
