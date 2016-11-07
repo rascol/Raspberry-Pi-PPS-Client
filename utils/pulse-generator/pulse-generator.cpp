@@ -408,16 +408,13 @@ int main(int argc, char *argv[]){
 		}
 		if (strcmp(argv[1], "-p") == 0 && argc == 3){
 			sscanf(argv[2], "%d", &g.pulseTime1);
-			g.pulseTime1 -= WRITE_DELAY;
 			if (g.pulseTime1 >= 0){
 				goto start;
 			}
 		}
 		if (strcmp(argv[1], "-p") == 0 && argc == 4){
 			sscanf(argv[2], "%d", &g.pulseTime1);
-			g.pulseTime1 -= WRITE_DELAY;
 			sscanf(argv[3], "%d", &g.pulseTime2);
-			g.pulseTime2 -= WRITE_DELAY;
 
 			if (g.pulseTime1 >= 0 && g.pulseTime2 > 0){
 				goto start;
@@ -477,15 +474,15 @@ start:
 	for (;;){
 		nanosleep(&ts2, NULL);
 
-		writeData[0] = GPIO_A;							// Identify the first GPIO outuput
-		writeData[1] = g.pulseTime1;					// and the pulse time.
+		writeData[0] = GPIO_A;							// Identify the first GPIO outuput.
+		writeData[1] = g.pulseTime1 - WRITE_DELAY;		// Set the pulse time.
 		write(fd, writeData, 2 * sizeof(int));			// Request a write at g.pulseTime1.
 
 		if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred.
 			g.badRead = true;
 		}
 		else {
-			pulseEnd1 = readData[1];
+			pulseEnd1 = readData[1] + WRITE_DELAY;
 			buildPulseDistrib(pulseEnd1, g.pulseTime1, g.p1Distrib, &g.p1Count);
 		}
 
@@ -498,15 +495,15 @@ start:
 			ts2.tv_sec = 0;
 			nanosleep(&ts2, NULL);						// Sleep to pulseStart2.
 
-			writeData[0] = GPIO_B;						// Identify the second GPIO output
-			writeData[1] = g.pulseTime2;				// and the pulse time.
+			writeData[0] = GPIO_B;						// Identify the second GPIO output.
+			writeData[1] = g.pulseTime2 - WRITE_DELAY;	// Set the pulse time.
 			write(fd, writeData, 2 * sizeof(int));		// Request a write at pulseTime2.
 
 			if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred.
 				g.badRead = true;
 			}
 			else {
-				pulseEnd2 = readData[1];
+				pulseEnd2 = readData[1] + WRITE_DELAY;
 				buildPulseDistrib(pulseEnd2, g.pulseTime2, g.p2Distrib, &g.p2Count);
 			}
 
