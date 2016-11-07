@@ -953,7 +953,7 @@ void waitForPPS(bool verbose, int pps_fd){
 										// This allows for a delay of about 50 microseconds coming out
 										// of sleep plus interrupt latencies up to 100 microseconds.
 
-	timePPS = -900000;					// test long wait
+	timePPS = -500000;					// test long wait
 
 	gettimeofday(&tv1, NULL);
 	ts2 = setSyncDelay(timePPS, tv1.tv_usec);
