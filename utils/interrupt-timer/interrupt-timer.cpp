@@ -543,13 +543,19 @@ int main(int argc, char *argv[]){
 		printf("  -s Outputs time in seconds since the Linux epoch.\n");
 		printf("otherwise outputs in date format (default).\n");
 		printf("  -n removes the default sleep masking on repetitive\n");
-		printf("events.\n");
-		printf("  -p [probability] causes interrupt-timer to time\n");
-		printf("single events and output both the event time and a\n");
-		printf("time range where the requested probability is the\n");
-		printf("probability (<= 0.999) that the event time is within\n");
-		printf("that range. If a probability value is zero or missing,\n");
-		printf("a list of time ranges and probabilities is generated.\n\n");
+		printf("events in order to simulate single event distribution.\n");
+
+		// The following is not yet practical because timer PD is still
+		// too irregular. Expect this to improve as Linux kernel evolves
+		// at wich point this code could be activated:
+
+//		printf("  -p [probability] causes interrupt-timer to time\n");
+//		printf("single events and output both the event time and a\n");
+//		printf("time range where the requested probability is the\n");
+//		printf("probability (<= 0.999) that the event time is within\n");
+//		printf("that range. If a probability value is zero or missing,\n");
+//		printf("a list of time ranges and probabilities is generated.\n\n");
+
 		printf("The program will exit on ctrl-c or when no interrupts\n");
 		printf("are received within 5 minutes. When done, unload the\n");
 		printf("driver with,\n");
@@ -610,10 +616,10 @@ start:
 			if (rv == -1){
 				return 1;
 			}
-			tm[1] -= sysDelay;								// Time in microseconds corrected for system interrupt sysDelay
-			if (tm[1] < 0){									// If negative after correction, extend the time.
-				tm[1] = 1000000 + tm[1];
-				tm[0] -= 1;
+			tm[1] -= sysDelay;								// Time in microseconds corrected for system interrupt sysDelay.
+			if (tm[1] < 0){									// If negative after correction, adjustment both
+				tm[1] = 1000000 + tm[1];					// fractional second
+				tm[0] -= 1;									// and whole second to make the fractional second positive.
 			}
 
 			if (singleEvent == false){

@@ -39,8 +39,8 @@
 #define NONE 2
 #define GPIO_A 0
 #define GPIO_B 1
-#define WRITE_DELAY 3			// Delay between write request and assertion
-								// of output pin for Raspberry Pi 3.
+#define WRITE_DELAY 2			// Estimated delay between write request and
+								// assertion of output pin for Raspberry Pi 3.
 #define JITTER_DISTRIB_LEN 61
 #define SETTLE_TIME 10
 
@@ -482,7 +482,8 @@ start:
 			g.badRead = true;
 		}
 		else {
-			pulseEnd1 = readData[1] + WRITE_DELAY;
+			readData[1] += WRITE_DELAY;
+			pulseEnd1 = readData[1];
 			buildPulseDistrib(pulseEnd1, g.pulseTime1, g.p1Distrib, &g.p1Count);
 		}
 
@@ -503,7 +504,8 @@ start:
 				g.badRead = true;
 			}
 			else {
-				pulseEnd2 = readData[1] + WRITE_DELAY;
+				readData[1] += WRITE_DELAY;
+				pulseEnd2 = readData[1];
 				buildPulseDistrib(pulseEnd2, g.pulseTime2, g.p2Distrib, &g.p2Count);
 			}
 
