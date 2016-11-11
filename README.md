@@ -30,7 +30,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average accuracy of 2 microseconds. This has been verified on ten Raspberry Pi 3 test units.
+The pps-client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average accuracy of 2 microseconds. This was verified on a sample of ten Raspberry Pi 3 test units.
 
 Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
@@ -54,7 +54,7 @@ Figure 4 is the distribution of measured times relative to a true time of 800,00
 
 <center><img src="/images/InterruptTimerDistrib.png" alt="Time Parameters" style=""/></center>
 
-The peak of the distribution in Figure 4 is about 0.28 microsecond below 800,000 microseconds, showing the average accuracy of the this RPi to be much better than 1 microsecond. The peak was not in error by more than 0.6 microseconds for any of the test units.
+The peak of the distribution in Figure 4 is the average error for this test unit and is about 0.28 microsecond below 800,000 microseconds. For the ten test units the median error was -0.28 microsecnd and the maximum error was -1.1 microseconds. 
 
 Figure 4 also shows that there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [](#practical-limits-to-time-measurement).
 
@@ -104,7 +104,7 @@ Then run `rpi-update` as follows with the second number of the kernel on your RP
 ```
 $ sudo BRANCH=rpi-4.X.y rpi-update
 ```
-To finish the install, copy the appropriate installer to your RPi and run it. (Type the command below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
+To finish the install, copy the appropriate installer to your RPi and run it. (Type the command below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the kernel version of your RPi).
 ```
 $ sudo ./pps-client-`uname -r`
 ```
@@ -118,19 +118,16 @@ Uninstall pps-client on the RPi with:
 $ sudo pps-client-stop
 $ sudo pps-client-remove
 ```
+This removes everything **except** the configuration file which you might want to keep if it has been modified and you intend to reinstall pps-client. To remove everything do:
+
+```
+$ sudo pps-client-remove -a
+```
+
 # Reinstalling
 ---
 
-On a reinstall, first uninstall as [described above](#unstalling). But please consider this:
-
-If you modified your current `/etc/pps-client.conf` and want to keep it then rename it before you perform a subsequent install of pps-client. Otherwise it will be overwritten with the default. For example, you could preserve it by doing something like,
-```
-$ sudo mv /ect/pps-client.conf /etc/pps-client.conf.orig
-```
-and then, after installing pps-client,
-```
-$ sudo cp /etc/pps-client.conf.orig  /ect/pps-client.conf
-```
+On a reinstall, first uninstall as [described above](#uninstalling). Then install as [described above](#installing).
 
 # Building from Source
 ---

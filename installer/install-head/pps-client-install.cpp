@@ -159,8 +159,15 @@ int main(int argc, char *argv[]){
 	strcat(cmd, "/kernel/drivers/misc/pps-client.ko");
 	system(cmd);
 
-	printf("Moving pps-client.conf to /etc/pps-client.conf\n");
-	system("mv ./pkg/pps-client.conf /etc/pps-client.conf");
+	int fdc = open("/etc/pps-client.conf", O_RDONLY);
+	if (fdc == -1){
+		printf("Moving pps-client.conf to /etc/pps-client.conf\n");
+		system("mv ./pkg/pps-client.conf /etc/pps-client.conf");
+	}
+	else {
+		printf("Existing file: /etc/pps-client.conf was not replaced.\n");
+		close(fdc);
+	}
 
 	printf("Moving pps-client-remove to /usr/sbin/pps-client-remove\n");
 	system("mv ./pkg/pps-client-remove /usr/sbin/pps-client-remove");

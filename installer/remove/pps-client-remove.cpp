@@ -33,6 +33,11 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	if (argc > 1 && strcmp(argv[1], "-a") == 0){
+		printf("Removing /etc/pps-client.conf\n");
+		system("rm /etc/pps-client.conf");
+	}
+
 	system("service pps-client stop");
 	system("chkconfig --del pps-client");
 	system("pps-client-stop");					// In case not started as a service
@@ -45,9 +50,6 @@ int main(int argc, char *argv[])
 
 	printf("Removing /etc/init.d/pps-client\n");
 	system("rm /etc/init.d/pps-client");
-
-	printf("Removing /etc/pps-client.conf\n");
-	system("rm /etc/pps-client.conf");
 
 	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko\n");
 	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko");

@@ -157,7 +157,7 @@ The specific purpose of the feedback controller described above is to adjust the
 
 It does that by setting the local clock so that the difference between `G.sysDelay` and the median of `G.interruptTime` is zero. For this to succeed in adjusting the local time to the PPS, `G.sysDelay` must be the median of the time delay at which the system responded to the rising edge of the PPS interrupt. But the median value of `G.sysDelay` can't be determined by the feedback controller. As indicated by the equation, all the controller can do is satisfy the equation of time.
 
-In order to independently determine the `G.sysDelay` value, a calibration interrupt is made every second immediately following the PPS interrupt. These time measurements are requested from the `pps-client.ko` device driver in the `getInterruptDelay()` routine. That routine calculates `G.intrptDelay` from the time measurements and calls `removeIntrptNoise()` with that value. The `removeIntrptNoise()` routine generates `G.delayMedian`, an estimate of the median of the `G.intrptDelay` value, in a parallel way and using the same routines that `removeNoise()` uses to generate the median of `G.interruptTime`. The `G.delayMedian` value is then assigned to `G.sysDelay`.
+In order to independently determine the `G.sysDelay` value in self-calibrate mode, a calibration interrupt is made every second immediately following the PPS interrupt. These time measurements are requested from the `pps-client.ko` device driver in the `getInterruptDelay()` routine. That routine calculates `G.intrptDelay` from the time measurements and calls `removeIntrptNoise()` with that value. The `removeIntrptNoise()` routine generates `G.delayMedian`, an estimate of the median of the `G.intrptDelay` value, in a parallel way and using the same routines that `removeNoise()` uses to generate the median of `G.interruptTime`. The `G.delayMedian` value is then assigned to `G.sysDelay`.
 
 ## Controller Behavior on Startup {#controller-behavior-on-startup}
 
@@ -255,7 +255,7 @@ Data that can be collected using the configuration file is enabled with settings
 
 * `jitter-distrib=enable` generates `/var/local/pps-jitter-distrib-forming` which contains the currently forming distribution of jitter values. When 24 hours of corrections have been accumulated, these are transferred to `/var/local/pps-jitter-distrib` which contains the cumulative distribution of all time (jitter) values recorded at reception of the PPS interrupt over 24 hours.
 
-Unless `calibrate=disable` is set in `/etc/pps-client.conf` these files may also be saved:
+When `calibrate=enable` is set in `/etc/pps-client.conf` these files may also be saved:
 
 * `interrupt-distrib=enable` generates `/var/local/pps-intrpt-distrib-forming` which contains the currently forming distribution of calibration interrupt delays. When 24 hours of these have been accumulated they are transferred to `/var/local/pps-intrpt-distrib` which contains a cumulative distribution of recorded calibration interrupt delays that occurred over 24 hours.
 
@@ -392,7 +392,7 @@ But since the [feedforward compensator](#feedforward-compensator) determines the
 
 The distributions obtained in testing pps-client are usually narrow which makes it difficult to estimate offset errors and standard deviations. Moreover there is ample evidence that the random component of the pps-client distriutions is well-modeled by a normal distribution but is also effectively binned by the 1 microsecond resolution of the system clock. The `NormalDistribParams` program makes it possible to directly compute normal distribution parameters from binned values of a sample distribution. 
 
-The program fits an ideal normal distribution to the three binned sample values that wrap around the zero of the distribution. While it is always possible to fit a normal distribution to any pair of sample points, only one specific normal distibution will fit three sample points. Moreover only specific combinations of three sample points will fit a normal distribution with a specific sample size. If the sample distribution is not normal, there will be a conformance error which is largest in the fit of the mean. The conformance error in the mean is a measure of the reliability of the calculated values of both ideal mean and ideal SD as they apply to the sample distribution.
+The program fits an ideal normal distribution to the three binned sample values that wrap around the peak of the distribution. While it is always possible to fit a normal distribution to any pair of sample points, only one specific normal distibution will fit three sample points. Moreover only a specific combination of three sample points will fit a normal distribution with a specific sample size. If the sample distribution is not normal, there will be a conformance error which is largest in the fit of the mean. The conformance error in the mean is a measure of the reliability of the calculated values of both ideal mean and ideal SD as they apply to the sample distribution.
 
 The program can be used to determine mean and SD for any of the sample distributions collected in testing pps-client. For example, the jitter distribtion in Figure 2a was evaluated for mean and standard deviation by providing the sample numbers for the sample bins around zero like this,
 
@@ -402,7 +402,9 @@ The program can be used to determine mean and SD for any of the sample distribut
     stddev: 0.526684 error: 0.000006
     Simulation error: 0.000016
 
-In this example, sample numbers were internally normalized to a default total sample size of 86,400. But an arbitrary sample size can be provided as an additional entry following the sample counts and bin locations. To keep data entry as simple as possible, sample bin locations must be relative to zero. For bin locations relative to some other number just treat that number as zero and adjacent bin locations as relative to zero. More information can be obtained by running the program without command line arguments.
+In this example, sample numbers were internally normalized to a default total sample size of 86,400. But an arbitrary sample size can be provided as an additional entry following the sample counts and bin locations. 
+
+To keep data entry as simple as possible, sample bin locations must be relative to zero and the peak of the distribution should be near zero. For a peak value near some other number just treat that number as zero and adjacent bin locations as relative to zero. Experience indicates that for a reliable fit, simulation error must be less than 0.0001 and mean error should be less than about 0.05.
 
 ### Testing Accuracy {#testing-accuracy}
 
@@ -412,7 +414,7 @@ The pulse-generator utility runs in two-pulse mode on an RPi identified as RPi-1
 
 Timing pulses are received each second by interrupt-timer on RPi-2. Validation is successful if the average time of reception of Pulse 2 is equal to the time difference between the times of Pulse 2 and Pulse 1 (generated on RPi-1) with sufficiently small error.
 
-In order to get low-latency timings it was necessary for interrupt-timer to sleep until just before the expected time of arrival of Pulse 2. So that technique is built into interrupt-timer. Timings that did not use this technique contained noticeably more sporadic system interrupt latency.
+In order to get low-latency timings it was necessary for interrupt-timer to sleep until just before the expected time of arrival of Pulse 2. So that technique is built into interrupt-timer. Timings that did not use this technique contained substantially more sporadic system interrupt latency.
 
 #### Test Setup {#test-setup}
 
