@@ -959,12 +959,17 @@ void waitForPPS(bool verbose, int pps_fd){
 
 	writeStatusStrings();
 
+	printf("g.doCalibration: %d\n", g.doCalibration);
+
 	for (;;){							// Delay loop
 		if (g.exit_requested){
 			sprintf(g.logbuf, "pps-client stopped.\n");
 			writeToLog(g.logbuf);
 			break;
 		}
+
+		printf("docalibration: %d\n", g.doCalibration);
+
 
 		nanosleep(&ts2, NULL);			// Sleep until ready to look for PPS interrupt
 
