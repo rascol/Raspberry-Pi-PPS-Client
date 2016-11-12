@@ -30,7 +30,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average accuracy of 2 microseconds. This was verified on a sample of ten Raspberry Pi 3 test units.
+The pps-client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average accuracy of 2 microseconds on the Raspberry Pi 3 (verified on 10 test units).
 
 Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
@@ -63,13 +63,13 @@ For a detailed description of the pps-client controller and accuracy testing run
 # Hardware Requirements
 ---
 
-1. A Raspberry Pi 3 or Pi 2 Model B. All data included in this file is for Raspberry Pi 3. Please note that jitter and noise are larger in the Raspberry Pi 2 than in the Raspberry Pi 3.
+1. A Raspberry Pi 3 or Pi 2 Model B. All data included in this file is for Raspberry Pi 3. Please note that jitter and noise are lowest in the Raspberry Pi 3.
 
 2. A GPS module that provides a PPS output. Development was done with the [Adafruit Ultimate GPS module](http://www.adafruit.com/product/746). Others providing compatible logic levels can also be used.
 
 3. A wired connection from a PPS source with 3.3 Volt logic outputs to GPIO 4 (pin 7) on the RPi header.
 
-4. An optional wired connection from GPIO_17 (pin 11) to GPIO_22 (pin 15) to support self calibration (Note the yellow jumper in the photo above).
+4. A wired connection from GPIO_17 (pin 11) to GPIO_22 (pin 15) to support self calibration (Note the yellow jumper in the photo above).
  
 # Software Requirements
 ---
@@ -127,7 +127,7 @@ $ sudo pps-client-remove -a
 # Reinstalling
 ---
 
-On a reinstall, first uninstall as [described above](#uninstalling). Then install as [described above](#installing).
+To reinstall, first uninstall as [described above](#uninstalling) then install.
 
 # Building from Source
 ---

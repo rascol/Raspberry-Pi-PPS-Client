@@ -457,7 +457,7 @@ This test as described above was performed on ten Raspberry Pi 3 processors unde
 
 The distribution shows the average recorded pulse time to be about 0.6 microsecond lower than the ideal time of 800,000 microseconds. The log plot shows that for this unit pulses were received with a delay as much as 28 usecs because of sporadic Linux system interrupt latency.
 
-The results collected for all ten units are shown in the table below. The indicated tolerances are the conformance errors to an ideal normal distribution provided by the `NormalDistribParams` utility. In no case did the average clock offset exceed 1 microsecond.
+The results collected for all ten units are shown in the table below. The indicated tolerances are the conformance errors to an ideal normal distribution provided by the `NormalDistribParams` utility.
 
     --- System Clock Error (microseconds) ---
     UNIT#      offset             stddev
@@ -473,6 +473,5 @@ The results collected for all ten units are shown in the table below. The indica
     RPi3#9  -0.22  +/-0.01    1.081 +/-0.003
     RPi3#10 -0.21  +/-0.01    0.916 +/-0.003
 
-In order to estimate the amount of random variation in the offsets, RPi3#1 which had the maximum offset was tested 10 times over as many days. That result is shown in the next table.
 
 

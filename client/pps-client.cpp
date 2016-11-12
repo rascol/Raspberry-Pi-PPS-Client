@@ -79,6 +79,7 @@ void initialize(bool verbose){
 	g.invProportionalGain = INV_GAIN_0;
 	g.hardLimit = HARD_LIMIT_NONE;
 	g.exitOnLostPPS = true;
+	g.doCalibration = true;
 
 	g.t3.modes = ADJ_FREQUENCY;			// Initialize system clock
 	g.t3.freq = 0;						// frequency offset to zero.
