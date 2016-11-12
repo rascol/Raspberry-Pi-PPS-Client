@@ -54,7 +54,7 @@ As described, hard limiting removes the error that would be introduced by the ma
 
 ## Noise {#noise}
 
-The situation with regard to jitter and latency (noise) in the PPS interrupt response is complicated. Not only is it necessary to characterize `sysDelay` but there is also the problem of removing as much noise as possible. In order to characterize `sysDelay`, measurements of interrupt latency were made by timing the triggering of the hardware interrupt from a GPIO pin tied across to the GPIO pin that requested the interrupt.  Those measurements revealed that interrupt latency has three distinct components: 
+The situation with regard to jitter and latency (noise) in the PPS interrupt response is complicated. Not only is it necessary to characterize `sysDelay` but also noise must be removed as much as possible. In order to characterize `sysDelay`, measurements of interrupt latency were made by timing the triggering of the hardware interrupt from a GPIO pin tied across to the GPIO pin that requested the interrupt.  Those measurements revealed that interrupt latency has three distinct components: 
 
 1. a constant component corresponding to the minimum time required to process the interrupt interrupt request, 
 
@@ -68,14 +68,14 @@ The long duration latency of component 3 is treated as [noise that is to be remo
 
 ### Raspberry Pi 2 {#raspberry-pi-2}
 
-Although qualitatively similar, the quantitative noise characteristics of Raspberry Pi 2 and Raspberry Pi 3 are quite different. Raspberry Pi 3 noise is described in a [separate section](#raspberry-pi-3). Typical Raspberry Pi 2 PPS delay noise (jitter) is shown in Figure 1a. 
+Although qualitatively similar, the quantitative noise characteristics of Raspberry Pi 2 and Raspberry Pi 3 are different. Raspberry Pi 3 noise is described in a [separate section](#raspberry-pi-3). Typical Raspberry Pi 2 PPS delay noise (jitter) is shown in Figure 1a. 
 
 <a name="timed-event"></a>
 ![Raspberry Pi 2 Jitter Distribution](pps-jitter-distrib.png) 
 
 Figure 1a is data that was captured from an RPi 2 test unit over 24 hours to the file `/var/local/pps-jitter-distrib` by setting `jitter-distrib=enable` in `/etc/pps-client.conf` and is typical data that is easily generated on any RPi 2.
 
-Figure 1a shows a delay peak at zero (relative to `sysDelay`) followed by infrequent sporadic interrupt delays in the log plot. These delays are caused by other processes running in the Linux kernel. Even though pps-client is a real-time process, the PPS interrupt does not always receive an immediate response. The situation is much better on the 4.0 kernel than on previous kernels. On real-time configured 3.0 kernels `sysDelay` was on the order of 25 usecs. On the stock 4.0 kernel `sysDelay` has shrunk to about 8 usecs on Raspberry Pi 2. But delays caused by other running processes continue to be a problem. Clearly, the pps-client controller can [synchronize the time precisely](InterruptTimerDistrib.png). Evidently, the most significant impediment to precisely timing external events is sporadic Linux kernel interrupt latency.
+Figure 1a shows a delay peak at zero (relative to `sysDelay`) followed by infrequent sporadic interrupt delays in the log plot. These delays are caused by other processes running in the Linux kernel. Even though pps-client is a real-time process, the PPS interrupt does not always receive an immediate response. The situation is much better on the 4.0 kernel than on previous kernels. On real-time configured 3.0 kernels `sysDelay` was on the order of 25 usecs. On the stock 4.0 kernel `sysDelay` has shrunk to about 9 usecs on Raspberry Pi 2. But delays caused by other running processes continue to be a problem. Clearly, the pps-client controller can [synchronize the time precisely](InterruptTimerDistrib.png). Evidently, the most significant impediment to precisely timing external events is sporadic Linux kernel interrupt latency.
 
 The random noise component at zero in Figure 1a is a combination of randomness in the response time of the system to the PPS interrupt and flicker noise in the clock oscillator. These random components can be evaluated by comparing the jitter distribution in Figure 1a to the test interrupt delay distribution collected over the same 24 hour period.
 
