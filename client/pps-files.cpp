@@ -73,9 +73,7 @@ const char *valid_config[] = {
 		"calibrate",
 		"interrupt-distrib",
 		"sysdelay-distrib",
-		"exit-lost-pps",
-		"show-remove-noise",
-		"sysdelay-value"
+		"exit-lost-pps"
 };
 
 /**
@@ -915,17 +913,10 @@ void processFiles(char *config_str[], char *pbuf, int size){
 		writeSysdelayDistribFile();
 	}
 
-	if (isEnabled(SHOW_REMOVE_NOISE, config_str)){
-		g.showRemoveNoise = true;
-	}
-	else if (isDisabled(SHOW_REMOVE_NOISE, config_str)){
-		g.showRemoveNoise = false;
-	}
-
-	int value;
-	if (configHasValue(SYSDELAY_VALUE, config_str, &value)){
-		g.sysDelay = value;
-	}
+//	int value;
+//	if (configHasValue(SYSDELAY_VALUE, config_str, &value)){
+//		g.sysDelay = value;
+//	}
 
 	processWriteRequest();
 

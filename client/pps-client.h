@@ -112,8 +112,6 @@
 #define INTERRUPT_DISTRIB 16
 #define SYSDELAY_DISTRIB 32
 #define EXIT_LOST_PPS 64
-#define SHOW_REMOVE_NOISE 128
-#define SYSDELAY_VALUE 256
 
 /*
  * Struct for passing arguments to and from threads
@@ -218,7 +216,6 @@ struct G {
 	bool exit_loop;
 
 	bool doCalibration;
-	bool showRemoveNoise;
 
 	int recIndex;
 	int recIndex2;
