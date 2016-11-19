@@ -1,0 +1,10 @@
+<map id="bufferStatusMsg" name="bufferStatusMsg">
+<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#a8a87b6ef0bf407467331509efdd5b3e9" title="getInterruptDelay" alt="" coords="417,5,540,32"/>
+<area shape="rect" id="node3" href="$d5/d60/pps-client_8cpp.html#a4610ca59593e517fde46aa10657a7891" title="readPPS_SetTime" alt="" coords="413,56,544,83"/>
+<area shape="rect" id="node4" href="$d5/d60/pps-client_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="453,208,504,235"/>
+<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="225,107,311,133"/>
+<area shape="rect" id="node6" href="$dc/d4f/pps-sntp_8cpp.html#a1121c37b30e0ab417a95d6be065a0666" title="allocNTPServerList" alt="" coords="411,157,546,184"/>
+<area shape="rect" id="node7" href="$dc/d4f/pps-sntp_8cpp.html#ab6d786ab6487a8937306f50e65b1e4cd" title="makeSNTPTimeQuery" alt="" coords="595,208,749,235"/>
+<area shape="rect" id="node8" href="$d0/d3e/pps-files_8cpp.html#a99055dd0dc705a74bb0b3ab03fea92e3" title="bufferStateParams" alt="" coords="203,360,333,387"/>
+<area shape="rect" id="node9" href="$dc/d4f/pps-sntp_8cpp.html#ac0d0c84eb76dc4985ba295fbd8199c1c" title="getTimeConsensisAndCount" alt="" coords="173,309,363,336"/>
+</map>

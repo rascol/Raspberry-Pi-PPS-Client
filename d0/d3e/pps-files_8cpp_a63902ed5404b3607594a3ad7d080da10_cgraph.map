@@ -1,0 +1,7 @@
+<map id="disableNTP" name="disableNTP">
+<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#a94ad6f36dae10e5652ea241b11d2e5c7" title="open_logerr" alt="" coords="323,38,413,65"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="462,89,549,115"/>
+<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a459e7950f1def63780ba7fda8e3c12d2" title="read_logerr" alt="" coords="325,139,411,166"/>
+<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a180a91d8d62c36158e3b769ac35aa01e" title="replaceNTPConfig" alt="" coords="145,89,274,115"/>
+<area shape="rect" id="node6" href="$d0/d3e/pps-files_8cpp.html#a4ec814a023712bff67399cc287385ed3" title="restartNTP" alt="" coords="166,190,253,217"/>
+</map>

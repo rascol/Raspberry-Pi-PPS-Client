@@ -1,0 +1,20 @@
+<map id="open_logerr" name="open_logerr">
+<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="477,475,528,502"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#afdccb305ab5e5c4f3402fe7969c6737b" title="writeStatusStrings" alt="" coords="149,44,278,71"/>
+<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#ab03cf9b5563affdcf46a4ca95d4ff4ed" title="getChildPID" alt="" coords="167,95,260,122"/>
+<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a9942302e3e5272291f62fda42bdf6319" title="createPIDfile" alt="" coords="331,348,429,375"/>
+<area shape="rect" id="node6" href="$d0/d3e/pps-files_8cpp.html#a7192857cf334ce14c00dd49dca3c541a" title="readConfigFile" alt="" coords="160,196,267,223"/>
+<area shape="rect" id="node7" href="$d0/d3e/pps-files_8cpp.html#aa688c89aacc832cc1e7ef6ff1be6541e" title="writeDistribution" alt="" coords="155,247,271,274"/>
+<area shape="rect" id="node8" href="$d0/d3e/pps-files_8cpp.html#a82969e14917a0330c7a2174bea9af5d6" title="writeMultipleDistrib" alt="" coords="147,298,280,324"/>
+<area shape="rect" id="node9" href="$d0/d3e/pps-files_8cpp.html#a73e9f77c69f58e616293b5ca5126e77f" title="writeOffsets" alt="" coords="167,348,260,375"/>
+<area shape="rect" id="node10" href="$d0/d3e/pps-files_8cpp.html#a493e043705885cfcebc5ac807989eb4d" title="writeFrequencyVars" alt="" coords="144,399,283,426"/>
+<area shape="rect" id="node11" href="$d0/d3e/pps-files_8cpp.html#a4e1eee07f00ecb77c3ae3f508744f610" title="saveDoubleArray" alt="" coords="152,450,275,476"/>
+<area shape="rect" id="node12" href="$d0/d3e/pps-files_8cpp.html#af916d258db5da33fc999021de2722283" title="writeSysDelay" alt="" coords="160,500,267,527"/>
+<area shape="rect" id="node13" href="$d0/d3e/pps-files_8cpp.html#aad53ec22f551c789425b2870f59fbae9" title="writeTimestamp" alt="" coords="156,551,271,578"/>
+<area shape="rect" id="node14" href="$d0/d3e/pps-files_8cpp.html#a180a91d8d62c36158e3b769ac35aa01e" title="replaceNTPConfig" alt="" coords="149,652,278,679"/>
+<area shape="rect" id="node15" href="$d0/d3e/pps-files_8cpp.html#a63902ed5404b3607594a3ad7d080da10" title="disableNTP" alt="" coords="335,602,425,628"/>
+<area shape="rect" id="node16" href="$d0/d3e/pps-files_8cpp.html#a6354b54021f614ab3ab87ef5b3df64d0" title="enableNTP" alt="" coords="337,652,423,679"/>
+<area shape="rect" id="node17" href="$d0/d3e/pps-files_8cpp.html#a0ff8b8ea02b0483a116f8b5089546ea4" title="copyMajorTo" alt="" coords="165,754,262,780"/>
+<area shape="rect" id="node18" href="$d0/d3e/pps-files_8cpp.html#aa402d7b46a75b43bb077558f5343f3b8" title="daemonSaveArray" alt="" coords="149,804,278,831"/>
+<area shape="rect" id="node19" href="$dc/d4f/pps-sntp_8cpp.html#a1121c37b30e0ab417a95d6be065a0666" title="allocNTPServerList" alt="" coords="146,855,281,882"/>
+</map>

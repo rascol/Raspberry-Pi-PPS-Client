@@ -1,0 +1,17 @@
+<map id="waitForPPS" name="waitForPPS">
+<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#ae0bab7cf61e38b79d3bade19c957735a" title="initialize" alt="" coords="381,9,451,36"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#a7192857cf334ce14c00dd49dca3c541a" title="readConfigFile" alt="" coords="363,212,469,239"/>
+<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="555,288,642,315"/>
+<area shape="rect" id="node5" href="$dc/d4f/pps-sntp_8cpp.html#a95b1abb556e50d5bce590653d66f8b7d" title="allocInitializeSNTPThreads" alt="" coords="326,263,506,289"/>
+<area shape="rect" id="node6" href="$d0/d3e/pps-files_8cpp.html#af2476e49a353b0df5be1459f9a0c2260" title="HUPhandler" alt="" coords="165,516,259,543"/>
+<area shape="rect" id="node7" href="$d0/d3e/pps-files_8cpp.html#a6092b615f5e717c843a1948b2a34cf6a" title="TERMhandler" alt="" coords="365,313,467,340"/>
+<area shape="rect" id="node8" href="$d5/d60/pps-client_8cpp.html#a505a6be9b7669b349cea03a9fe663d74" title="setSyncDelay" alt="" coords="160,567,264,593"/>
+<area shape="rect" id="node9" href="$d0/d3e/pps-files_8cpp.html#afdccb305ab5e5c4f3402fe7969c6737b" title="writeStatusStrings" alt="" coords="147,617,277,644"/>
+<area shape="rect" id="node10" href="$d5/d60/pps-client_8cpp.html#a4610ca59593e517fde46aa10657a7891" title="readPPS_SetTime" alt="" coords="147,60,277,87"/>
+<area shape="rect" id="node11" href="$d5/d60/pps-client_8cpp.html#a510df19cb6ad4f22a7823cbc0852b9e9" title="checkPPSInterrupt" alt="" coords="350,364,482,391"/>
+<area shape="rect" id="node12" href="$d0/d3e/pps-files_8cpp.html#a99055dd0dc705a74bb0b3ab03fea92e3" title="bufferStateParams" alt="" coords="147,668,277,695"/>
+<area shape="rect" id="node13" href="$d5/d60/pps-client_8cpp.html#a8a87b6ef0bf407467331509efdd5b3e9" title="getInterruptDelay" alt="" coords="355,415,477,441"/>
+<area shape="rect" id="node14" href="$d0/d3e/pps-files_8cpp.html#a3ce43a5b60daa4f8158895454f2b7bd3" title="processFiles" alt="" coords="164,212,260,239"/>
+<area shape="rect" id="node15" href="$dc/d4f/pps-sntp_8cpp.html#ab6d786ab6487a8937306f50e65b1e4cd" title="makeSNTPTimeQuery" alt="" coords="339,465,493,492"/>
+<area shape="rect" id="node16" href="$dc/d4f/pps-sntp_8cpp.html#a05a786e283f51c4aea4de852b7292bb9" title="freeSNTPThreads" alt="" coords="149,719,275,745"/>
+</map>

@@ -1,0 +1,14 @@
+<map id="makeTimeCorrection" name="makeTimeCorrection">
+<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#aa8b4e9f304261f8d81a3d9b52991e3c4" title="setClockToNTPtime" alt="" coords="201,5,343,32"/>
+<area shape="rect" id="node3" href="$d5/d60/pps-client_8cpp.html#a75f33c602a27dd5150efbe4b4389e2da" title="getFractionalSeconds" alt="" coords="198,56,346,83"/>
+<area shape="rect" id="node4" href="$d5/d60/pps-client_8cpp.html#ad71923ccec11a6d6e132c43e60fe8765" title="removeNoise" alt="" coords="223,107,321,133"/>
+<area shape="rect" id="node5" href="$d5/d60/pps-client_8cpp.html#a86c229e1f60e3e90ca0a1c6e91841a10" title="getPPStime" alt="" coords="226,157,318,184"/>
+<area shape="rect" id="node6" href="$d5/d60/pps-client_8cpp.html#a4efd2ecedb34b38cd1000d86ba5f6ef9" title="adjtimex" alt="" coords="237,208,307,235"/>
+<area shape="rect" id="node7" href="$d5/d60/pps-client_8cpp.html#ad4d47fa254fa62368be4b75c2d5a5889" title="getAcquireState" alt="" coords="215,259,329,285"/>
+<area shape="rect" id="node8" href="$d5/d60/pps-client_8cpp.html#a062748b2a1af5a7bb4e0efd94b84f8d1" title="getAverageCorrection" alt="" coords="198,309,346,336"/>
+<area shape="rect" id="node9" href="$d5/d60/pps-client_8cpp.html#aec269fd5b44aeaa993781dddc42a2b59" title="makeAverageIntegral" alt="" coords="199,360,345,387"/>
+<area shape="rect" id="node10" href="$d5/d60/pps-client_8cpp.html#a2a7a8a06f0119359f624d891dbcfa08f" title="integralIsReady" alt="" coords="215,411,329,437"/>
+<area shape="rect" id="node11" href="$d5/d60/pps-client_8cpp.html#a8696238d80e8a7a4ae44de6de50ab1ce" title="getIntegral" alt="" coords="231,461,313,488"/>
+<area shape="rect" id="node12" href="$d0/d3e/pps-files_8cpp.html#a844fdb2cde0cee3651ece4170fbeb59a" title="recordOffsets" alt="" coords="221,512,323,539"/>
+<area shape="rect" id="node13" href="$d0/d3e/pps-files_8cpp.html#af916d258db5da33fc999021de2722283" title="writeSysDelay" alt="" coords="219,563,325,589"/>
+</map>

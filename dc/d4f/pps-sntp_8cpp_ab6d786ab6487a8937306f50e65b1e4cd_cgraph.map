@@ -1,0 +1,8 @@
+<map id="makeSNTPTimeQuery" name="makeSNTPTimeQuery">
+<area shape="rect" id="node2" href="$dc/d4f/pps-sntp_8cpp.html#ac0d0c84eb76dc4985ba295fbd8199c1c" title="getTimeConsensisAndCount" alt="" coords="392,5,581,32"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#a6f609d689ebe787455ce220808ca3ba0" title="bufferStatusMsg" alt="" coords="630,95,749,121"/>
+<area shape="rect" id="node4" href="$dc/d4f/pps-sntp_8cpp.html#ad78b6046af5bbade4a7fc8941d689f44" title="updateLog" alt="" coords="235,107,317,133"/>
+<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="443,132,530,159"/>
+<area shape="rect" id="node6" href="$dc/d4f/pps-sntp_8cpp.html#a1121c37b30e0ab417a95d6be065a0666" title="allocNTPServerList" alt="" coords="209,208,343,235"/>
+<area shape="rect" id="node7" href="$dc/d4f/pps-sntp_8cpp.html#aa210dcf9646721cd7a6148d795257899" title="doTimeCheck" alt="" coords="225,259,327,285"/>
+</map>
