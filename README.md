@@ -2,7 +2,7 @@
 
 <center><img src="/images/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" style="width: 400px;"/></center>
 
-The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi that synchronizes the Raspberry Pi system clock to a GPS time clock. 
+The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi that synchronizes the Raspberry Pi system time clock to a GPS time clock. 
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -18,8 +18,9 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 - [Reinstalling](#reinstalling)
 - [Building from Source](#building-from-source)
   - [Locate the Kernel Source](#locate-the-kernel-source)
-  - [Building on the RPi](#building-on-the-rpi)
-  - [Building on a Linux Workstation](#building-on-a-linux-workstation)
+    - [Latest Version Source](#latest-version-source)
+    - [Earlier Version Source](#earlier-version-source)
+  - [Building](#building)
 - [Running pps-client](#running-pps-client)
 - [Practical Limits to Time Measurement](#practical-limits-to-time-measurement)
   - [Flicker Noise](#flicker-noise)
@@ -54,7 +55,7 @@ Figure 4 is the distribution of measured times relative to a true time of 800,00
 
 <center><img src="/images/InterruptTimerDistrib.png" alt="Time Parameters" style=""/></center>
 
-The peak of the distribution in Figure 4 is the average error for this test unit and is about 0.28 microsecond below 800,000 microseconds. For the ten test units the median error was -0.28 microsecnd and the maximum error was -1.1 microseconds. 
+The peak of the distribution in Figure 4 is the average error for this test unit and is about 0.28 microsecond below 800,000 microseconds. For the ten test units the median error was -0.25 microsecond and the maximum error was -0.76 microseconds. 
 
 Figure 4 also shows that there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [](#practical-limits-to-time-measurement).
 
@@ -63,7 +64,7 @@ For a detailed description of the pps-client controller and accuracy testing run
 # Hardware Requirements
 ---
 
-1. A Raspberry Pi 3 or Pi 2 Model B. All data included in this file is for Raspberry Pi 3. Please note that jitter and noise are lowest in the Raspberry Pi 3.
+1. A Raspberry Pi 3 or Pi 2 Model B.
 
 2. A GPS module that provides a PPS output. Development was done with the [Adafruit Ultimate GPS module](http://www.adafruit.com/product/746). Others providing compatible logic levels can also be used.
 
@@ -90,25 +91,29 @@ This is necessary if you want to install pps-client as a system service.
 # Installing
 ---
 
-The pps-client has a few pre-compiled Linux 4 versions of the installer on the server. The pps-client version must match the version of the Linux kernel on your RPi. Version matching is necessary because pps-client contains a kernel driver that will only be recognized by the matching version of the Linux kernel.
+The pps-client program has a built-in Linux kernel driver. It is a Linux requirement that kernel drivers must be compiled on the Linux version on which they are used. This means that there is a different version of PPS-Client for every version of Linux that has been released since Linux 4.0 ! Since there have been more than one hundred of these, it is impractical to provide a pre-compiled pps-client installer for every one.
 
-The kernel version of your RPi can be found by running `uname -r` from a connected terminal. The first two numbers in the kernel version on your RPi must match those in the pps-client installer that you select. If the third number mismatches that means the kernel version on your RPi is not the latest bugfix version of the Linux kernel in that series. In that case, you will need to update the kernel on your RPi to that version.
+So this is our compromise: A few pre-compiled installers are provided on the server for the most current stable versions of Linux. However, instructions for [installing from source](#building-from-source) for any version of Linux 4 are also provided below.
 
-Bugfix kernel updates within the same kernel series, as for example from version `4.1.19` to `4.1.21`, are unlikely to adversely affect the operation of software already installed on your RPi. But in the exceptional case that you run into a problem later, the kernel you replaced has been saved on your RPi so you can always revert to it.
+One possibility is to download and install a fresh copy of [Raspian](https://www.raspberrypi.org/downloads/raspbian/) and use the pps-client installer from our website to try out pps-client. Then later install pps-client from source for earlier an version of Linux.
 
-If you need to update your kernel, then on your RPi install `rpi-update` with
+To install pps-client on a fresh Raspian, open a terminal to your Raspberry Pi. Then if you haven't already done so,
 ```
-$ sudo apt-get install rpi-update
+$ sudo apt-get update
+$ sudo apt-get upgrade
+$ sudo reboot
 ```
-Then run `rpi-update` as follows with the second number of the kernel on your RPi substituted for `X`,
+After rebooting check the Linux version:
 ```
-$ sudo BRANCH=rpi-4.X.y rpi-update
+$ uname -r
+$ 4.4.26-v7+
 ```
-To finish the install, copy the appropriate installer to your RPi and run it. (Type the command below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the kernel version of your RPi).
+That Linux version must match the installer version on our website. Now copy the installer and run it:
 ```
-$ sudo ./pps-client-`uname -r`
+$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/pps-client-4.4.26-v7+"
+$ sudo ./pps-client-4.4.26-v7+
 ```
-Installers for a few different Linux kernels are currently on the server and more will be. This is not an ideal solution because it means that pps-client has to be re-installed if the kernel version is updated. That will not automatically happen unless you run `rpi-update`. If there is enough interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
+This is not an ideal installation solution because it means that pps-client has to be re-installed if the Linux kernel is upgraded. But that will not automatically happen unless you run `rpi-update`. If there is enough interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
 # Uninstalling
 ---
@@ -131,9 +136,11 @@ To reinstall, first uninstall as [described above](#uninstalling) then install.
 
 # Building from Source
 ---
-Because pps-client contains a Linux kernel driver, building pps-client requires that a compiled Linux kernel with the same version as the version present on the RPi must also be available during the compilation of pps-client. The pps-client project can be built directly on the RPi or on a Linux workstation with a cross-compiler. Building on the RPi is slower but more reliable. In either case you will first need to download and compile the Linux kernel that corresponds to the kernel version on your RPi.
+The pps-client contains a Linux kernel driver. Consequently, as with all kernel drivers, building pps-client requires that a compiled Linux kernel with the same version as the version present on the RPi must also be available when pps-client is compiled. This is a two step process. First the appropriate Linux kernel source is downloaded and compiled. Then the pps-client project is compiled with access to the compiled kernel object files. 
 
-The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver.
+In principle that can be done on a cross-compiler. However building on the Raspberry Pi is better because if the source code of the released Linux kernel has problems, a fallback is available to the Pi that is not available to a cross-compiler: Once the Linux team has recognized that there were problems, `apt-get upgrade` will automatically revert the OS to a previous known good kernel that matches the downloaded source code (which the Linux team will also have reverted to the known good kernel).
+
+The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. The complete installation takes about 40 minutes on Raspberry Pi 3.
 
 If you don't have git,
 ```
@@ -142,29 +149,56 @@ $ sudo apt-get install git
 
 ## Locate the Kernel Source
 
-First determine the Linux kernel version by running `uname -r` from a terminal on your RPi. 
+Before attempting to compile the kernel be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case Linux was reverted to an earlier version. That could happen if the Linux team detected problems with the later version:
+```
+$ sudo apt-get update
+$ sudo apt-get upgrade
+$ sudo reboot
+```
+After reboot determine the Linux kernel version on the Raspberry Pi by running `uname -r` from a connected terminal. Then from a web browser go to https://github.com/raspberrypi/linux. Scroll down the page and examine the `Makefile` line. That line will contain the version number of the latest Linux version (for example `Linux 4.4.21`). For the moment, ignore the **third** number. If the **first two** numbers of the version are the same as the first two numbers of the kernel version running on your RPi, it is running the latest kernel (Linux 4.4). 
 
-Then from a browser go to, for example, https://github.com/raspberrypi/linux/commits/rpi-4.4.y (the second number must agree with your Linux kernel version). Scroll down the page and click on the Linux commit entry (`Linux 4.4.21` in this example). That will take you to the latest commit page. Click on the `Browse files` tab on the right side. That will take you to the source page you need in the build steps below.
+In that case, use the procedure in section [Latest Version Source](#latest-version-source) to retrieve the kernel source that you need. Otherwise you will need to use the procedure given in the section [Earlier Version Source](#earlier-version-source) to retrieve the required kernel.
 
-The third number, `y`, in the Linux version identifies bugfix updates. If that number in the page you found above is later than the version on your RPi then before you use the downloaded kernel you will need to update your kernel to that bugfix update. Bugfix updates are unlikely to adversely affect the operation of software already on your RPi. But if you later run into a problem, the kernel you replaced has been saved on your RPi so you can always revert to it.
+### Latest Version Source
+
+Chances are, as indicated by the **third** number in the kernel version on your RPi, the RPi kernel is earlier than the latest Linux bugfix version. You can find the kernel source that you need by browsing to https://github.com/raspberrypi/linux/commits/rpi-4.4.y (assuming that `Linux 4.4` is the latest kernel). 
+
+That page lists all of the commits made for `Linux 4.4`. Scroll down the page (clicking the `Older` button at the bottom of the page as necessary) until you find the version commit line for the version that matches your installed RPi kernel (listed as `Linux 4.4.19` for example). Click on `Linux 4.4.19`. That will take you to the commit page. Now click on the `Browse files` button on the right in the title line. That will take you to the source page that you need in the build steps below.
+
+### Earlier Version Source
+
+From a browser go to, for example, https://github.com/raspberrypi/linux/commits/rpi-4.1.y (the **second** number must agree with your Linux kernel version). Scroll down the page (clicking the `Older` button at the bottom of the page as necessary) until you find the version commit line for the version that matches the installed kernel on your RPi (listed as `Linux 4.1.19` for example). Click on `Linux 4.1.19`. That will take you to the commit page. Now click on the `Browse files` button on the right in the title line. That will take you to the source page that you need in the build steps below.
+
+It is possible that you might not be able to locate the kernel version that you need. In this case you could update your RPi to the latest bugfix kernel (`Linux 4.1.21` in this example). Bugfix updates are intended to only make changes that will not break existing code. But, there are no guarantees. If you later run into a problem, the kernel you replaced has been saved on your RPi so you can always revert to it.
 
 To update your RPi kernel you will need to use the `rpi-update` utility. If necessary install it with `sudo apt-get install rpi-update`.
 
-Then update to the latest bugfix for your kernel version with (replace `X` with the corresponding number from your kernel)
+Then update to the latest bugfix for your kernel version (in this example `Linux 4.1`) with
 ```
-$ sudo BRANCH=rpi-4.X.y rpi-update
+$ sudo BRANCH=rpi-4.1.y rpi-update
 ```
+Now browse back to  https://github.com/raspberrypi/linux/commits/rpi-4.1.y and click on the Linux commit entry (`Linux 4.1.21` was the latest). That will take you to the latest commit page for `Linux 4.1`. Click on the `Browse files` button on the right in the title. That will take you to the source page you need in the build steps below.
 
-## Building on the RPi
+## Building
 
 You might want to create a folder to hold the kernel and pps-client project. For example,
 ```
 $ mkdir ~/rpi
 $ cd ~/rpi
 ```
-Download the version of the kernel sources corresponding to your RPi as described above in "Locate the Kernel Source", substituting the appropriate source page:
+Assuming that you are on a workstation or Raspberry Pi that has an open terminal to the RPi and also have the [kernel sources page](#locate-the-kernel-source) open in a web browser, click on the green `Clone or download` button on the right side of the browser page. That will open an entry box. Hover over the `Download ZIP` box at the bottom of the entry box, right click on it and select `Copy link address`. Paste that address onto the command line of the RPi terminal. Surround it with quotes and prefix it with `wget` as in this example:
 ```
-$ git clone --depth=1 [your-rpi-kernel-source-page]
+$ wget "https://github.com/raspberrypi/linux/archive/887b692a469f9a9a666654e607103f5204ac5eb7.zip"
+```
+Execute the command and wait a few minutes for the download to complete.
+
+Now unzip the download.
+```
+$ unzip -q 887b692a469f9a9a666654e607103f5204ac5eb7.zip
+```
+Wait a few more minutes for it to unzip then rename it to `linux`:
+```
+$ mv linux-887b692a469f9a9a666654e607103f5204ac5eb7 linux
 ```
 Get missing dependencies:
 ```
@@ -172,78 +206,35 @@ $ sudo apt-get install bc
 ```
 Configure the kernel:
 ```
-$ cd linux
+$ cd ~/rpi/linux
 $ KERNEL=kernel7
 $ make bcm2709_defconfig
 ```
-Compile the kernel (takes about half an hour on Pi 2, about 20 minutes on Pi 3):
+Now compile the kernel (takes about half an hour on Pi 2, 20 minutes on Pi 3):
 ```
 $ make -j4 zImage
 ```
-That will provide the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:
+If there are no compile errors, the last message from the compiler will be,
+```
+$ Kernel: arch/arm/boot/zImage is ready
+```
+If there are errors and you need to recompile be sure to first clean the Linux folders with,
+```
+$ make mrproper
+```
+If all went well, you have the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:
 ```
 $ cd ..
-$ git clone --depth=1 https://github.com/rascol/PPS-Client
+$ git clone --depth=1 https://github.com/rascol/Raspberry-Pi-PPS-Client
 $ cd PPS-Client
 ```
-Now make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
+Now make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type or copy the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
 ```
 $ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
 ```
 That will build the installer. Run it on the RPi as root:
 ```
 $ sudo ./pps-client-`uname -r`
-```
-That completes the pps-client installation.
-
-## Building on a Linux Workstation
-
-This is decidedly for the adventurous. We've had problems with the cross-compiler where it looked like everything was fine but the code didn't run on the RPi. Very hard to debug. On the other hand, it can be much easier to get code though the compile stage on a workstation.
-
-You might want to create a folder to hold the kernel and tools. For example,
-```
-$ mkdir ~/rpi
-$ cd ~/rpi
-```
-On a workstation you will need the latest version of the cross-compiler:
-```
-$ git clone https://github.com/raspberrypi/tools
-```
-That should create a `tools` folder in `/rpi`.
-
-Download the version of the kernel sources corresponding to your RPi as described above in "Locate the Kernel Source", substituting the appropriate source page:
-```
-$ git clone --depth=1 [your-rpi-kernel-source-page]
-```
-This environment variable will be needed both to configure the kernel and to build pps-client:
-```
-$ export CROSS_COMPILE=~/rpi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-
-```
-The `export` command above is temporary. It will survive only until you close the terminal window. To make it persistent you can optionally add the `export` command to the `.bashrc` file in your home directory.
-
-Now configure the kernel:
-```
-$ cd linux
-$ KERNEL=kernel7
-$ make ARCH=arm CROSS_COMPILE=$CROSS_COMPILE bcm2709_defconfig
-```
-and compile it:
-```
-$ make -j6 ARCH=arm CROSS_COMPILE=$CROSS_COMPILE zImage
-```
-That will provide the necessary kernel object files to build the driver. If you have not already downloaded the pps-client project, do it now:
-```
-$ cd ~/rpi
-$ git clone --depth=1 https://github.com/rascol/PPS-Client
-$ cd PPS-Client
-```
-Now (assuming that the kernel source version is 4.4.14) make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. If not, change it to point to the correct location of the "linux" folder.
-```
-$ make CROSS_COMPILE=$CROSS_COMPILE KERNELDIR=~/rpi/linux KERNELVERS=4.4.14-v7+
-```
-That will build the installer, `pps-client-4.4.14-v7+`. Copy this to the RPi. Run it on the RPi as root:
-```
-$ sudo ./pps-client-4.4.14-v7+
 ```
 That completes the pps-client installation.
 
@@ -266,7 +257,7 @@ The `jitter` value is showing the fractional second offset of the PPS signal acc
 
 <center><img src="/images/StatusPrintoutAt10Min.png" alt="Status Printout after 10 Min" style="width: 634px;"/></center>
 
-The `jitter` is displaying small numbers. The time of the rising edge of the PPS signal is shown in the second column. The `clamp` value on the far right indicates that the maximum time correction applied to the system clock is being limited to one microsecond. The system clock is synchronized to the PPS signal to a precision of one microsecond (but with an absolute accuracy limited by clock oscillator noise which has ≈1 microsecond [RMS](https://en.wikipedia.org/wiki/Root_mean_square) jitter).
+The `jitter` is displaying small numbers. The time of the rising edge of the PPS signal is shown in the second column. The `clamp` value on the far right indicates that the maximum time correction applied to the system clock is being limited to one microsecond. The system clock is synchronized to the PPS signal to a precision of one microsecond (but with an absolute accuracy limited by clock oscillator noise which could have as much as 1 microsecond of [RMS](https://en.wikipedia.org/wiki/Root_mean_square) jitter).
 
 It can take as long as 20 minutes for pps-client to fully acquire the first time it runs. This happens if the `jitter` shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount on a cold start. In this case pps-client may restart several times as it slowly reduces the `jitter` offset. That happens because system functions that pps-client calls internally prevent time changes of more than about 500 microseconds in each second.
 
@@ -309,25 +300,21 @@ While pps-client will synchronize the system clock to a GPS clock with an averag
 
 ## Flicker Noise
 
-The Raspberry Pi is an ARM processor that generates all internal timing with a conventional integrated circuit oscillator timed by an external crystal. Consequently the RPi is subject to crystal oscillator flicker noise. In the case of the RPi, flicker noise appears as a random deviation of system time from the PPS signal of up to several microseconds. Even though flicker noise is always present, it is not evident when timing intervals between events occurring in software running on the same system. It only becomes evident when timing events external to the processor or between two systems. 
+The Raspberry Pi is an ARM processor that generates all internal timing with a conventional integrated circuit oscillator timed by an external crystal. Consequently the RPi is subject to crystal oscillator flicker noise. In the case of the RPi, flicker noise appears as a random deviation of system time from the PPS signal of up to a few microseconds. Even though flicker noise is always present, it is not evident when timing intervals between events occurring in software running on the same system. It only becomes evident when timing events external to the processor or between two systems. 
 
 Flicker noise sets the absolute limit on the accuracy of the system clock. This is true not only of the RPi ARM processor but also of all conventional application processors.
 
 ## Linux OS Real-Time Latency
 
-The Linux OS was not designed to be a real-time operating system. Nevertheless, there is considerable interest in upgrading it to provide real-time performance. Consequently, real-time performance improved significantly between versions 3 and 4. As a result of that, median system latency in responding to an external interrupt on the RPi ARM processor is currently about 6 microseconds - down from about 23 microseconds in Linux 3. As yet, however, longer sporadic delays occur frequently. 
+The Linux OS was never designed to be a real-time operating system. Nevertheless, because of considerable interest in upgrading it to provide real-time performance, real-time performance improved significantly between versions 3 and 4. As a result, median system latency in responding to an external interrupt on the RPi ARM processor is currently about 6 microseconds - down from about 23 microseconds in Linux 3. As yet, however, longer sporadic delays still occur. 
 
 ## Measurements of Noise and Latency
 
-As it maintains clock synchronization, the pps-client daemon continuously measures jitter and interrupt delay. Jitter is predominantly a combination flicker noise in the clock oscillator and OS response latency. A jitter plot recorded second by second over 24 hours on a Raspberry Pi 3 Model B is shown in Figure 3.
+<center><img src="/images/SingleEventTimerDistrib.png" alt="Jitter Distribution" style=""/></center>
 
-<center><img src="/images/pps-jitter-distrib.png" alt="Jitter Distribution" style=""/></center>
+Figure 5 is a typical accumulation of single-event timings for external interrupts at 800,000 microseconds after the PPS interrupt. The main peak is the result of reasonably constant system latency and clock oscillator flicker noise having a standard deviation of about 0.8 microsecond. The secondary peak at about 800,003 microseconds is one of many such features introduced by OS latency that can appear for hours or days or disappear altogether. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal also introduced by OS latency.
 
-This is a spreadsheet plot of the data file `/var/local/pps-jitter-distrib` that was generated when `jitter-distrib=enable` was set in in the pps-client config file, `/etc/pps-client.conf`. 
-
-The shape of the main peak is consistent with clock oscillator flicker noise having a standard deviation of about 0.8 microsecond. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal introduced by OS latency. There were about 1500 of these out of a total sample population of 86,400. So about 1.7% of the time Linux system latency delayed the sample as much as 15 microseconds.
-
-Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click to a few microseconds, the real-time performance of the Linux OS (as of v4.4.14-v7+) sets the timing accuracy of external events to about 20 microseconds.
+Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click to a few microseconds (~1 μsec SD), the real-time performance of the Linux OS (as of v4.4.14-v7+) sets the timing accuracy of external events to about 20 microseconds (Pi 3) because of sporadic system interrupt latency.
 
 
 

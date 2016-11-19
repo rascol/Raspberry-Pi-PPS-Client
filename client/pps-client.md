@@ -26,7 +26,7 @@
 
 # Uses {#uses}
 
-The pps-client source code is the reference design for a general technique that provides high accuracy timekeeping. It was implemented on a relatively slow ARM processor which should illustrate that a similar software solution can be successful on almost any application processor.
+The pps-client source code is the reference design and proof of concept for a general technique that provides high accuracy timekeeping. It was implemented on a relatively slow ARM processor which should illustrate that a similar software solution can be successful on almost any application processor.
 
 Although the goal of high accuracy computer timekeeping, evident from even a cursory search on the internet, has been around since at least the introduction of the Network Time Protocol, general support for high precision timekeeping over the internet is still not available. However, GPS reception is available everywhere and in conjunction with a daemon like pps-client can be used for that purpose now. Indeed, an internet search found commercial GPS repeaters that can bring GPS reception indoors with local coverage up to at least 30 meters.
 
@@ -36,7 +36,7 @@ There are other uses for time synchronized computers: Network administrators wou
 
 # Achieving High Accuracy Timekeeping {#achieving-high-accuracy-timekeeping}
 
-The pps-client daemon is implemented as a [proportional-integral (PI) controller](https://en.wikipedia.org/wiki/PID_controller) (a.k.a. a Type 2 Servo) with proportional and integral feedback provided each second but with the value of the integral feedback adjusted once per minute. The PI controller model provides a view of time synchronization as a linear feedback system in which gain coefficients can be adjusted to provide a good compromise among stability, transient response and amount of noise introduced in the error signal. 
+The pps-client daemon is implemented as a [proportional-integral (PI) controller](https://en.wikipedia.org/wiki/PID_controller) (a.k.a. type 2 Servo) with proportional and integral feedback provided each second but with the value of the integral feedback adjusted once per minute. The PI controller model provides a view of time synchronization as a linear feedback system in which gain coefficients can be adjusted to provide a good compromise among stability, transient response and amount of noise introduced in the error signal. 
 
 The error signal is the time difference between the one-second interval provided by a PPS signal and the length of the second reported by the system clock. The noise of concern is the second-to-second variation in time reported by the system because of the corresponding variation of system delay in responding to the PPS interrupt. This variable component of the delay, referred to as jitter, is a combination of clock oscillator jitter, PPS signal jitter and system latency in responding the the interrupt.
 
@@ -75,7 +75,7 @@ Although qualitatively similar, the quantitative noise characteristics of Raspbe
 
 Figure 1a is data that was captured from an RPi 2 test unit over 24 hours to the file `/var/local/pps-jitter-distrib` by setting `jitter-distrib=enable` in `/etc/pps-client.conf` and is typical data that is easily generated on any RPi 2.
 
-Figure 1a shows a delay peak at zero (relative to `sysDelay`) followed by infrequent sporadic interrupt delays in the log plot. These delays are caused by other processes running in the Linux kernel. Even though pps-client is a real-time process, the PPS interrupt does not always receive an immediate response. The situation is much better on the 4.0 kernel than on previous kernels. On real-time configured 3.0 kernels `sysDelay` was on the order of 25 usecs. On the stock 4.0 kernel `sysDelay` has shrunk to about 9 usecs on Raspberry Pi 2. But delays caused by other running processes continue to be a problem. Clearly, the pps-client controller can [synchronize the time precisely](InterruptTimerDistrib.png). Evidently, the most significant impediment to precisely timing external events is sporadic Linux kernel interrupt latency.
+Figure 1a shows a delay peak at zero (relative to `sysDelay`) followed by infrequent sporadic interrupt delays in the log plot. These delays are caused by other processes running in the Linux kernel. Even though pps-client is a real-time process, the PPS interrupt does not always receive an immediate response. The situation is much better on the Linux 4 kernel than on previous kernels. On real-time configured Linux 3 kernels `sysDelay` was on the order of 25 μsecs. On the stock Linux 4 kernel `sysDelay` has shrunk to about 9 μsecs on Raspberry Pi 2. But delays caused by other running processes continue to be a problem. Clearly, the pps-client controller can [synchronize the time precisely](InterruptTimerDistrib.png). Evidently, the most significant impediment to precisely timing external events is sporadic Linux kernel interrupt latency.
 
 The random noise component at zero in Figure 1a is a combination of randomness in the response time of the system to the PPS interrupt and flicker noise in the clock oscillator. These random components can be evaluated by comparing the jitter distribution in Figure 1a to the test interrupt delay distribution collected over the same 24 hour period.
 
@@ -83,11 +83,9 @@ The random noise component at zero in Figure 1a is a combination of randomness i
 
 The Test Interrupt Delay distribution was captured in the file `/var/local/pps-intrpt-distrib` by setting `interrupt-distrib=enable` in `/etc/pps-client.conf`.
 
-The two different random components are inseparable in the jitter distribution (displayed in the Figure 1b as PPS Interrupt Delay). However, in the region below 8 microseconds where interrupt latency spikes are not present, the jitter distribution can be compared with the Test Interrupt Delay distribution (TID). The TID is a system response to a self-generated interrupt that is measured totally within the system. That makes it blind to flicker noise in the system clock oscillator. Consequently, it is representative of the randomness in the system response to an interrupt that is also present in the jitter. It shows a distribution with a standard deviation (SD) of about 0.48 microsecond.
+The two different random components are inseparable in the jitter distribution (displayed in the Figure 1b as PPS Interrupt Delay). However, the jitter distribution can be compared with the Test Interrupt Delay distribution (TID). The TID is a system response to a self-generated interrupt that is measured totally within the system. That makes it blind to flicker noise in the system clock oscillator. Consequently, it is representative of the randomness in the system response to an interrupt that is also present in the jitter. It shows a distribution with a standard deviation (SD) of about 0.82 microsecond. This was data collected while `sysDelay` took on the value of 8 μsecs with 45,343 samples collected.
 
-That is a good estimate because in this specific case, `sysDelay` took on two values over the test period with 60,200 samples at 8 usecs and 25,660 at 9 usecs. Consequently, the samples below 8 usecs were contributed mostly while sysDelay was at 8 usecs. In tests where `sysDelay` is not at the lowest value for the longest time the TID SD could incorrectly appear to be wider than shown here.
-
-In comparison, the PPS Interrupt Delay distribution SD is estimated to be about 1.05 microseconds in Figure 1b. 
+In comparison, the PPS Interrupt Delay distribution SD is estimated to be about 0.92 microseconds in Figure 1b. 
 
 Since distribution SDs of this kind add in root-sum-square fashion,
 
@@ -95,7 +93,7 @@ Since distribution SDs of this kind add in root-sum-square fashion,
 {{\sigma}_t}^2 = {{\sigma}_1}^2 + {{\sigma}_2}^2
 \f]
 
-then by using the numbers above with \f${\sigma}_t=1.05\f$ the width of the PPS delay distribution and \f${\sigma}_1=0.48\f$ the width of the test interrupt distribution, the flicker noise SD, \f${\sigma}_2\f$, is calculated to be about 0.9 microsecond which shows the random noise to be dominated by system clock oscillator flicker noise.
+then by using the numbers above with \f${\sigma}_t=0.92\f$ the width of the PPS delay distribution and \f${\sigma}_1=0.82\f$ the width of the test interrupt distribution, the flicker noise SD, \f${\sigma}_2\f$, is calculated to be about 0.42 microsecond which shows the random noise to be dominated by random jitter in the interrupt response for Pi 2.
 
 ### Raspberry Pi 3 {#raspberry-pi-3}
 
@@ -105,7 +103,7 @@ Typical Raspberry Pi 3 PPS delay noise (jitter) is shown in Figure 2a.
 
 Figure 2a is data that was captured from an RPi 3 test unit over 24 hours to the file `/var/local/pps-jitter-distrib` by setting `jitter-distrib=enable` in `/etc/pps-client.conf` and is typical data that is easily generated on any RPi 3.
 
-The random component of the jitter is estimated to have about 0.67 usecs SD in Figure 2a. The sporadic system interrupt delays in the log plot did not extend beyond 12 usecs in this 24 hours test period. There were 486 of these out of 86,400 accounting for only about one half of one percent of the total samples.
+The random component of the jitter is estimated to have about 0.83 μsecs SD in Figure 2a. The sporadic system interrupt delays in the log plot did not extend beyond 18 μsecs in this 24 hours test period. There were 480 of these out of 86,400 accounting for only about one half of one percent of the total samples.
 
 The random component at zero in Figure 2a was expected to be a combination of randomness in the response time of the system to the PPS interrupt and flicker noise in the clock oscillator. This hypothesis was tested by comparing the jitter distribution in Figure 2a to the test interrupt delay distribution collected over the same 24 hour period.
 
@@ -113,9 +111,9 @@ The random component at zero in Figure 2a was expected to be a combination of ra
 
 The Test Interrupt Delay distribution was captured in the file `/var/local/pps-intrpt-distrib` by setting `interrupt-distrib=enable` in `/etc/pps-client.conf`.
 
-As Figure 2b shows, there was almost no perceptable jitter in the region below 5 usecs. This lack of jitter in the test interrupt is also representative of system response jitter in the PPS interrupt. That indicates that the random noise at zero in Figure 2a is a result only of flicker noise in the clock oscillator. For Raspberry Pi 3, sysDelay is nearly deterministic except for sporadic system latency and a small hour-to-hour drift seen in recorded `sysDelay` values.
+As Figure 2b shows, the TID is much narrower for this typical Raspberry Pi 3 in comparison with Pi 2.  It shows a distribution with a standard deviation (SD) of about 0.37 microsecond. This was data collected while sysDelay took on the value of 5 μsecs with 50,212 samples collected.
 
-In this specific test data set, `sysDelay` took on only two values  over the test period and most of the samples were contributed while `sysDelay` was at the lowest value of 5 microseconds. In test cases where the lowest `sysDelay` value is not also the most frequent, it might appear that there is also internal random jitter in the interrupt response which is probably not the case.
+Using the same calculation that was done for RPi 2, with \f${\sigma}_t=0.83\f$ the width of the PPS delay distribution and \f${\sigma}_1=0.37\f$ the width of the test interrupt distribution, the flicker noise SD, \f${\sigma}_2\f$, is calculated to be about 0.74 microsecond showing flicker noise and PPS jitter to be the dominant component of the random jitter for Pi 3. To within estimation errors this is typical of the Pi 3 units that were tested.
 
 ### Jitter Spikes {#jitter-spikes}
 
@@ -141,7 +139,7 @@ G.rawError = G.interruptTime - G.sysDelay
 
 Each `G.rawError` is a time measurement corrupted by jitter. Thus the value of `G.rawError` generated each second can be significantly different from the true time correction. To extract the time correction, `G.rawError` is passed into the `removeNoise()` routine that contains the first noise processing routine, `detectDelaySpike()`, that determines (when `G.rawError` is sufficiently small) is `G.rawError` spike noise? in which case further processing in the current second is skipped. If it's not spike noise, the average time slew, `G.avgSlew` is updated by `G.rawError`. The `G.avgSlew` value along with the average time correction up to the current second, `G.avgCorrection`, determines the current hard limit value that will be applied in the final noise removal routine, `clampJitter()`. Then `G.rawError` limited by `clampJitter()` is returned from `removeNoise()` as `G.zeroError` which is then modified by the proportional gain value and then sign reversed to generate `G.timeCorrection` for the current second.
 
-The sign reversal on `G.timeCorrection` is necessary in order to provide a proportional control step that subtracts the time correction from the current time slew, making a time slew that is too large smaller and vice versa. That happens by passing `G.timeCorrection` to the system `adjtimex()` routine which slews the time by exactly that value unless the magnitude is greater than about 500 usecs, in which case the slew adjustment is restricted to 500 usecs by `adjtimex()`. This is usually what happens when pps-client starts. After several minutes of 500 usec steps, `G.timeCorrection` will be in a range to allow the integral control step to begin.
+The sign reversal on `G.timeCorrection` is necessary in order to provide a proportional control step that subtracts the time correction from the current time slew, making a time slew that is too large smaller and vice versa. That happens by passing `G.timeCorrection` to the system `adjtimex()` routine which slews the time by exactly that value unless the magnitude is greater than about 500 μsecs, in which case the slew adjustment is restricted to 500 μsecs by `adjtimex()`. This is usually what happens when pps-client starts. After several minutes of 500 μsec steps, `G.timeCorrection` will be in a range to allow the integral control step to begin.
 
 But before the integral control step can begin, an average of the second-by-second time corrections over the previous minute must be available to form the integral. That average is constructed in the `getAverageCorrection()` routine which sequences the time corrections through a circular buffer `G.correctionFifo` and simultaneously generates a rolling sum in `G.correctionAccum` which is scaled to form a rolling average of time corrections that is returned as `G.avgCorrection` by `getAverageCorrection()` each second. At feedback convergence, the rolling sum of *unit* `G.timeCorrection` values makes `G.avgCorrection` the *median* of `G.timeCorrection` values. 
 
@@ -157,7 +155,7 @@ The specific purpose of the feedback controller described above is to adjust the
 
 It does that by setting the local clock so that the difference between `G.sysDelay` and the median of `G.interruptTime` is zero. For this to succeed in adjusting the local time to the PPS, `G.sysDelay` must be the median of the time delay at which the system responded to the rising edge of the PPS interrupt. But the median value of `G.sysDelay` can't be determined by the feedback controller. As indicated by the equation, all the controller can do is satisfy the equation of time.
 
-In order to independently determine the `G.sysDelay` value in self-calibrate mode, a calibration interrupt is made every second immediately following the PPS interrupt. These time measurements are requested from the `pps-client.ko` device driver in the `getInterruptDelay()` routine. That routine calculates `G.intrptDelay` from the time measurements and calls `removeIntrptNoise()` with that value. The `removeIntrptNoise()` routine generates `G.delayMedian`, an estimate of the median of the `G.intrptDelay` value, in a parallel way and using the same routines that `removeNoise()` uses to generate the median of `G.interruptTime`. The `G.delayMedian` value is then assigned to `G.sysDelay`.
+In order to independently determine the `G.sysDelay` value, a calibration interrupt is made every second immediately following the PPS interrupt. These time measurements are requested from the `pps-client.ko` device driver in the `getInterruptDelay()` routine. That routine calculates `G.intrptDelay` from the time measurements and calls `removeIntrptNoise()` with that value. The `removeIntrptNoise()` routine generates `G.delayMedian`, an estimate of the median of the `G.intrptDelay` value, in a parallel way and using the same routines that `removeNoise()` uses to generate the median of `G.interruptTime`. The `G.delayMedian` value is then assigned to `G.sysDelay`.
 
 ## Controller Behavior on Startup {#controller-behavior-on-startup}
 
@@ -215,7 +213,7 @@ Here are the parameters shown in the status printout:
 
  * First two columns - date and time of the rising edge of the PPS signal.
  * Third column - the sequence number giving the total PPS interrupts received since pps-client was started.
- * `jitter` - the time deviation in microseconds recorded at the reception of the PPS interrupt. If shown as `*jitter` then jitter with a [delay shift](#delay-shifts) in progress.
+ * `jitter` - the time deviation in microseconds recorded at the reception of the PPS interrupt.
  * `freqOffset` - the frequency offset of the system clock in parts per million of the system clock frequency.
  * `avgCorrection` - the time corrections (in microseconds) averaged over the previous minute.
  * `clamp` - the hard limit (in microsecs) applied to the raw time error to convert it to a time correction.
@@ -255,13 +253,11 @@ Data that can be collected using the configuration file is enabled with settings
 
 * `jitter-distrib=enable` generates `/var/local/pps-jitter-distrib-forming` which contains the currently forming distribution of jitter values. When 24 hours of corrections have been accumulated, these are transferred to `/var/local/pps-jitter-distrib` which contains the cumulative distribution of all time (jitter) values recorded at reception of the PPS interrupt over 24 hours.
 
-When `calibrate=enable` is set in `/etc/pps-client.conf` these files may also be saved:
-
 * `interrupt-distrib=enable` generates `/var/local/pps-intrpt-distrib-forming` which contains the currently forming distribution of calibration interrupt delays. When 24 hours of these have been accumulated they are transferred to `/var/local/pps-intrpt-distrib` which contains a cumulative distribution of recorded calibration interrupt delays that occurred over 24 hours.
 
 * `sysdelay-distrib=enable` generates `/var/local/pps-sysDelay-distrib-forming` which contains the currently forming distribution of `sysDelay` values. When 24 hours of these have been accumulated they are transferred to `/var/local/pps-sysDelay-distrib` which contains a cumulative distribution of `sysDelay` values that were applied to the pps-client controller over 24 hours.
 
-Note that while the turnover interval for some of the files above is given as 24 hours, the interval will usually be longer than 24 hours because pps-client runs on an internal count, `G.activeCount`, that does not count lost PPS interrupts or skipped jitter spikes.
+Note that while the turnover interval for some of the files above is given as 24 hours, the interval will usually be slightly longer than 24 hours because pps-client runs on an internal count, `G.activeCount`, that does not count lost PPS interrupts or skipped jitter spikes.
 
 ### Command Line {#command-line}
 
@@ -293,7 +289,7 @@ As an aid to remembering what can be requested, omitting the type of data will p
     pps-offsets
 
 described as,
-* `rawError` writes an exponentially decaying distribution of unprocessed PPS jitter values as they enter the controller. These are relative to the current value of sysDelay. Each jitter value that is added to the distribution has a half-life of one hour. So the distribution is almost completely refreshed every four to five hours.
+* `rawError` writes an exponentially decaying distribution of unprocessed PPS jitter values as they enter the controller. These are relative to the current value of `sysDelay`. Each jitter value that is added to the distribution has a half-life of one hour. So the distribution is almost completely refreshed every four to five hours.
 
 * `intrptError` writes an exponentially decaying distribution of unprocessed test interrupt delay values. The description is otherwise the same as for `"rawError"`.
 
@@ -303,7 +299,7 @@ described as,
 
 ## Accuracy Validation {#accuracy-validation}
 
-Time accuracy is defined as the absolute time error at any point in time relative to the PPS time clock. The limit to time accuracy on any processor that uses a conventional integrated circuit crystal oscillator is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise) in the oscillator. At the 1 Hz operating frequency of the pps-client controller, flicker noise is evident as the random component of second-to-second jitter. The integrator in the control loop removes it from the system clock frequency adjustment and the proportional adjustment only allows a 1 microsecond adjustment each second which ignores all but 1 microsecond of it. 
+Time accuracy is defined as the absolute time error at any point in time relative to the PPS time clock. The limit to time accuracy on any processor that uses a conventional integrated circuit crystal oscillator is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise) in the oscillator. At the 1 Hz operating frequency of the pps-client controller, flicker noise is evident as [part of the random component](#noise) of second-to-second jitter. The integrator in the control loop removes it from the system clock frequency adjustment and the proportional adjustment only allows a 1 microsecond adjustment each second which ignores all but 1 microsecond of it. 
 
 As a result, any internal time measurement made on the system clock will see at most ± 1 microsecond of noise. Since that is the the resolution limit of time measurements, the processor clock is blind to its own flicker noise. Flicker noise is only evident when the RPi system clock is timing an external event, in which case the system clock will [see its own noise](#timed-event) plus any noise in the event being timed. Thus any time measurements indicated below as "on the local clock" are internal and are blind to local flicker noise.
 
@@ -312,11 +308,11 @@ It has been determined that the system clock oscillator synchronized by pps-clie
     $ pps-client -s frequency-vars
     $ cat /var/local/pps-frequency-vars
 
-Consequently, any interval measurement of one second or less on the system clock will have an average error smaller than 1 microsecond (on the local clock). That will, in fact, be true of any time measurement because whole seconds are synchronized to the PPS signal. This verifies that the RPi system clock has a precision of 1 microsecond with respect to the independent sysDelay value determined by the [feedforward compensation](#feedforward-compensator) mechanism, but does not verify that the sysDelay value is correct.
+Consequently, any interval measurement of one second or less on the system clock will have an average error smaller than 1 microsecond (on the local clock). That will, in fact, be true of any time measurement because whole seconds are synchronized to the PPS signal. This verifies that the RPi system clock has a precision of 1 microsecond with respect to the independent `sysDelay` value determined by the [feedforward compensation](#feedforward-compensator) mechanism, but does not verify that the `sysDelay` value is correct.
 
 To verify absolute time accuracy, a pair of repetitive pulses is necessary with the first pulse replacing the PPS time source and the second pulse providing a time value to be measured by the RPi system clock. If the time reported by the RPi system clock agrees with the known time interval between the pulses to within an acceptable error then absolute time accuracy is verified. 
 
-Ideally, the pulses would be generated by laboratory equipment. But precision test gear is not generally available and, fortunately, is not really necessary. Since RPi processors will have flicker noise that is about the same from unit to unit then one RPi can be configured as a timing pulse generator to test a second RPi (the UUT). The result of the timing will have the combined flicker noise of both RPi units. Since the noise distributions of these independent noise sources add in [RMS](https://en.wikipedia.org/wiki/Root_mean_square) fashion, then if the flicker noise in the units is about equal then the combined distribution will be wider than that of a single unit by about √2. Since all tests will be the result of evaluating the noise distributions over a large number of trials, the widening of the distribution will have a negligible effect.
+Ideally, the pulses would be generated by laboratory equipment. But precision test gear is not generally available and, fortunately, is not really necessary. Since RPi processors will have flicker noise that is about the same from unit to unit then one RPi can be configured as a timing pulse generator to test a second RPi. The result of the timing will have the combined flicker noise of both RPi units. Since the noise distributions of these independent noise sources add in [RMS](https://en.wikipedia.org/wiki/Root_mean_square) fashion, then if the flicker noise in the units is about equal then the combined distribution will be wider than that of a single unit by about √2. Since all tests will be the result of evaluating the peaks of noise distributions over a large number of trials, the widening of the distribution will have a negligible effect.
 
 ### The pulse-generator Utility {#the-pulse-generator-utility}
 
@@ -344,13 +340,13 @@ When finished, unload the driver with
 
     $ sudo pulse-generator unload-driver
 
-Pulses are generated by a kernel driver in a spin loop that constantly checks the system time with a kernel function `do_gettimeofday()` that returns the time within about half a microsecond so that, as soon as the specified times occur, the GPIO output(s) are asserted. This technique inherantly has high linearity because time on the local clock is linear to within the error introduced by flicker noise in the clock oscillator.
+Pulses are generated by a kernel driver in a spin loop that constantly checks the system time with a kernel function `do_gettimeofday()` that returns the time within about half a microsecond so that, as soon as the specified times occur, the GPIO output(s) are asserted. This technique inherently has high linearity because time on the local clock is linear to within the error introduced by flicker noise in the clock oscillator.
 
 The pulse-generator does not use interrupts - a fact that appears to minimize sporadic system latency. After each pulse is generated, pulse-generator prints the time of occurrence to the console. If a pulse is delayed more than 1 microsecond by latency it is omitted and a message to that effect is printed followed by the time the omitted pulse would have occurred. This typically occurs only a few times in 24 hours.
 
 ### The interrupt-timer Utility {#the-interrupt-timer-utility}
 
-To time interrupts generated by external pulses, a second utility, "interrupt-timer" is provided that is also installed on the RPi along with pps-client. The interrupt-timer utility is insensitive to omitted interrupt pulses. When it receives a pulse, it prints the reception time of the interrupt to the terminal and also records a distribution of the fractional seconds part of the time to a file `/var/local/pps-timer-distrib-forming` that is copied to `/var/local/pps-timer-distrib` every 24 hours. This timing-collection mode is used to validate the accuracy of pps-client. For the details see the [Testing Accuracy](#testing-accuracy) section below.
+To time interrupts generated by external pulses, a second utility, "interrupt-timer" is provided that is also installed on the RPi along with pps-client. The interrupt-timer utility is insensitive to omitted interrupt pulses. When it receives a pulse, it prints the reception time of the interrupt to the terminal and also records a distribution of the fractional seconds part of the time to a file `/var/local/timer-distrib-forming` that is copied to `/var/local/timer-distrib` every 24 hours. This timing-collection mode is used to validate the accuracy of pps-client. For the details see the [Testing Accuracy](#testing-accuracy) section below.
 
 The interrupt-timer can be run from the command line of any terminal communicating with the RPi. To use it, load the driver specifying the GPIO number of the pin that will provide the interrupt:
 
@@ -374,13 +370,13 @@ When finished, unload the driver with,
 
     $ sudo interrupt-timer unload-driver
 
-Because any interrupt time reported by the system is always later by the delay introduced by system latency, interrupt-timer compensates for system interrupt delay by reading the `sysDelay` value recorded by pps-client and subtracting it from the measured time of the interrupt. This generates a reported time of the external interrupt \f$t_r\f$ that adjusts the measured time of the interrupt \f$t_m\f$ by the value of sysDelay, \f$d_{sys}\f$,
+Because any interrupt time reported by the system is always later by the delay introduced by system latency, interrupt-timer compensates for system interrupt delay by reading the `sysDelay` value recorded by pps-client and subtracting it from the measured time of the interrupt internally recorded by interrupt-timer. This generates a reported time of the external interrupt \f$t_r\f$ that adjusts the measured time of the interrupt \f$t_m\f$ by the value of `sysDelay`, \f$d_{sys}\f$,
 
 \f[
 t_r = t_m - d_{sys}
 \f]
 
-in exactly the same way that the reported time of the zero crossing of the second \f$t_{r0}\f$ is the measured time of the PPS interrupt \f$t_{m0}\f$ adjusted for sysDelay:
+in exactly the same way that the reported time of the zero crossing of the second \f$t_{r0}\f$ is the measured time of the PPS interrupt \f$t_{m0}\f$ adjusted for `sysDelay`:
 
 \f[
 t_{r0} = t_{m0} - d_{sys}
@@ -392,23 +388,25 @@ But since the [feedforward compensator](#feedforward-compensator) determines the
 
 The distributions obtained in testing pps-client are usually narrow which makes it difficult to estimate offset errors and standard deviations. Moreover there is ample evidence that the random component of the pps-client distriutions is well-modeled by a normal distribution but is also effectively binned by the 1 microsecond resolution of the system clock. The `NormalDistribParams` program makes it possible to directly compute normal distribution parameters from binned values of a sample distribution. 
 
-The program fits an ideal normal distribution to the three binned sample values that wrap around the peak of the distribution. While it is always possible to fit a normal distribution to any pair of sample points, only one specific normal distibution will fit three sample points. Moreover only a specific combination of three sample points will fit a normal distribution with a specific sample size. If the sample distribution is not normal, there will be a conformance error which is largest in the fit of the mean. The conformance error in the mean is a measure of the reliability of the calculated values of both ideal mean and ideal SD as they apply to the sample distribution.
+The program fits an ideal normal distribution to the three binned sample values that wrap around the peak of the distribution. While it is always possible to fit a normal distribution to any pair of sample points, only particular normal distributions will fit three sample points. Moreover only a specific combination of three sample points will fit a normal distribution with a specific sample size. If the sample distribution is not normal, there will be a conformance error which is largest in the fit of the mean. The conformance error in the mean is a measure of the reliability of the calculated values of both ideal mean and ideal SD as they apply to the sample distribution.
 
-The program can be used to determine mean and SD for any of the sample distributions collected in testing pps-client. For example, the jitter distribtion in Figure 2a was evaluated for mean and standard deviation by providing the sample numbers for the sample bins around zero like this,
+The program can be used to determine mean and SD for any of the sample distributions collected in testing pps-client. For example, the jitter distribution in [Figure 2a](#raspberry-pi-3) was evaluated for mean and standard deviation by providing the sample numbers for the sample bins near zero like this,
 
-    RPi-1:~ $ NormalDistribParams 14759 -1 56810 0 14759 1
+    RPi-1:~ $ NormalDistribParams 5432 -2 17947 -1 38811 0
     Relative to an ideal normal distribution:
-    mean:  0.000009 error: 0.003814
-    stddev: 0.526684 error: 0.000006
-    Simulation error: 0.000016
+    mean:  0.133324 error: 0.031811
+    stddev: 0.988039 error: 0.156158
+    Simulation error: 0.000015
 
-In this example, sample numbers were internally normalized to a default total sample size of 86,400. But an arbitrary sample size can be provided as an additional entry following the sample counts and bin locations. 
+In this example, the positive side of the distribution is not quite normally distributed because of the system interrupt latency evident in the log plot. So the left side three points were chosen which resulted in a reasonably good fit. 
 
-To keep data entry as simple as possible, sample bin locations must be relative to zero and the peak of the distribution should be near zero. For a peak value near some other number just treat that number as zero and adjacent bin locations as relative to zero. Experience indicates that for a reliable fit, simulation error must be less than 0.0001 and mean error should be less than about 0.05.
+Also in this example, sample numbers were internally normalized to a default total sample size of 86,400. But an arbitrary sample size can be provided as an additional entry following the sample counts and bin locations. To keep data entry as simple as possible, sample bin locations must be relative to zero and the peak of the distribution should be near zero. For a peak value near some other number just treat that number as zero and adjacent bin locations as relative to zero. 
+
+Experience indicates that for a reliable fit, simulation error must be less than 0.0001 and mean error should be less than about 0.05.
 
 ### Testing Accuracy {#testing-accuracy}
 
-To minimize the effects of flicker noise and latency, accuracy testing consists of making a large number of independent time interval measurements and then statistically evaluating the results. That circumvents flicker noise in the oscillators of both the RPi unit under test and the RPi unit used to provide timing pulses. 
+To minimize the effects of flicker noise and latency, accuracy testing consists of making a large number of independent time interval measurements and then statistically evaluating the results. This circumvents flicker noise in the oscillators of both the RPi unit under test and the RPi unit used to provide timing pulses. 
 
 The pulse-generator utility runs in two-pulse mode on an RPi identified as RPi-1 that is connected to a GPS receiver providing the PPS signal. The pulse-generator on RPi-1 provides both Pulse 1 as the PPS signal to RPi-2 and Pulse 2 as the pulse to be timed. The interrupt-timer utility is used on the RPi-2 to time the reception of Pulse 2.
 
@@ -434,7 +432,7 @@ The diagram below shows those connections (the self-calibration connection for R
 
 ![Accuracy Test Wiring](wiring.png)
 
-After running pps-client on RPi-1 to at least a sequence count of 1200 to allow it to stabilize, the pulse-generator is started on RPi-1 with pulses at 100 usec and 900 usec with,
+After running pps-client on RPi-1 to at least a sequence count of 1200 to allow it to stabilize, the pulse-generator is started on RPi-1 with pulses at 100 μsec and 900 μsec with,
 
     RPi-1:~ $ sudo pulse-generator load-driver 23 25
     RPi-1:~ $ sudo pulse-generator -p 100000 900000 &
@@ -455,7 +453,7 @@ This test as described above was performed on ten Raspberry Pi 3 processors unde
 
 ![System Clock Accuracy](InterruptTimerDistrib.png)
 
-The distribution shows the average recorded pulse time to be about 0.6 microsecond lower than the ideal time of 800,000 microseconds. The log plot shows that for this unit pulses were received with a delay as much as 28 usecs because of sporadic Linux system interrupt latency.
+The distribution shows the average recorded pulse time for this distribution (RPi3#2) to be about 0.16 microsecond lower than the ideal time of 800,000 microseconds. The log plot shows that for this unit, pulses were received with a delay as much as 20 μsecs because of sporadic Linux system interrupt latency.
 
 The results collected for all ten units are shown in the table below. The indicated tolerances are the conformance errors to an ideal normal distribution provided by the `NormalDistribParams` utility.
 
