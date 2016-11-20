@@ -1,0 +1,1 @@
+This is the repository for the Raspberry-Pi-PPS-Client documentation. To view these files as HTML browse to [PPS-Client-Pages](https://rascol.github.io/Raspberry-Pi-PPS-Client).
