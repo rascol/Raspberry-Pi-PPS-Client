@@ -136,7 +136,7 @@ The pps-client contains a Linux kernel driver. Consequently, as with all kernel 
 
 In principle that can be done on a cross-compiler. However building on the Raspberry Pi is better because if the source code of the released Linux kernel has problems, a fallback is available to the Pi that is not available to a cross-compiler: Once the Linux team has recognized that there were problems, `apt-get upgrade` will automatically revert the OS to a previous known good kernel that matches the downloaded source code (which the Linux team will also have reverted to the known good kernel).
 
-The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. The complete installation takes about 40 minutes on Raspberry Pi 3.
+The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. This build installation takes about 40 minutes on Raspberry Pi 3.
 
 ## Locate the Kernel Source
 
