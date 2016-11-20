@@ -1,6 +1,6 @@
 # Raspberry Pi PPS Client
 
-<center><img src="https://github.com/rascol/Raspberry-Pi-PPS-Client/tree/master/figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" style="width: 400px;"/></center>
+<center><img src="figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" style="width: 400px;"/></center>
 
 The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi that synchronizes the Raspberry Pi system time clock to a GPS time clock. 
 
