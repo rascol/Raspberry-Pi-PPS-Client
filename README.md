@@ -30,13 +30,13 @@ The pps-client daemon provides timekeeping synchronization precision of 1 micros
 
 Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
-<center><img src="https://github.com/rascol/Raspberry-Pi-PPS-Client/tree/master/figures/offset-distrib.png" alt="Jitter and Corrections Distrib" style="width: 608px;"/></center>
+<center><img src="figures/offset-distrib.png" alt="Jitter and Corrections Distrib" width="608"/></center>
 
 This data was captured from a Raspberry Pi 3 running Raspian with a 4.4.14-v7+ Linux kernel. The time corrections required to keep the rollover of the second synchronized to the rising edge of the PPS signal never exceeded 1 microsecond in this 24 hour period. This was true for all test units.
 
 Figure 2 shows the system clock frequency set by the controller and the resulting [Allan deviation](https://en.wikipedia.org/wiki/Allan_variance) for the test unit with the largest error of the ten that were tested.
 
-<center><img src="https://github.com/rascol/Raspberry-Pi-PPS-Client/tree/master/figures/frequency-vars.png" alt="Frequency Vars over 24 hours" style="width: 685px;"/></center>
+<center><img src="figures/frequency-vars.png" alt="Frequency Vars over 24 hours" width="685"/></center>
 
 Although the clock frequency drifted slightly between each frequency correction, the maximum Allan deviation of 0.045 ppm over this 24 hour period shows it to be unlikely that the clock ever drifted more than 0.100 ppm from the control point. That corresponds to a time drift of less than 0.1 microseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsecond per sec.)
 
@@ -44,11 +44,11 @@ Since the time slew adjustments necessary to keep the system time synchronized t
 
 As shown in Figure 3, timekeeping **accuracy** is the time offset at the rollover of the second which is also the offset between the true time and the measured time at any point in time.
 
-<center><img src="https://github.com/rascol/Raspberry-Pi-PPS-Client/tree/master/figures/time.png" alt="Interpretation of accuracy and precision" style=""/></center>
+<center><img src="figures/time.png" alt="Interpretation of accuracy and precision" width=""/></center>
 
 Figure 4 is the distribution of measured times relative to a true time of 800,000 microseconds into each second for a typical Raspberry Pi 3 from the units tested.
 
-<center><img src="https://github.com/rascol/Raspberry-Pi-PPS-Client/tree/master/figures/InterruptTimerDistrib.png" alt="Time Parameters" style=""/></center>
+<center><img src="figures/InterruptTimerDistrib.png" alt="Time Parameters" width=""/></center>
 
 The peak of the distribution in Figure 4 is the average error for this test unit and is about 0.28 microsecond below 800,000 microseconds. For the ten test units the median error was -0.25 microsecond and the maximum error was -0.76 microseconds. 
 
@@ -241,11 +241,11 @@ $ pps-client -v
 ```
 That runs a secondary copy of pps-client that just displays a status printout that the pps-client daemon continuously generates and saves to a memory file. When pps-client starts up you can expect to see something like the following in the status printout:
 
-<center><img src="https://github.com/rascol/Raspberry-Pi-PPS-Client/tree/master/figures/StatusPrintoutOnStart.png" alt="Status Printout on Startup" style="width: 634px;"/></center>
+<center><img src="figures/StatusPrintoutOnStart.png" alt="Status Printout on Startup" width="634"/></center>
 
 The `jitter` value is showing the fractional second offset of the PPS signal according to the system clock. That value will decrease second by second as the controller locks to the PPS signal. After about 10 minutes the status printout will look like this:
 
-<center><img src="https://github.com/rascol/Raspberry-Pi-PPS-Client/tree/master/figures/StatusPrintoutAt10Min.png" alt="Status Printout after 10 Min" style="width: 634px;"/></center>
+<center><img src="figures/StatusPrintoutAt10Min.png" alt="Status Printout after 10 Min" width="634"/></center>
 
 The `jitter` is displaying small numbers. The time of the rising edge of the PPS signal is shown in the second column. The `clamp` value on the far right indicates that the maximum time correction applied to the system clock is being limited to one microsecond. The system clock is synchronized to the PPS signal to a precision of one microsecond (but with an absolute accuracy limited by clock oscillator noise which could have as much as 1 microsecond of [RMS](https://en.wikipedia.org/wiki/Root_mean_square) jitter).
 
@@ -300,11 +300,9 @@ The Linux OS was never designed to be a real-time operating system. Nevertheless
 
 ## Measurements of Noise and Latency
 
-<center><img src="https://github.com/rascol/Raspberry-Pi-PPS-Client/tree/master/figures/SingleEventTimerDistrib.png" alt="Jitter Distribution" style=""/></center>
+<center><img src="figures/SingleEventTimerDistrib.png" alt="Jitter Distribution" width=""/></center>
 
 Figure 5 is a typical accumulation of single-event timings for external interrupts at 800,000 microseconds after the PPS interrupt. The main peak is the result of reasonably constant system latency and clock oscillator flicker noise having a standard deviation of about 0.8 microsecond. The secondary peak at about 800,003 microseconds is one of many such features introduced by OS latency that can appear for hours or days or disappear altogether. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal also introduced by OS latency.
 
 Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click to a few microseconds (~1 μsec SD), the real-time performance of the Linux OS (as of v4.4.14-v7+) sets the timing accuracy of external events to about 20 microseconds (Pi 3) because of sporadic system interrupt latency.
-
-
 
