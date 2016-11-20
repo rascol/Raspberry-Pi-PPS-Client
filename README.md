@@ -105,7 +105,8 @@ $ 4.4.26-v7+
 ```
 That Linux version must match the installer version on our website. Now copy the installer and run it:
 ```
-$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/pps-client-4.4.26-v7+"
+$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/blob/master/pps-client-4.4.26-v7%2B"
+$ chmod +x pps-client-4.4.26-v7+
 $ sudo ./pps-client-4.4.26-v7+
 ```
 This is not an ideal installation solution because it means that pps-client has to be re-installed if the Linux kernel is upgraded. But that will not automatically happen unless you run `rpi-update`. If there is enough interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
