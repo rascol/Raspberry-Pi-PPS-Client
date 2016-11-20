@@ -92,7 +92,7 @@ So this is our compromise: A few pre-compiled installers are provided on the ser
 
 One possibility is to download and install a fresh copy of [Raspian](https://www.raspberrypi.org/downloads/raspbian/) and use the pps-client installer from our website to try out pps-client. Then later install pps-client from source for earlier an version of Linux.
 
-To install pps-client on a fresh Raspian, open a terminal to your Raspberry Pi. Then if you haven't already done so,
+To install pps-client on a fresh Raspian, open a terminal to your Raspberry Pi. Then if you haven't already done this on the fresh Raspian install do it now,
 ```
 $ sudo apt-get update
 $ sudo apt-get upgrade
