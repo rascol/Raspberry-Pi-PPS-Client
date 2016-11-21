@@ -61,7 +61,7 @@ For a detailed description of the pps-client controller and accuracy testing run
 
 1. A Raspberry Pi 3 or Pi 2 Model B.
 
-2. A GPS module that provides a PPS output. Development was done with the [Adafruit Ultimate GPS module](http://www.adafruit.com/product/746). Others providing compatible logic levels can also be used.
+2. A GPS module that provides a PPS output. Development was done with the [Adafruit Ultimate GPS module](https://www.adafruit.com/products/2324). Others providing compatible logic levels can also be used.
 
 3. A wired connection from a PPS source with 3.3 Volt logic outputs to GPIO 4 (pin 7) on the RPi header.
 
