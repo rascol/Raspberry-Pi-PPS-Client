@@ -73,7 +73,7 @@ Although qualitatively similar, the quantitative noise characteristics of Raspbe
 <a name="timed-event"></a>
 ![Raspberry Pi 2 Jitter Distribution](pps-jitter-distrib.png) 
 
-Figure 1a is data that was captured from an RPi 2 test unit over 24 hours to the file `/var/local/pps-jitter-distrib` by setting `jitter-distrib=enable` in `/etc/pps-client.conf` and is typical data that is easily generated on any RPi 2.
+Figure 1a is data that was captured from an RPi 2 (BCM2836 processor) test unit over 24 hours to the file `/var/local/pps-jitter-distrib` by setting `jitter-distrib=enable` in `/etc/pps-client.conf` and is typical data that is easily generated on any RPi 2.
 
 Figure 1a shows a delay peak at zero (relative to `sysDelay`) followed by infrequent sporadic interrupt delays in the log plot. These delays are caused by other processes running in the Linux kernel. Even though pps-client is a real-time process, the PPS interrupt does not always receive an immediate response. The situation is much better on the Linux 4 kernel than on previous kernels. On real-time configured Linux 3 kernels `sysDelay` was on the order of 25 μsecs. On the stock Linux 4 kernel `sysDelay` has shrunk to about 9 μsecs on Raspberry Pi 2. But delays caused by other running processes continue to be a problem. Clearly, the pps-client controller can [synchronize the time precisely](InterruptTimerDistrib.png). Evidently, the most significant impediment to precisely timing external events is sporadic Linux kernel interrupt latency.
 

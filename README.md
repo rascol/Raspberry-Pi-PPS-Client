@@ -92,22 +92,28 @@ So this is our compromise: A few pre-compiled installers are provided on the ser
 
 One possibility is to download and install a fresh copy of [Raspian](https://www.raspberrypi.org/downloads/raspbian/) and use the pps-client installer from our website to try out pps-client. Then later install pps-client from source for earlier an version of Linux.
 
-To install pps-client on a fresh Raspian, open a terminal to your Raspberry Pi. Then if you haven't already done this on the fresh Raspian install do it now,
+After downloading and installing the fresh copy of **Raspian**, upgrade it to the latest stable Linux version with,
+```
+$ sudo rpi-update
+```
+Then do,
 ```
 $ sudo apt-get update
 $ sudo apt-get upgrade
 $ sudo reboot
 ```
+These steps are all critical in order to correctly synchronize to the latest **stable** version of Linux which is often behind the version listed on https://github.com/raspberrypi/linux.
+
 After rebooting check the Linux version:
 ```
 $ uname -r
-$ 4.4.26-v7+
+$ 4.4.32-v7+
 ```
 That Linux version must match the installer version on our website. Now copy the installer and run it:
 ```
-$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/blob/master/pps-client-4.4.26-v7%2B"
-$ chmod +x pps-client-4.4.26-v7+
-$ sudo ./pps-client-4.4.26-v7+
+$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/blob/master/pps-client-4.4.32-v7%2B"
+$ chmod +x pps-client-4.4.32-v7+
+$ sudo ./pps-client-4.4.32-v7+
 ```
 This is not an ideal installation solution because it means that pps-client has to be re-installed if the Linux kernel is upgraded. But that will not automatically happen unless you run `rpi-update`. If there is enough interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
