@@ -55,7 +55,6 @@ all:
 	find ./tmp -type f -delete
 	
 	cp ./README.md ./pkg/README.md
-	cp ./README.html ./pkg/README.html
 	cp ./figures/RPi_with_GPS.jpg ./pkg/RPi_with_GPS.jpg
 	cp ./figures/frequency-vars.png ./pkg/frequency-vars.png
 	cp ./figures/offset-distrib.png ./pkg/offset-distrib.png

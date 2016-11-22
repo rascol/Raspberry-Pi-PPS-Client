@@ -95,21 +95,25 @@ One possibility is to download and install a fresh copy of [Raspian](https://www
 After downloading and installing the fresh copy of **Raspian**, upgrade it to the latest stable Linux version with,
 ```
 $ sudo rpi-update
-```
-Then do,
-```
-$ sudo apt-get update
-$ sudo apt-get upgrade
+...
 $ sudo reboot
 ```
-These steps are all critical in order to correctly synchronize to the latest **stable** version of Linux which is often behind the version listed on https://github.com/raspberrypi/linux.
+Ater rebooting do,
+```
+$ sudo apt-get update
+...
+$ sudo apt-get upgrade
+...
+$ sudo reboot
+```
+These steps are all critical in order to correctly synchronize to the latest **stable** version of Linux which is sometimes behind the latest version listed on https://github.com/raspberrypi/linux.
 
 After rebooting check the Linux version:
 ```
 $ uname -r
 $ 4.4.32-v7+
 ```
-That Linux version must match the installer version on our website. Now copy the installer and run it:
+That Linux version must match the installer version that you use from our website. Now copy the installer and run it:
 ```
 $ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/blob/master/pps-client-4.4.32-v7%2B"
 $ chmod +x pps-client-4.4.32-v7+
