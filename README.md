@@ -113,9 +113,9 @@ After rebooting check the Linux version:
 $ uname -r
 $ 4.4.34-v7+
 ```
-That Linux version must match the installer version that you use from our website. Now copy the installer and run it:
+That Linux version must match the installer version that you use from our website. Now copy the installer and run it (substituting appropriate version number in `wget` command):
 ```
-$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/blob/master/pps-client-4.4.34-v7%2B"
+$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/raw/master/pps-client-4.4.34-v7%2B"
 $ chmod +x pps-client-4.4.34-v7+
 $ sudo ./pps-client-4.4.34-v7+
 ```
