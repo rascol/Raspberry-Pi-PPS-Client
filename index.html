@@ -158,7 +158,7 @@ Raspberry Pi 2</h3>
 <img src="pps-jitter-distrib.png" alt="pps-jitter-distrib.png"/>
 <div class="caption">
 Raspberry Pi 2 Jitter Distribution</div></div>
-<p>Figure 1a is data that was captured from an RPi 2 test unit over 24 hours to the file <code>/var/local/pps-jitter-distrib</code> by setting <code>jitter-distrib=enable</code> in <code>/etc/pps-client.conf</code> and is typical data that is easily generated on any RPi 2.</p>
+<p>Figure 1a is data that was captured from an RPi 2 (BCM2836 processor) test unit over 24 hours to the file <code>/var/local/pps-jitter-distrib</code> by setting <code>jitter-distrib=enable</code> in <code>/etc/pps-client.conf</code> and is typical data that is easily generated on any RPi 2.</p>
 <p>Figure 1a shows a delay peak at zero (relative to <code>sysDelay</code>) followed by infrequent sporadic interrupt delays in the log plot. These delays are caused by other processes running in the Linux kernel. Even though pps-client is a real-time process, the PPS interrupt does not always receive an immediate response. The situation is much better on the Linux 4 kernel than on previous kernels. On real-time configured Linux 3 kernels <code>sysDelay</code> was on the order of 25 μsecs. On the stock Linux 4 kernel <code>sysDelay</code> has shrunk to about 9 μsecs on Raspberry Pi 2. But delays caused by other running processes continue to be a problem. Clearly, the pps-client controller can <a href="InterruptTimerDistrib.png">synchronize the time precisely</a>. Evidently, the most significant impediment to precisely timing external events is sporadic Linux kernel interrupt latency.</p>
 <p>The random noise component at zero in Figure 1a is a combination of randomness in the response time of the system to the PPS interrupt and flicker noise in the clock oscillator. These random components can be evaluated by comparing the jitter distribution in Figure 1a to the test interrupt delay distribution collected over the same 24 hour period.</p>
 <div class="image">
@@ -169,10 +169,7 @@ Test Interrupt and PPS Interrupt Delay Comparison</div></div>
 <p>The two different random components are inseparable in the jitter distribution (displayed in the Figure 1b as PPS Interrupt Delay). However, the jitter distribution can be compared with the Test Interrupt Delay distribution (TID). The TID is a system response to a self-generated interrupt that is measured totally within the system. That makes it blind to flicker noise in the system clock oscillator. Consequently, it is representative of the randomness in the system response to an interrupt that is also present in the jitter. It shows a distribution with a standard deviation (SD) of about 0.82 microsecond. This was data collected while <code>sysDelay</code> took on the value of 8 μsecs with 45,343 samples collected.</p>
 <p>In comparison, the PPS Interrupt Delay distribution SD is estimated to be about 0.92 microseconds in Figure 1b.</p>
 <p>Since distribution SDs of this kind add in root-sum-square fashion,</p>
-<p class="formulaDsp">
-\[ {{\sigma}_t}^2 = {{\sigma}_1}^2 + {{\sigma}_2}^2 \]
-</p>
-<p>then by using the numbers above with \({\sigma}_t=0.92\) the width of the PPS delay distribution and \({\sigma}_1=0.82\) the width of the test interrupt distribution, the flicker noise SD, \({\sigma}_2\), is calculated to be about 0.42 microsecond which shows the random noise to be dominated by random jitter in the interrupt response for Pi 2.</p>
+<center><em>σ<sub> t</sub></em><sup> 2</sup> = <em>σ</em><sub> 1</sub><sup> 2</sup> + <em>σ</em><sub> 2</sub><sup> 2</sup></center><p>then by using the numbers above with <em>σ<sub> t</sub></em> = 0.92 the width of the PPS delay distribution and <em>σ</em><sub> 1</sub> = 0.82 the width of the test interrupt distribution, the flicker noise SD, <em>σ</em><sub> 2</sub>, is calculated to be about 0.42 microsecond which shows the random noise to be dominated by random jitter in the interrupt response for Pi 2.</p>
 <h3><a class="anchor" id="raspberry-pi-3"></a>
 Raspberry Pi 3</h3>
 <p>Typical Raspberry Pi 3 PPS delay noise (jitter) is shown in Figure 2a.</p>
@@ -189,7 +186,7 @@ Raspberry Pi 3 Jitter Distribution</div></div>
 Test Interrupt and PPS Interrupt Delay Comparison</div></div>
 <p> The Test Interrupt Delay distribution was captured in the file <code>/var/local/pps-intrpt-distrib</code> by setting <code>interrupt-distrib=enable</code> in <code>/etc/pps-client.conf</code>.</p>
 <p>As Figure 2b shows, the TID is much narrower for this typical Raspberry Pi 3 in comparison with Pi 2. It shows a distribution with a standard deviation (SD) of about 0.37 microsecond. This was data collected while sysDelay took on the value of 5 μsecs with 50,212 samples collected.</p>
-<p>Using the same calculation that was done for RPi 2, with \({\sigma}_t=0.83\) the width of the PPS delay distribution and \({\sigma}_1=0.37\) the width of the test interrupt distribution, the flicker noise SD, \({\sigma}_2\), is calculated to be about 0.74 microsecond showing flicker noise and PPS jitter to be the dominant component of the random jitter for Pi 3. To within estimation errors this is typical of the Pi 3 units that were tested.</p>
+<p>Using the same calculation that was done for RPi 2, with <em>σ<sub> t</sub></em> = 0.83 the width of the PPS delay distribution and <em>σ</em><sub> 1</sub> = 0.37 the width of the test interrupt distribution, the flicker noise SD, <em>σ</em><sub> 2</sub>, is calculated to be about 0.74 microsecond showing flicker noise and PPS jitter to be the dominant component of the random jitter for Pi 3. To within estimation errors this is typical of the Pi 3 units that were tested.</p>
 <h3><a class="anchor" id="jitter-spikes"></a>
 Jitter Spikes</h3>
 <p>A typical jitter spike is evident in the pps-client status printout shown below which shows low jitter values except for the delay spike in the middle line of the image.</p>
@@ -344,15 +341,9 @@ The interrupt-timer Utility</h3>
 </pre><p>In this case it can be stopped with </p><pre class="fragment">$ sudo kill `pidof interrupt-timer`
 </pre><p>Notice that back quotes are used instead of single quotes.</p>
 <p>When finished, unload the driver with, </p><pre class="fragment">$ sudo interrupt-timer unload-driver
-</pre><p>Because any interrupt time reported by the system is always later by the delay introduced by system latency, interrupt-timer compensates for system interrupt delay by reading the <code>sysDelay</code> value recorded by pps-client and subtracting it from the measured time of the interrupt internally recorded by interrupt-timer. This generates a reported time of the external interrupt \(t_r\) that adjusts the measured time of the interrupt \(t_m\) by the value of <code>sysDelay</code>, \(d_{sys}\),</p>
-<p class="formulaDsp">
-\[ t_r = t_m - d_{sys} \]
-</p>
-<p>in exactly the same way that the reported time of the zero crossing of the second \(t_{r0}\) is the measured time of the PPS interrupt \(t_{m0}\) adjusted for <code>sysDelay</code>:</p>
-<p class="formulaDsp">
-\[ t_{r0} = t_{m0} - d_{sys} \]
-</p>
-<p>But since the <a href="#feedforward-compensator">feedforward compensator</a> determines the value of \(d_{sys}\) and the feedback controller forces \(t_{r0}\) to be zero then the only question is did the feedforward compensator determine the correct value for \(d_{sys}\)? If it did then the reported value of the time of the interrupt \(t_r\) in the first equation should be the true time of the interrupt relative to the PPS. That is exactly what accuracy testing establishes.</p>
+</pre><p>Because any interrupt time reported by the system is always later by the delay introduced by system latency, interrupt-timer compensates for system interrupt delay by reading the <code>sysDelay</code> value recorded by pps-client and subtracting it from the measured time of the interrupt internally recorded by interrupt-timer. This generates a reported time of the external interrupt <em>t<sub> r</sub></em> that adjusts the measured time of the interrupt <em>t<sub> m</sub></em> by the value of <code>sysDelay</code>, <em>d<sub> sys</sub></em>,</p>
+<center><em>t<sub> r</sub></em> = <em>t<sub> m</sub></em> - <em>d<sub> sys</sub></em></center><p>in exactly the same way that the reported time of the zero crossing of the second, <em>t<sub> r0</sub></em>, is the measured time of the PPS interrupt, <em>t<sub> m0</sub></em>, adjusted for <code>sysDelay</code>:</p>
+<center><em>t<sub> r0</sub></em> = <em>t<sub> m0</sub></em> - <em>d<sub> sys</sub></em></center><p>But since the <a href="#feedforward-compensator">feedforward compensator</a> determines the value of <em>d<sub> sys</sub></em> and the feedback controller forces <em>t<sub> r0</sub></em> to be zero then the only question is did the feedforward compensator determine the correct value for <em>d<sub> sys</sub></em> If it did then the reported value of the time of the interrupt <em>t<sub> r</sub></em> in the first equation should be the true time of the interrupt relative to the PPS. That is exactly what accuracy testing establishes.</p>
 <h3><a class="anchor" id="normaldistribparams-utility"></a>
 The NormalDistribParams Utility</h3>
 <p>The distributions obtained in testing pps-client are usually narrow which makes it difficult to estimate offset errors and standard deviations. Moreover there is ample evidence that the random component of the pps-client distriutions is well-modeled by a normal distribution but is also effectively binned by the 1 microsecond resolution of the system clock. The <code>NormalDistribParams</code> program makes it possible to directly compute normal distribution parameters from binned values of a sample distribution.</p>
@@ -414,7 +405,7 @@ RPi3#9  -0.22  +/-0.01    1.081 +/-0.003
 RPi3#10 -0.21  +/-0.01    0.916 +/-0.003</pre> </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Nov 19 2016 07:27:03 for PPS-Client by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Nov 23 2016 11:14:07 for PPS-Client by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.12
 </small></address>
