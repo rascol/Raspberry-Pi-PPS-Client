@@ -26,7 +26,7 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average accuracy of 2 microseconds on the Raspberry Pi 3 (verified on 10 test units).
+The pps-client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average timekeeping accuracy of 2 microseconds on the Raspberry Pi 3 (verified on 10 test units).
 
 Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
 
