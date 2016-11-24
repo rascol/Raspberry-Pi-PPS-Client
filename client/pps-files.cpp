@@ -565,6 +565,7 @@ void writeDistribution(int distrib[], int len, int scaleZero, int count,
  *
  * @param[in] label The sysDelay values for each column.
  * @param[in] distrib The arrays containing the distributions.
+ * @param[in] len The length of the distrib[] arrays.
  * @param[in] scaleZero The array index corresponding to distribution zero.
  * @param[in] count The current total number of samples in the distributions.
  * @param[out] last_epoch The saved count of the previous epoch.
@@ -604,7 +605,10 @@ void writeMultipleDistrib(int label[], int distrib[][INTRPT_DISTRIB_LEN], int le
 		*last_epoch = epoch;
 		remove(last_distrib_file);
 		rename(distrib_file, last_distrib_file);
-		memset(distrib, 0, len * sizeof(int));
+		for (int i = 0; i < NUM_PARAMS; i++){
+			memset(distrib[i], 0, len * sizeof(int));
+		}
+
 	}
 }
 

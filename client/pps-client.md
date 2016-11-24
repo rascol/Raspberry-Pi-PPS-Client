@@ -87,13 +87,11 @@ The two different random components are inseparable in the jitter distribution (
 
 In comparison, the PPS Interrupt Delay distribution SD is estimated to be about 0.92 microseconds in Figure 1b. 
 
-Since distribution SDs of this kind add in root-sum-square fashion,
+Since distribution SDs of this kind add in root-sum-square fashion, 
 
-\f[
-{{\sigma}_t}^2 = {{\sigma}_1}^2 + {{\sigma}_2}^2
-\f]
+<center><I>σ<sub> t</sub></I><sup> 2</sup> = <I>σ</I><sub> 1</sub><sup> 2</sup> + <I>σ</I><sub> 2</sub><sup> 2</sup></center>
 
-then by using the numbers above with \f${\sigma}_t=0.92\f$ the width of the PPS delay distribution and \f${\sigma}_1=0.82\f$ the width of the test interrupt distribution, the flicker noise SD, \f${\sigma}_2\f$, is calculated to be about 0.42 microsecond which shows the random noise to be dominated by random jitter in the interrupt response for Pi 2.
+then by using the numbers above with <I>σ<sub> t</sub></I> = 0.92 the width of the PPS delay distribution and <I>σ</I><sub> 1</sub> = 0.82 the width of the test interrupt distribution, the flicker noise SD, <I>σ</I><sub> 2</sub>, is calculated to be about 0.42 microsecond which shows the random noise to be dominated by random jitter in the interrupt response for Pi 2.
 
 ### Raspberry Pi 3 {#raspberry-pi-3}
 
@@ -113,7 +111,7 @@ The Test Interrupt Delay distribution was captured in the file `/var/local/pps-i
 
 As Figure 2b shows, the TID is much narrower for this typical Raspberry Pi 3 in comparison with Pi 2.  It shows a distribution with a standard deviation (SD) of about 0.37 microsecond. This was data collected while sysDelay took on the value of 5 μsecs with 50,212 samples collected.
 
-Using the same calculation that was done for RPi 2, with \f${\sigma}_t=0.83\f$ the width of the PPS delay distribution and \f${\sigma}_1=0.37\f$ the width of the test interrupt distribution, the flicker noise SD, \f${\sigma}_2\f$, is calculated to be about 0.74 microsecond showing flicker noise and PPS jitter to be the dominant component of the random jitter for Pi 3. To within estimation errors this is typical of the Pi 3 units that were tested.
+Using the same calculation that was done for RPi 2, with <I>σ<sub> t</sub></I> = 0.83 the width of the PPS delay distribution and  <I>σ</I><sub> 1</sub> = 0.37 the width of the test interrupt distribution, the flicker noise SD,  <I>σ</I><sub> 2</sub>, is calculated to be about 0.74 microsecond showing flicker noise and PPS jitter to be the dominant component of the random jitter for Pi 3. To within estimation errors this is typical of the Pi 3 units that were tested.
 
 ### Jitter Spikes {#jitter-spikes}
 
@@ -370,19 +368,15 @@ When finished, unload the driver with,
 
     $ sudo interrupt-timer unload-driver
 
-Because any interrupt time reported by the system is always later by the delay introduced by system latency, interrupt-timer compensates for system interrupt delay by reading the `sysDelay` value recorded by pps-client and subtracting it from the measured time of the interrupt internally recorded by interrupt-timer. This generates a reported time of the external interrupt \f$t_r\f$ that adjusts the measured time of the interrupt \f$t_m\f$ by the value of `sysDelay`, \f$d_{sys}\f$,
+Because any interrupt time reported by the system is always later by the delay introduced by system latency, interrupt-timer compensates for system interrupt delay by reading the `sysDelay` value recorded by pps-client and subtracting it from the measured time of the interrupt internally recorded by interrupt-timer. This generates a reported time of the external interrupt <I>t<sub> r</sub></I> that adjusts the measured time of the interrupt <I>t<sub> m</sub></I> by the value of `sysDelay`, <I>d<sub> sys</sub></I>,
 
-\f[
-t_r = t_m - d_{sys}
-\f]
+<center><I>t<sub> r</sub></I> = <I>t<sub> m</sub></I> - <I>d<sub> sys</sub></I></center>
 
-in exactly the same way that the reported time of the zero crossing of the second \f$t_{r0}\f$ is the measured time of the PPS interrupt \f$t_{m0}\f$ adjusted for `sysDelay`:
+in exactly the same way that the reported time of the zero crossing of the second, <I>t<sub> r0</sub></I>, is the measured time of the PPS interrupt, <I>t<sub> m0</sub></I>, adjusted for `sysDelay`:
 
-\f[
-t_{r0} = t_{m0} - d_{sys}
-\f]
+<center><I>t<sub> r0</sub></I> = <I>t<sub> m0</sub></I> - <I>d<sub> sys</sub></I></center>
 
-But since the [feedforward compensator](#feedforward-compensator) determines the value of \f$d_{sys}\f$ and the feedback controller forces \f$t_{r0}\f$ to be zero then the only question is did the feedforward compensator determine the correct value for \f$d_{sys}\f$? If it did then the reported value of the time of the interrupt \f$t_r\f$ in the first equation should be the true time of the interrupt relative to the PPS. That is exactly what accuracy testing establishes.
+But since the [feedforward compensator](#feedforward-compensator) determines the value of <I>d<sub> sys</sub></I> and the feedback controller forces <I>t<sub> r0</sub></I> to be zero then the only question is did the feedforward compensator determine the correct value for <I>d<sub> sys</sub></I> If it did then the reported value of the time of the interrupt <I>t<sub> r</sub></I> in the first equation should be the true time of the interrupt relative to the PPS. That is exactly what accuracy testing establishes.
 
 ### The NormalDistribParams Utility {#normaldistribparams-utility}
 
