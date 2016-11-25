@@ -100,7 +100,7 @@ $ sudo apt-get upgrade
 ...
 $ sudo reboot
 ```
-These steps are all critical in order to correctly synchronize to the latest **stable** version of Linux which is frequently behind the latest version listed at https://github.com/raspberrypi/linux.
+These steps are all critical in order to correctly synchronize to the latest **stable** version of Linux (which is frequently behind the latest version listed at https://github.com/raspberrypi/linux).
 
 After rebooting check the Linux version:
 ```
