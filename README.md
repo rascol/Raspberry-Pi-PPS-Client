@@ -92,13 +92,7 @@ So this is our compromise: A few pre-compiled installers are provided on the ser
 
 One possibility is to download and install a fresh copy of [Raspian](https://www.raspberrypi.org/downloads/raspbian/) and use the pps-client installer from our website to try out pps-client. Then later install pps-client from source for earlier an version of Linux.
 
-After downloading and installing the fresh copy of **Raspian**, upgrade it to the latest stable Linux version with,
-```
-$ sudo rpi-update
-...
-$ sudo reboot
-```
-Ater rebooting do,
+After downloading and installing the fresh copy of **Raspian**, do,
 ```
 $ sudo apt-get update
 ...
@@ -106,19 +100,20 @@ $ sudo apt-get upgrade
 ...
 $ sudo reboot
 ```
-These steps are all critical in order to correctly synchronize to the latest **stable** version of Linux which is sometimes behind the latest version listed on https://github.com/raspberrypi/linux.
+These steps are all critical in order to correctly synchronize to the latest **stable** version of Linux which is frequently behind the latest version listed at https://github.com/raspberrypi/linux.
 
 After rebooting check the Linux version:
 ```
 $ uname -r
-$ 4.4.34-v7+
+$ 4.4.32-v7+
 ```
-That Linux version must match the installer version that you use from our website. Now copy the installer and run it (substituting appropriate version number in `wget` command):
+That Linux version must match the installer version that you use from our website. Now copy the installer and run it (if necessary, substituting the appropriate version number in `wget` command):
 ```
-$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/raw/master/pps-client-4.4.34-v7%2B"
-$ chmod +x pps-client-4.4.34-v7+
-$ sudo ./pps-client-4.4.34-v7+
+$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/raw/master/pps-client-4.4.32-v7%2B"
+$ chmod +x pps-client-4.4.32-v7+
+$ sudo ./pps-client-4.4.32-v7+
 ```
+
 This is not an ideal installation solution because it means that pps-client has to be re-installed if the Linux kernel is upgraded. But that will not automatically happen unless you run `rpi-update`. If there is enough interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
 # Uninstalling
