@@ -114,7 +114,7 @@ $ chmod +x pps-client-4.4.32-v7+
 $ sudo ./pps-client-4.4.32-v7+
 ```
 
-This is not an ideal installation solution because it means that pps-client has to be re-installed if the Linux kernel is upgraded. But that will not automatically happen unless you run `rpi-update`. If there is enough interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
+This is not an ideal installation solution because it means that pps-client has to be re-installed when the Linux kernel is upgraded. When that happens, this website will have a pps-client installer for that kernel. If there is interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
 # Uninstalling
 ---
@@ -145,13 +145,13 @@ The steps below don't do a complete kernel installation. Only enough is done to 
 
 ## Locate the Kernel Source
 
-Before attempting to compile the kernel be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case Linux was reverted to an earlier version. That could happen if the Linux team detected problems with the later version:
+Before attempting to compile the kernel be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case the Linux kernel version was  updated.
 ```
 $ sudo apt-get update
 $ sudo apt-get upgrade
 $ sudo reboot
 ```
-After reboot determine the Linux kernel version on the Raspberry Pi by running `uname -r` from a connected terminal. Then from a web browser go to https://github.com/raspberrypi/linux. Scroll down the page and examine the `Makefile` line. That line will contain the version number of the latest Linux version (for example `Linux 4.4.21`). For the moment, ignore the **third** number. If the **first two** numbers of the version are the same as the first two numbers of the kernel version running on your RPi, it is running the latest kernel (Linux 4.4). 
+After reboot determine the Linux kernel version on the Raspberry Pi by running `uname -r` from a connected terminal. Then from a web browser go to https://github.com/raspberrypi/linux. Scroll down the page and examine the `Makefile` line. That line will contain the version number of the latest Linux version (for example `Linux 4.4.35`). For the moment, ignore the **third** number. If the **first two** numbers of the version are the same as the first two numbers of the kernel version running on your RPi, it is running the latest kernel (Linux 4.4). 
 
 In that case, use the procedure in section [Latest Version Source](#latest-version-source) to retrieve the kernel source that you need. Otherwise you will need to use the procedure given in the section [Earlier Version Source](#earlier-version-source) to retrieve the required kernel.
 
@@ -159,7 +159,7 @@ In that case, use the procedure in section [Latest Version Source](#latest-versi
 
 Chances are, as indicated by the **third** number in the kernel version on your RPi, the RPi kernel is earlier than the latest Linux bugfix version. You can find the kernel source that you need by browsing to https://github.com/raspberrypi/linux/commits/rpi-4.4.y (assuming that `Linux 4.4` is the latest kernel). 
 
-That page lists all of the commits made for `Linux 4.4`. Scroll down the page (clicking the `Older` button at the bottom of the page as necessary) until you find the version commit line for the version that matches your installed RPi kernel (listed as `Linux 4.4.19` for example). Click on `Linux 4.4.19`. That will take you to the commit page. Now click on the `Browse files` button on the right in the title line. That will take you to the source page that you need in the build steps below.
+That page lists all of the commits made for `Linux 4.4`. Scroll down the page (clicking the `Older` button at the bottom of the page as necessary) until you find the version commit line for the version that matches your installed RPi kernel (listed as `Linux 4.4.32` for example). Click on `Linux 4.4.32`. That will take you to the commit page. Now click on the `Browse files` button on the right in the title line. That will take you to the source page that you need in the build steps below.
 
 ### Earlier Version Source
 
