@@ -113,6 +113,7 @@ $ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/raw/master/pps-client-
 $ chmod +x pps-client-4.4.32-v7+
 $ sudo ./pps-client-4.4.32-v7+
 ```
+That completes the installation.
 
 This is not an ideal installation solution because it means that pps-client has to be re-installed when the Linux kernel is upgraded. When that happens, this website will have a pps-client installer for that kernel. If there is interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
