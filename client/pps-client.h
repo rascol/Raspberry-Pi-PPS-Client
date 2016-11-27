@@ -203,6 +203,7 @@ struct G {
 
 	int consensisTimeError;							//!< Consensis value of whole-second time corrections for DST or leap seconds from internet SNTP servers.
 
+	char linuxVersion[20];							//!< Space for recording the Linux version.
 	/**
 	 * @cond FILES
 	 */

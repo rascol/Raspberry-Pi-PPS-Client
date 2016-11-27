@@ -1081,6 +1081,7 @@ int main(int argc, char *argv[])
 
 	if (driver_load() == -1){
 		sprintf(g.logbuf, "Could not load pps-client driver. Exiting.\n");
+		printf(g.logbuf);
 		writeToLog(g.logbuf);
 		rv = -1;
 		goto end0;

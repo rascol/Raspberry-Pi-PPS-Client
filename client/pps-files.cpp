@@ -48,6 +48,7 @@ const char *space = " ";
 const char *num = "0123456789.";
 
 extern const char *version;
+const char *driverFile = "/lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko";
 
 /**
  * Local file-scope shared variables.
@@ -1395,8 +1396,24 @@ char *copyMajorTo(char *majorPos){
  */
 int driver_load(void){
 
+	int fd = open(driverFile, O_RDONLY);
+	if (fd < 0){
+		if (errno == ENOENT){
+			sprintf(g.logbuf, "Linux version changed. Requires\n");
+			printf(g.logbuf);
+			writeToLog(g.logbuf);
+			sprintf(g.logbuf, "reinstall of version-matching pps-client.\n");
+			printf(g.logbuf);
+			writeToLog(g.logbuf);
+		}
+		return -1;
+	}
+	close(fd);
+
 	char *insmod = g.strbuf;
-	strcpy(insmod, "/sbin/insmod /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko");
+
+	strcpy(insmod, "/sbin/insmod ");
+	strcat(insmod, driverFile);
 
 	system("rm -f /dev/pps-client");				// Clean up any old device files.
 
