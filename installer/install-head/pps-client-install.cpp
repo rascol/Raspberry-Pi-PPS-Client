@@ -216,10 +216,10 @@ int main(int argc, char *argv[]){
 	system("mv ./pkg/SingleEventTimerDistrib.png /usr/share/doc/pps-client/figures/SingleEventTimerDistrib.png");
 	system("mv ./pkg/time.png /usr/share/doc/pps-client/figures/time.png");
 
-	printf("Moving Doxyfile to /usr/share/doc/pps-client/Doxyfile");
+	printf("Moving Doxyfile to /usr/share/doc/pps-client/Doxyfile\n");
 	system("mv ./pkg/Doxyfile /usr/share/doc/pps-client/Doxyfile");
 
-	printf("Moving pps-client.md to /usr/share/doc/pps-client/client/pps-client.md");
+	printf("Moving pps-client.md to /usr/share/doc/pps-client/client/pps-client.md\n");
 	system("mkdir /usr/share/doc/pps-client/client");
 	system("mv ./pkg/client/pps-client.md /usr/share/doc/pps-client/client/pps-client.md");
 

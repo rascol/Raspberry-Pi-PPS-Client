@@ -95,9 +95,9 @@
 #define GPIO_22 22
 
 /* The text below will appear in output from 'cat /proc/interrupt' */
-#define INTERRUPT_NAME "pps-client"
+#define INTERRUPT_NAME "gps-pps-io"
 
-const char *version = "pps-client-driver v1.0.0";
+const char *version = "gps-pps-io v1.0.0";
 
 static int major = 0;							/* dynamic by default */
 module_param(major, int, 0);					/* but can be specified at load time */
@@ -403,47 +403,47 @@ irqreturn_t pps_interrupt2(int irq, void *dev_id)
 int configureInterruptOn(int gpio_num) {
 
    if (gpio_request(gpio_num, INTERRUPT_NAME)) {
-      printk(KERN_INFO "pps-client: GPIO request failed on GPIO %d\n", gpio_num);
+      printk(KERN_INFO "gps-pps-io: GPIO request failed on GPIO %d\n", gpio_num);
       return -1;
    }
 
    if (gpio_direction_input(gpio_num)){
-	   printk(KERN_INFO "pps-client: GPIO pin direction 'INPUT' on GPIO %d was denied\n", gpio_num);
+	   printk(KERN_INFO "gps-pps-io: GPIO pin direction 'INPUT' on GPIO %d was denied\n", gpio_num);
 	   return -1;
    }
 
    if (gpio_num == GPIO_4){
 	   if ( (pps_irq1 = gpio_to_irq(gpio_num)) < 0 ) {
-	      printk(KERN_INFO "pps-client: GPIO to IRQ mapping failed\n");
+	      printk(KERN_INFO "gps-pps-io: GPIO to IRQ mapping failed\n");
 	      return -1;
 	   }
 
-	   printk(KERN_INFO "pps-client: Mapped int %d\n", pps_irq1);
+	   printk(KERN_INFO "gps-pps-io: Mapped int %d\n", pps_irq1);
 
 	   if (request_irq(pps_irq1,
 					   (irq_handler_t) pps_interrupt1,
 					   IRQF_TRIGGER_RISING | IRQF_NO_THREAD,
 					   INTERRUPT_NAME,
 					   NULL) != 0) {
-		  printk(KERN_INFO "pps-client: request_irq() failed\n");
+		  printk(KERN_INFO "gps-pps-io: request_irq() failed\n");
 		  return -1;
 	   }
    }
 
    if (gpio_num == GPIO_22){
 	   if ( (pps_irq2 = gpio_to_irq(gpio_num)) < 0 ) {
-	      printk(KERN_INFO "pps-client: GPIO to IRQ mapping failed\n");
+	      printk(KERN_INFO "gps-pps-io: GPIO to IRQ mapping failed\n");
 	      return -1;
 	   }
 
-	   printk(KERN_INFO "pps-client: Mapped int %d\n", pps_irq2);
+	   printk(KERN_INFO "gps-pps-io: Mapped int %d\n", pps_irq2);
 
 	   if (request_irq(pps_irq2,
 					   (irq_handler_t) pps_interrupt2,
 					   IRQF_TRIGGER_RISING | IRQF_NO_THREAD,
 					   INTERRUPT_NAME,
 					   NULL) != 0) {
-		  printk(KERN_INFO "pps-client: request_irq() failed\n");
+		  printk(KERN_INFO "gps-pps-io: request_irq() failed\n");
 		  return -1;
 	   }
    }
@@ -454,12 +454,12 @@ int configureInterruptOn(int gpio_num) {
 int configureWriteOn(int gpio_num){
 
 	if (gpio_request(gpio_num, INTERRUPT_NAME)) {
-		printk(KERN_INFO "pps-client: GPIO request failed on GPIO %d\n", gpio_num);
+		printk(KERN_INFO "gps-pps-io: GPIO request failed on GPIO %d\n", gpio_num);
 		return -1;
 	}
 
 	if (gpio_direction_output(gpio_num, 0)){
-		printk(KERN_INFO "pps-client: GPIO pin direction 'OUTPUT' on GPIO %d was denied\n", gpio_num);
+		printk(KERN_INFO "gps-pps-io: GPIO pin direction 'OUTPUT' on GPIO %d was denied\n", gpio_num);
 		return -1;
 	}
 	gpio_out = gpio_num;
@@ -478,7 +478,7 @@ void pps_cleanup(void)
 
 	flush_scheduled_work();
 
-	unregister_chrdev(major, "pps-client");
+	unregister_chrdev(major, "gps-pps-io");
 
 	if (pps_buffer)
 		free_page((unsigned long)pps_buffer);
@@ -487,7 +487,7 @@ void pps_cleanup(void)
 	gpio_free(GPIO_22);
 	gpio_free(GPIO_17);
 
-	printk(KERN_INFO "pps-client: removed\n");
+	printk(KERN_INFO "gps-pps-io: removed\n");
 }
 
 struct file* file_open(const char* path, int flags, int rights) {
@@ -545,9 +545,9 @@ int pps_init(void)
 	pps_irq1 = irq1;
 	pps_irq2 = irq2;
 
-	result = register_chrdev(major, "pps-client", &pps_i_fops);
+	result = register_chrdev(major, "gps-pps-io", &pps_i_fops);
 	if (result < 0) {
-		printk(KERN_INFO "pps-client: can't get major number\n");
+		printk(KERN_INFO "gps-pps-io: can't get major number\n");
 		return result;
 	}
 
@@ -557,24 +557,24 @@ int pps_init(void)
 	pps_buffer = (int *)__get_free_pages(GFP_KERNEL,0);
 
 	if (configureInterruptOn(GPIO_4) == -1){
-		printk(KERN_INFO "pps-client: failed installation\n");
+		printk(KERN_INFO "gps-pps-io: failed installation\n");
 		pps_cleanup();
 		return -1;
 	}
 
 	if (configureInterruptOn(GPIO_22) == -1){
-		printk(KERN_INFO "pps-client: failed installation\n");
+		printk(KERN_INFO "gps-pps-io: failed installation\n");
 		pps_cleanup();
 		return -1;
 	}
 
 	if (configureWriteOn(GPIO_17) == -1){
-		printk(KERN_INFO "pps-client: failed installation\n");
+		printk(KERN_INFO "gps-pps-io: failed installation\n");
 		pps_cleanup();
 		return -1;
 	}
 
-	printk(KERN_INFO "pps-client: installed\n");
+	printk(KERN_INFO "gps-pps-io: installed\n");
 
 	return 0;
 }
