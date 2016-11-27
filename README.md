@@ -54,7 +54,7 @@ The peak of the distribution in Figure 4 is the average error for this test unit
 
 Figure 4 also shows that there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [Practical Limits to Time Measurement](#practical-limits-to-time-measurement).
 
-For a detailed description of the pps-client controller and accuracy testing run Doxygen to generate the documentation or visit the [PPS-Client-Pages](https://rascol.github.io/Raspberry-Pi-PPS-Client) website.
+For a detailed description of the pps-client controller and accuracy testing run Doxygen in `/usr/share/doc/pps-client` on the RPi to generate the documentation or visit the [PPS-Client-Pages](https://rascol.github.io/Raspberry-Pi-PPS-Client) website.
 
 # Hardware Requirements
 ---
