@@ -20,7 +20,7 @@
  * The configuration file is "/etc/pps-client.conf"
  *
  * The kernel driver is
- * "/lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko"
+ * "/lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko"
  *
  * Created on: Nov 17, 2015
  *
@@ -48,7 +48,7 @@
  */
 extern int adjtimex (struct timex *timex);
 
-const char *version = "1.1.1";							//!< The program version number.
+const char *version = "1.1.2";							//!< The program version number.
 
 struct G g;												//!< Declares the global variables defined in pps-client.h.
 
@@ -381,9 +381,9 @@ double getAverageCorrection(int timeCorrection){
  * Errors are infrequent: DST change twice a year or
  * leap seconds less frequently. The whole seconds
  * of system clock are set immedately to the correct
- * time though the pps-client device driver.
+ * time though the gps-pps-io device driver.
  *
- * @param[in] pps_fd The pps-client device driver file
+ * @param[in] pps_fd The gps-pps-io device driver file
  * descriptor.
  */
 void setClockToNTPtime(int pps_fd){
@@ -553,7 +553,7 @@ int getFractionalSeconds(timeval pps_t){
  * @param[in] pps_t The delayed time of
  * the PPS rising edge returned by the system clock.
  *
- * @param[in] pps_fd The pps-client device driver
+ * @param[in] pps_fd The gps-pps-io device driver
  * file descriptor.
  */
 void makeTimeCorrection(timeval pps_t, int pps_fd){
@@ -616,7 +616,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
  * Can force exit if the interrupt is lost for more than one
  * hour when "exit-lost-pps=enable" is set in the config file.
  *
- * @param[in] pps_fd The pps-client device driver file descriptor.
+ * @param[in] pps_fd The gps-pps-io device driver file descriptor.
  *
  * @returns 0 on success, else -1 on error.
  */
@@ -727,7 +727,7 @@ int removeIntrptNoise(int intrptError){
  * adjustment value of timeAt in microseconds. The purpose
  * of the delay is to put the program to sleep until just
  * before the time when a PPS interrupt timing will be
- * delivered by the pps-client device driver.
+ * delivered by the gps-pps-io device driver.
  *
  * @param[in] timeAt The adjustment value.
  *
@@ -809,7 +809,7 @@ void getInterruptDelay(int pps_fd){
 		}
 	}
 	else if (rv < 0){
-		sprintf(g.logbuf, "pps-client device read() returned: %d Error: %s\n", rv, strerror(errno));
+		sprintf(g.logbuf, "gps-pps-io device read() returned: %d Error: %s\n", rv, strerror(errno));
 		writeToLog(g.logbuf);
 	}
 
@@ -819,7 +819,7 @@ void getInterruptDelay(int pps_fd){
 
 /**
  * Requests a read of the reception time of the PPS hardware
- * interrupt by the pps-client driver and passes the value
+ * interrupt by the gps-pps-io driver and passes the value
  * read to makeTimeCorrection(). The driver is accessed with
  * the pps_fd file descriptor.
  *
@@ -842,7 +842,7 @@ void getInterruptDelay(int pps_fd){
  * @param[in] verbose If "true" then write pps-client
  * state status messages to the console. Else not.
  *
- * @param[in] pps_fd The pps-client device driver file
+ * @param[in] pps_fd The gps-pps-io device driver file
  * descriptor.
  *
  * @returns "false" if no restart is required,
@@ -860,7 +860,7 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 			bufferStatusMsg("Read PPS interrupt failed\n");
 		}
 		else {
-			sprintf(g.logbuf, "pps-client PPS read() returned: %d Error: %s\n", rv, strerror(errno));
+			sprintf(g.logbuf, "gps-pps-io PPS read() returned: %d Error: %s\n", rv, strerror(errno));
 			writeToLog(g.logbuf);
 		}
 		g.interruptLost = true;
@@ -916,7 +916,7 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
  * @param[in] verbose If "true" then write pps-client
  * state status messages to the console. Else not.
  *
- * @param[in] pps_fd The pps-client device driver
+ * @param[in] pps_fd The gps-pps-io device driver
  * file descriptor.
  */
 void waitForPPS(bool verbose, int pps_fd){
@@ -1099,7 +1099,7 @@ int main(int argc, char *argv[])
 		goto end1;
 	}
 
-	pps_fd = open_logerr("/dev/pps-client", O_RDWR);// Open the pps-client device driver.
+	pps_fd = open_logerr("/dev/gps-pps-io", O_RDWR);// Open the gps-pps-io device driver.
 	if (pps_fd == -1){
 		rv = -1;
 		goto end2;

@@ -16,7 +16,7 @@ EXTRA_CFLAGS += -static
 
 ifneq ($(KERNELRELEASE),)
 
-obj-m := pps-client.o
+obj-m := gps-pps-io.o
 
 else
 

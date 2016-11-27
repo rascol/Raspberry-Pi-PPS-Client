@@ -1322,7 +1322,7 @@ int enableNTP(void){
 }
 
 /**
- * Reads the major number assigned to pps-client
+ * Reads the major number assigned to gps-pps-io
  * from "/proc/devices" as a string which is
  * returned in the majorPos char pointer. This
  * value is used to load the hardware driver that
@@ -1364,9 +1364,9 @@ char *copyMajorTo(char *majorPos){
 
 	fbuf[sz] = '\0';
 
-	char *pos = strstr(fbuf, "pps-client");
+	char *pos = strstr(fbuf, "gps-pps-io");
 	if (pos == NULL){
-		sprintf(g.logbuf, "Can't find pps-client in \"/run/shm/proc_devices\"\n");
+		sprintf(g.logbuf, "Can't find gps-pps-io in \"/run/shm/proc_devices\"\n");
 		writeToLog(g.logbuf);
 		delete fbuf;
 		return NULL;
@@ -1398,7 +1398,7 @@ char *getLinuxVersion(void){
 /**
  * Loads the hardware driver required by pps-client which
  * is expected to be available in the file:
- * "/lib/modules/'uname -r'/kernel/drivers/misc/pps-client.ko".
+ * "/lib/modules/'uname -r'/kernel/drivers/misc/gps-pps-io.ko".
  *
  * @returns 0 on success, else -1 on error.
  */
@@ -1407,7 +1407,7 @@ int driver_load(void){
 
 	strcpy(driverFile, "/lib/modules/");
 	strcat(driverFile, getLinuxVersion());
-	strcat(driverFile, "/kernel/drivers/misc/pps-client.ko");
+	strcat(driverFile, "/kernel/drivers/misc/gps-pps-io.ko");
 
 	int fd = open(driverFile, O_RDONLY);
 	if (fd < 0){
@@ -1428,35 +1428,35 @@ int driver_load(void){
 	strcpy(insmod, "/sbin/insmod ");
 	strcat(insmod, driverFile);
 
-	system("rm -f /dev/pps-client");				// Clean up any old device files.
+	system("rm -f /dev/gps-pps-io");				// Clean up any old device files.
 
 	system(insmod);									// Issue the insmod command
 
 	char *mknod = g.strbuf;
-	strcpy(mknod, "mknod /dev/pps-client c ");
+	strcpy(mknod, "mknod /dev/gps-pps-io c ");
 	char *major = copyMajorTo(mknod + strlen(mknod));
 	if (major == NULL){								// No major found! insmod failed.
 		sprintf(g.logbuf, "driver_load() error: No major found!\n");
 		writeToLog(g.logbuf);
-		system("/sbin/rmmod pps-client");
+		system("/sbin/rmmod gps-pps-io");
 		return -1;
 	}
 	strcat(mknod, " 0");
 
 	system(mknod);									// Issue the mknod command
 
-	system("chgrp root /dev/pps-client");
-	system("chmod 664 /dev/pps-client");
+	system("chgrp root /dev/gps-pps-io");
+	system("chmod 664 /dev/gps-pps-io");
 
 	return 0;
 }
 
 /**
- * Unloads the pps-client hardware driver.
+ * Unloads the gps-pps-io hardware driver.
  */
 void driver_unload(void){
-	system("/sbin/rmmod pps-client");
-	system("rm -f /dev/pps-client");
+	system("/sbin/rmmod gps-pps-io");
+	system("rm -f /dev/gps-pps-io");
 }
 
 /**

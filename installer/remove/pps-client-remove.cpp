@@ -23,7 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 
-const char *version = "pps-client-remove v1.0.0";
+const char *version = "pps-client-remove v1.0.1";
 
 int main(int argc, char *argv[])
 {
@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
 	printf("Removing /etc/init.d/pps-client\n");
 	system("rm /etc/init.d/pps-client");
 
-	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko\n");
-	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko");
+	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko\n");
+	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko");
 
 	printf("Removing /usr/sbin/interrupt-timer\n");
 	system("rm /usr/sbin/interrupt-timer");

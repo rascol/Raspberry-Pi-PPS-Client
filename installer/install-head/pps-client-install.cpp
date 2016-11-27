@@ -1,5 +1,5 @@
 /*
- * install-pps-client.cpp
+ * pps-client-install.cpp
  *
  * Copyright (C) 2016  Raymond S. Connell
  *
@@ -25,6 +25,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+const char *version = "pps-client-installer v1.0.1";
 
 /**
  * Returns the Linux kernel identifier
@@ -153,10 +155,10 @@ int main(int argc, char *argv[]){
 
 	char *cmd = (char *)fbuf;
 
-	printf("Moving pps-client.ko to /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko\n");
-	strcpy(cmd, "mv ./pkg/pps-client.ko /lib/modules/");
+	printf("Moving gps-pps-io.ko to /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko\n");
+	strcpy(cmd, "mv ./pkg/gps-pps-io.ko /lib/modules/");
 	strcat(cmd, version);
-	strcat(cmd, "/kernel/drivers/misc/pps-client.ko");
+	strcat(cmd, "/kernel/drivers/misc/gps-pps-io.ko");
 	system(cmd);
 
 	int fdc = open("/etc/pps-client.conf", O_RDONLY);
@@ -210,6 +212,31 @@ int main(int argc, char *argv[]){
 	system("mv ./pkg/StatusPrintoutOnStart.png /usr/share/doc/pps-client/figures/StatusPrintoutOnStart.png");
 	system("mv ./pkg/StatusPrintoutAt10Min.png /usr/share/doc/pps-client/figures/StatusPrintoutAt10Min.png");
 	system("mv ./pkg/RPi_with_GPS.jpg /usr/share/doc/pps-client/figures/RPi_with_GPS.jpg");
+	system("mv ./pkg/InterruptTimerDistrib.png /usr/share/doc/pps-client/figures/InterruptTimerDistrib.png");
+	system("mv ./pkg/SingleEventTimerDistrib.png /usr/share/doc/pps-client/figures/SingleEventTimerDistrib.png");
+	system("mv ./pkg/time.png /usr/share/doc/pps-client/figures/time.png");
+
+	printf("Moving Doxyfile to /usr/share/doc/pps-client/Doxyfile");
+	system("mv ./pkg/Doxyfile /usr/share/doc/pps-client/Doxyfile");
+
+	printf("Moving pps-client.md to /usr/share/doc/pps-client/client/pps-client.md");
+	system("mkdir /usr/share/doc/pps-client/client");
+	system("mv ./pkg/client/pps-client.md /usr/share/doc/pps-client/client/pps-client.md");
+
+	system("mkdir /usr/share/doc/pps-client/client/figures");
+	system("mv ./pkg/client/figures/accuracy_verify.jpg /usr/share/doc/pps-client/client/figures/accuracy_verify.jpg");
+	system("mv ./pkg/client/figures/interrupt-delay-comparison.png /usr/share/doc/pps-client/client/figures/interrupt-delay-comparison.png");
+	system("mv ./pkg/client/figures/InterruptTimerDistrib.png /usr/share/doc/pps-client/client/figures/InterruptTimerDistrib.png");
+	system("mv ./pkg/client/figures/jitter-spike.png /usr/share/doc/pps-client/client/figures/jitter-spike.png");
+	system("mv ./pkg/client/figures/pps-jitter-distrib.png /usr/share/doc/pps-client/client/figures/pps-jitter-distrib.png");
+	system("mv ./pkg/client/figures/pps-offsets-stress.png /usr/share/doc/pps-client/client/figures/pps-offsets-stress.png");
+	system("mv ./pkg/client/figures/pps-offsets-to-300.png /usr/share/doc/pps-client/client/figures/pps-offsets-to-300.png");
+	system("mv ./pkg/client/figures/pps-offsets-to-720.png /usr/share/doc/pps-client/client/figures/pps-offsets-to-720.png");
+	system("mv ./pkg/client/figures/StatusPrintoutAt10Min.png /usr/share/doc/pps-client/client/figures/StatusPrintoutAt10Min.png");
+	system("mv ./pkg/client/figures/StatusPrintoutOnStart.png /usr/share/doc/pps-client/client/figures/StatusPrintoutOnStart.png");
+	system("mv ./pkg/client/figures/wiring.png /usr/share/doc/pps-client/client/figures/wiring.png");
+	system("mv ./pkg/client/figures/interrupt-delay-comparison-RPi3.png /usr/share/doc/pps-client/client/figures/interrupt-delay-comparison-RPi3.png");
+	system("mv ./pkg/client/figures/pps-jitter-distrib-RPi3.png /usr/share/doc/pps-client/client/figures/pps-jitter-distrib-RPi3.png");
 
 	system("rm -rf ./pkg");
 	system("rm pkg.tar.gz");

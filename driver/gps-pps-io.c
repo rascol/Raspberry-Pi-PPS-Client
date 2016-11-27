@@ -1,5 +1,5 @@
 /*
- * pps-client.c
+ * gps-pps-io.c
  *
  * Copyright (C) 2016  Raymond S. Connell
  *
@@ -23,9 +23,9 @@
  *
  * Notes:
  *
- * Compile on Raspberry Pi 2 to create pps-client.ko. On
- * installation pps-client.ko must be copied to
- *  /lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko
+ * Compile on Raspberry Pi 2 to create gps-pps-io.ko. On
+ * installation gps-pps-io.ko must be copied to
+ *  /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko
  *
  * 1. When an interrupt is received on GPIO 4 this driver records
  * the reception time. That time can then be read from the driver
