@@ -48,7 +48,6 @@ const char *space = " ";
 const char *num = "0123456789.";
 
 extern const char *version;
-const char *driverFile = "/lib/modules/`uname -r`/kernel/drivers/misc/pps-client.ko";
 
 /**
  * Local file-scope shared variables.
@@ -1387,6 +1386,15 @@ char *copyMajorTo(char *majorPos){
 	return majorPos;
 }
 
+char *getLinuxVersion(void){
+	char fbuf[20];
+	system("uname -r > /run/shm/linuxVersion");
+	int fd = open("/run/shm/linuxVersion", O_RDONLY);
+	int sz = read(fd, fbuf, 20);
+	sscanf(fbuf, "%s\n", g.linuxVersion);
+	return g.linuxVersion;
+}
+
 /**
  * Loads the hardware driver required by pps-client which
  * is expected to be available in the file:
@@ -1395,6 +1403,11 @@ char *copyMajorTo(char *majorPos){
  * @returns 0 on success, else -1 on error.
  */
 int driver_load(void){
+	char driverFile[100];
+
+	strcpy(driverFile, "/lib/modules/");
+	strcat(driverFile, getLinuxVersion());
+	strcat(driverFile, "/kernel/drivers/misc/pps-client.ko");
 
 	int fd = open(driverFile, O_RDONLY);
 	if (fd < 0){
