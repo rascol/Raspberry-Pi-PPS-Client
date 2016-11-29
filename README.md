@@ -50,7 +50,7 @@ Figure 4 is the distribution of measured times relative to a true time of 800,00
 
 <p align="center"><img src="figures/InterruptTimerDistrib.png" alt="Time Parameters" width=""/></p>
 
-The peak of the distribution in Figure 4 is the average error for this test unit and is about 0.28 microsecond below 800,000 microseconds. For the ten test units the median error was -0.25 microsecond and the maximum error was -0.76 microseconds. 
+The peak of the distribution in Figure 4 is the average error for this test unit and is about 0.28 microsecond below 800,000 microseconds. For the ten test units the median average error was -0.25 microsecond and the maximum average error was -0.76 microseconds. 
 
 Figure 4 also shows that there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [Practical Limits to Time Measurement](#practical-limits-to-time-measurement).
 
