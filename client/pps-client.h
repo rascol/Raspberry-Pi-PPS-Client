@@ -112,6 +112,9 @@
 #define INTERRUPT_DISTRIB 16
 #define SYSDELAY_DISTRIB 32
 #define EXIT_LOST_PPS 64
+#define PPS_GPIO 128
+#define OUTPUT_GPIO 256
+#define INTRPT_GPIO 512
 
 /*
  * Struct for passing arguments to and from threads
@@ -133,6 +136,10 @@ struct timeCheckParams {
  * Struct for program-wide global variables.
  */
 struct G {
+	int ppsGPIO;									//!< The PPS GPIO interrupt number read from pps-client.conf and passed to the driver.
+	int outputGPIO;									//!< The calibrate GPIO output number read from pps-client.conf and passed to the driver.
+	int intrptGPIO;									//!< The calibrate GPIO interrupt number read from pps-client.conf and passed to the driver.
+
 	bool isVerbose;									//!< Enables continuous printing of state status params when "true".
 
 	unsigned int seq_num;							//!< Advancing count of the number of PPS interrupt timings that have been received.

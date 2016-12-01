@@ -48,7 +48,7 @@
  */
 extern int adjtimex (struct timex *timex);
 
-const char *version = "1.1.2";							//!< The program version number.
+const char *version = "1.2.0";							//!< The program version number.
 
 struct G g;												//!< Declares the global variables defined in pps-client.h.
 
@@ -1011,6 +1011,40 @@ end1:
 }
 
 /**
+ * Reads pps-client driver GPIO number assignments from
+ * "/etc/pps-client.conf" and stores them as temporary
+ * values in the global variables struct to be passed
+ * to the pps-client driver when it is loaded.
+ *
+ * These values are not persistent.
+ */
+void getDriverGPIOvals(void){
+	memset(&g, 0, sizeof(struct G));
+
+	char *pbuf = NULL;
+	char *configVals[32];
+	int value;
+
+	pbuf = new char[CONFIG_FILE_SZ];
+
+	readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
+
+	if (configHasValue(PPS_GPIO, configVals, &value)){
+		g.ppsGPIO = value;
+	}
+
+	if (configHasValue(OUTPUT_GPIO, configVals, &value)){
+		g.outputGPIO = value;
+	}
+
+	if (configHasValue(INTRPT_GPIO, configVals, &value)){
+		g.intrptGPIO = value;
+	}
+
+	delete pbuf;
+}
+
+/**
  * If not already running, creates a detached process that
  * will run as a daemon. Accepts one command line arg: -v
  * that causes the daemon to run in verbose mode which
@@ -1079,7 +1113,9 @@ int main(int argc, char *argv[])
 		writeToLog(g.logbuf);
 	}
 
-	if (driver_load() == -1){
+	getDriverGPIOvals();
+
+	if (driver_load(g.ppsGPIO, g.outputGPIO, g.intrptGPIO) == -1){
 		sprintf(g.logbuf, "Could not load pps-client driver. Exiting.\n");
 		printf(g.logbuf);
 		writeToLog(g.logbuf);

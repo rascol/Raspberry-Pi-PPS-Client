@@ -73,7 +73,10 @@ const char *valid_config[] = {
 		"calibrate",
 		"interrupt-distrib",
 		"sysdelay-distrib",
-		"exit-lost-pps"
+		"exit-lost-pps",
+		"pps-gpio",
+		"output-gpio",
+		"intrpt-gpio"
 };
 
 /**
@@ -917,11 +920,6 @@ void processFiles(char *config_str[], char *pbuf, int size){
 		writeSysdelayDistribFile();
 	}
 
-//	int value;
-//	if (configHasValue(SYSDELAY_VALUE, config_str, &value)){
-//		g.sysDelay = value;
-//	}
-
 	processWriteRequest();
 
 	return;
@@ -1400,9 +1398,13 @@ char *getLinuxVersion(void){
  * is expected to be available in the file:
  * "/lib/modules/'uname -r'/kernel/drivers/misc/gps-pps-io.ko".
  *
+ * @param[in] ppsGPIO A GPIO number to be assigned to the driver.
+ * @param[in] outputGPIO A GPIO number to be assigned to the driver.
+ * @param[in] intrptGPIO A GPIO number to be assigned to the driver.
+ *
  * @returns 0 on success, else -1 on error.
  */
-int driver_load(void){
+int driver_load(int ppsGPIO, int outputGPIO, int intrptGPIO){
 	char driverFile[100];
 
 	strcpy(driverFile, "/lib/modules/");
@@ -1423,13 +1425,12 @@ int driver_load(void){
 	}
 	close(fd);
 
-	char *insmod = g.strbuf;
-
-	strcpy(insmod, "/sbin/insmod ");
-	strcat(insmod, driverFile);
-
 	system("rm -f /dev/gps-pps-io");				// Clean up any old device files.
 
+	char *insmod = g.strbuf;
+	strcpy(insmod, "/sbin/insmod ");
+	strcat(insmod, driverFile);
+	sprintf(insmod + strlen(insmod), " PPS_GPIO=%d OUTPUT_GPIO=%d INTRPT_GPIO=%d", ppsGPIO, outputGPIO, intrptGPIO);
 	system(insmod);									// Issue the insmod command
 
 	char *mknod = g.strbuf;
