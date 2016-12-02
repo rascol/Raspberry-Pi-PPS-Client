@@ -411,7 +411,9 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 
 	int rvs = stat(config_file, &f.configFileStat);
 	if (rvs == -1){
-		return 0;									// No config file
+		sprintf(g.logbuf, "readConfigFile(): Config file not found.\n");
+		writeToLog(g.logbuf);
+		return -1;									// No config file
 	}
 
 	timespec t = f.configFileStat.st_mtim;
@@ -782,7 +784,7 @@ bool configHasValue(int config_val, char *config_str[], void *value){
 			sscanf(val, "%lf", (double *)value);
 		}
 		else {
-			scanf(val, "%d", (int *)value);
+			sscanf(val, "%d", (int *)value);
 		}
 		return true;
 	}
@@ -826,11 +828,12 @@ int saveDoubleArray(double distrib[], const char *filename, int len, int arrayZe
 }
 
 /**
- * Reads the data label and filename of an array to be written
- * from a request passed from the command line. Then matches
- * the requestStr to the corresponding arrayData which is then
- * passed to a routine that saves the array idendified by the
- * data label.
+ * From within the daemon, reads the data label and filename
+ * of an array to write to disk from a request made from the
+ * command line with "pps-client -s [label] <filename>".
+ * Then matches the requestStr to the corresponding arrayData
+ * which is then passed to a routine that saves the array
+ * idendified by the data label.
  */
 void processWriteRequest(void){
 	struct stat buf;
@@ -1388,7 +1391,7 @@ char *getLinuxVersion(void){
 	char fbuf[20];
 	system("uname -r > /run/shm/linuxVersion");
 	int fd = open("/run/shm/linuxVersion", O_RDONLY);
-	int sz = read(fd, fbuf, 20);
+	read(fd, fbuf, 20);
 	sscanf(fbuf, "%s\n", g.linuxVersion);
 	return g.linuxVersion;
 }
@@ -1396,7 +1399,7 @@ char *getLinuxVersion(void){
 /**
  * Loads the hardware driver required by pps-client which
  * is expected to be available in the file:
- * "/lib/modules/'uname -r'/kernel/drivers/misc/gps-pps-io.ko".
+ * "/lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko".
  *
  * @param[in] ppsGPIO A GPIO number to be assigned to the driver.
  * @param[in] outputGPIO A GPIO number to be assigned to the driver.
@@ -1425,12 +1428,12 @@ int driver_load(int ppsGPIO, int outputGPIO, int intrptGPIO){
 	}
 	close(fd);
 
-	system("rm -f /dev/gps-pps-io");				// Clean up any old device files.
-
 	char *insmod = g.strbuf;
 	strcpy(insmod, "/sbin/insmod ");
 	strcat(insmod, driverFile);
 	sprintf(insmod + strlen(insmod), " PPS_GPIO=%d OUTPUT_GPIO=%d INTRPT_GPIO=%d", ppsGPIO, outputGPIO, intrptGPIO);
+
+	system("rm -f /dev/gps-pps-io");				// Clean up any old device files.
 	system(insmod);									// Issue the insmod command
 
 	char *mknod = g.strbuf;

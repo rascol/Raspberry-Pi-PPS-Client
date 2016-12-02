@@ -1017,31 +1017,56 @@ end1:
  * to the pps-client driver when it is loaded.
  *
  * These values are not persistent.
+ *
+ * @returns 0 on success else -1.
  */
-void getDriverGPIOvals(void){
+int getDriverGPIOvals(void){
 	memset(&g, 0, sizeof(struct G));
 
-	char *pbuf = NULL;
 	char *configVals[32];
 	int value;
+	int rv = 0;
 
-	pbuf = new char[CONFIG_FILE_SZ];
+	char *pbuf = new char[CONFIG_FILE_SZ];
+	if (pbuf == NULL){
+		sprintf(g.logbuf, "Error: getDriverGPIOvals(): Unable to allocate memory for config file.\n");
+		printf(g.logbuf);
+		writeToLog(g.logbuf);
+		return -1;
+	}
 
-	readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
+	rv = readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
+	if (rv == -1){
+		delete pbuf;
+		return -1;
+	}
 
 	if (configHasValue(PPS_GPIO, configVals, &value)){
 		g.ppsGPIO = value;
+	}
+	else {
+		delete pbuf;
+		return -1;
 	}
 
 	if (configHasValue(OUTPUT_GPIO, configVals, &value)){
 		g.outputGPIO = value;
 	}
+	else {
+		delete pbuf;
+		return -1;
+	}
 
 	if (configHasValue(INTRPT_GPIO, configVals, &value)){
 		g.intrptGPIO = value;
 	}
+	else {
+		delete pbuf;
+		return -1;
+	}
 
 	delete pbuf;
+	return rv;
 }
 
 /**
@@ -1113,8 +1138,12 @@ int main(int argc, char *argv[])
 		writeToLog(g.logbuf);
 	}
 
-	getDriverGPIOvals();
-
+	if(getDriverGPIOvals() == -1){
+		sprintf(g.logbuf, "Could not get GPIO vals for driver. Exiting.\n");
+		printf(g.logbuf);
+		writeToLog(g.logbuf);
+		goto end0;
+	}
 	if (driver_load(g.ppsGPIO, g.outputGPIO, g.intrptGPIO) == -1){
 		sprintf(g.logbuf, "Could not load pps-client driver. Exiting.\n");
 		printf(g.logbuf);

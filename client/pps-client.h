@@ -321,7 +321,7 @@ void writeSysdelayDistribFile(void);
 void showStatusEachSecond(void);
 struct timespec setSyncDelay(int, int);
 int accessDaemon(int argc, char *argv[]);
-int driver_load(void);
+int driver_load(int, int, int);
 void driver_unload(void);
 void buildErrorDistrib(int);
 void buildJitterDistrib(int);
@@ -332,6 +332,7 @@ void buildInterruptJitterDistrib(int);
 void buildSysDelayDistrib(int);
 void recordFrequencyVars(void);
 void recordOffsets(int timeCorrection);
+bool configHasValue(int, char *[], void *);
 /**
  * @endcond
  */

@@ -26,7 +26,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-const char *version = "pps-client-installer v1.0.1";
+const char *version = "pps-client-installer v1.0.2";
+const char *cfgVersion = "1.2.0";
 
 /**
  * Returns the Linux kernel identifier
@@ -56,6 +57,9 @@ int main(int argc, char *argv[]){
 	pkg_start[5] = 0x00;
 	pkg_start[6] = 0xff;
 	pkg_start[7] = 0x00;
+
+	char buf[50];
+	char sbuf[20];
 
 	uid_t uid = geteuid();
 	if (uid != 0){
@@ -162,12 +166,20 @@ int main(int argc, char *argv[]){
 	system(cmd);
 
 	int fdc = open("/etc/pps-client.conf", O_RDONLY);
-	if (fdc == -1){
+	if (fdc == -1){													// No config file.
 		printf("Moving pps-client.conf to /etc/pps-client.conf\n");
 		system("mv ./pkg/pps-client.conf /etc/pps-client.conf");
 	}
-	else {
-		printf("Existing file: /etc/pps-client.conf was not replaced.\n");
+	else {															// Config file exists.
+		read(fdc, buf, 50);
+		sscanf(buf, "# pps-client.conf v%s\n", sbuf);
+		if (strcmp(sbuf, cfgVersion) != 0){							// But the version is different.
+			printf("Moving pps-client.conf to /etc/pps-client.conf\n");
+			system("mv ./pkg/pps-client.conf /etc/pps-client.conf");
+		}
+		else {														// Exists and is same config version.
+			printf("Existing file: /etc/pps-client.conf was not replaced.\n");
+		}
 		close(fdc);
 	}
 
