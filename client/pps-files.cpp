@@ -384,7 +384,7 @@ int createPIDfile(void){
 
 /**
  * Reads the pps-client config file and sets bits
- * in config_select to 1 or 0 corresponding to
+ * in g.config_select to 1 or 0 corresponding to
  * whether a particular config_str appears in the
  * config file. The config_str from the file is then
  * copied to fbuf and a pointer to that string is
@@ -408,6 +408,8 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 		writeToLog(g.logbuf);
 		return -1;
 	}
+
+	memset(fbuf, 0, size);
 
 	int rvs = stat(config_file, &f.configFileStat);
 	if (rvs == -1){
@@ -449,10 +451,7 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 
 	char *pToken = strtok(fbuf, "\n");					// Separate tokens at "\n" and space
 
-	for (i = 0; i < 100; i++){
-		if (pToken == NULL){
-			break;
-		}
+	while (pToken != NULL){
 		if (strlen(pToken) != 0){						// If not a blank line
 			for (int j = 0; j < 10; j++){				// Remove leading spaces
 				if (pToken[0] == ' '){
@@ -822,7 +821,7 @@ int saveDoubleArray(double distrib[], const char *filename, int len, int arrayZe
 	write(fd, filebuf, fileLen + 1);
 	fsync(fd);
 
-	delete filebuf;
+	delete[] filebuf;
 	close(fd);
 	return 0;
 }
@@ -1246,11 +1245,14 @@ int disableNTP(void){
 	fstat(fd, &stat_buf);
 	int sz = stat_buf.st_size;
 
-	char *fbuf = new char[sz + strlen("\ndisable ntp\n") + 1];
+	int fbufSz = sz + strlen("\ndisable ntp\n") + 10;
+
+	char *fbuf = new char[fbufSz];
+	memset(fbuf, 0, fbufSz);
 
 	int rv = read_logerr(fd, fbuf, sz, ntp_config_file);		// Read ntp.conf into fbuf
 	if (rv == -1 || rv != sz){
-		delete fbuf;
+		delete[] fbuf;
 		close(fd);
 		return -1;
 	}
@@ -1268,7 +1270,7 @@ int disableNTP(void){
 	writeToLog(g.logbuf);
 
 	rv = replaceNTPConfig(fbuf);
-	delete fbuf;
+	delete[] fbuf;
 
 	if (rv == -1){
 		return rv;
@@ -1302,7 +1304,7 @@ int enableNTP(void){
 
 	rv = read_logerr(fd, fbuf, sz, ntp_config_file);
 	if (rv == -1 || rv != sz){
-		delete fbuf;
+		delete[] fbuf;
 		close(fd);
 		return -1;
 	}
@@ -1312,7 +1314,7 @@ int enableNTP(void){
 	removeConfigKeys("disable", "ntp", fbuf);
 
 	rv = replaceNTPConfig(fbuf);
-	delete fbuf;
+	delete[] fbuf;
 
 	if (rv == -1){
 		return rv;
@@ -1357,7 +1359,7 @@ char *copyMajorTo(char *majorPos){
 	if (rv == -1){
 		close(fd);
 		remove(filename);
-		delete(fbuf);
+		delete[] fbuf;
 		return NULL;
 	}
 	close(fd);
@@ -1369,7 +1371,7 @@ char *copyMajorTo(char *majorPos){
 	if (pos == NULL){
 		sprintf(g.logbuf, "Can't find gps-pps-io in \"/run/shm/proc_devices\"\n");
 		writeToLog(g.logbuf);
-		delete fbuf;
+		delete[] fbuf;
 		return NULL;
 	}
 	char *end = pos - 1;
@@ -1383,7 +1385,7 @@ char *copyMajorTo(char *majorPos){
 	}
 	strcpy(majorPos, pos2);
 
-	delete fbuf;
+	delete[] fbuf;
 	return majorPos;
 }
 

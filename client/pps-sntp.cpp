@@ -72,7 +72,7 @@ int allocNTPServerList(timeCheckParams *tcp){
 	int sz = stat_buf.st_size;
 
 	if (tcp->buf != NULL){
-		delete tcp->buf;
+		delete[] tcp->buf;
 		tcp->buf = NULL;
 	}
 	tcp->buf = new char[sz+ADDR_LEN];
@@ -151,7 +151,7 @@ int waitForNTPServers(void){
 		sleep(10);
 	}
 	if (tcp.buf != NULL){
-		delete tcp.buf;
+		delete[] tcp.buf;
 		tcp.buf = NULL;
 	}
 	if (nServers <= 0){
@@ -517,9 +517,9 @@ int allocInitializeSNTPThreads(timeCheckParams *tcp){
  */
 void freeSNTPThreads(timeCheckParams *tcp){
 	pthread_attr_destroy(&(tcp->attr));
-	delete tcp->strbuf;
-	delete tcp->logbuf;
+	delete[] tcp->strbuf;
+	delete[] tcp->logbuf;
 	if (tcp->buf != NULL){
-		delete tcp->buf;
+		delete[] tcp->buf;
 	}
 }

@@ -935,7 +935,6 @@ void waitForPPS(bool verbose, int pps_fd){
 
 	rv = readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
 	if (rv == -1){
-
 		goto end1;
 	}
 
@@ -1005,7 +1004,7 @@ end:
 	freeSNTPThreads(&tcp);
 end1:
 	if (pbuf != NULL){
-		delete pbuf;
+		delete[] pbuf;
 	}
 	return;
 }
@@ -1037,36 +1036,36 @@ int getDriverGPIOvals(void){
 
 	rv = readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
 	if (rv == -1){
-		delete pbuf;
-		return -1;
+		goto err_end;
 	}
 
 	if (configHasValue(PPS_GPIO, configVals, &value)){
 		g.ppsGPIO = value;
 	}
 	else {
-		delete pbuf;
-		return -1;
+		goto err_end;
 	}
 
 	if (configHasValue(OUTPUT_GPIO, configVals, &value)){
 		g.outputGPIO = value;
 	}
 	else {
-		delete pbuf;
-		return -1;
+		goto err_end;
 	}
 
 	if (configHasValue(INTRPT_GPIO, configVals, &value)){
 		g.intrptGPIO = value;
 	}
 	else {
-		delete pbuf;
-		return -1;
+		goto err_end;
 	}
 
-	delete pbuf;
+	delete[] pbuf;
 	return rv;
+
+err_end:
+	delete[] pbuf;
+	return -1;
 }
 
 /**
@@ -1144,6 +1143,7 @@ int main(int argc, char *argv[])
 		writeToLog(g.logbuf);
 		goto end0;
 	}
+
 	if (driver_load(g.ppsGPIO, g.outputGPIO, g.intrptGPIO) == -1){
 		sprintf(g.logbuf, "Could not load pps-client driver. Exiting.\n");
 		printf(g.logbuf);
