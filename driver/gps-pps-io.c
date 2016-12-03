@@ -27,26 +27,26 @@
  * installation gps-pps-io.ko must be copied to
  *  /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko
  *
- * 1. When an interrupt is received on GPIO 4 this driver records
+ * 1. When an interrupt is received on PPS_GPIO this driver records
  * the reception time. That time can then be read from the driver
  * with the read() function.
  *
  * 2. This driver can also record the reception time of a second
- * interrupt on GPIO 22 that is initiated from within the driver.
- * That requires an external wired connection between GPIO 17
- * and GPIO 22.
+ * interrupt on INTRPT_GPIO that is initiated from within the driver.
+ * That requires an external wired connection between OUTPUT_GPIO
+ * and INTRPT_GPIO.
  *
  * With that connection in place, writing a 1 to the driver
- * will disable the interrupt on GPIO 4, will cause GPIO 17 to
- * request an interrupt on GPIO 22 and will record the time the
- * write arrived at GPIO 17.
+ * will disable the interrupt on PPS_GPIO, will cause OUTPUT_GPIO to
+ * request an interrupt on INTRPT_GPIO and will record the time the
+ * write arrived at OUTPUT_GPIO.
  *
- * The write time to GPIO 17 and the reception time of the
- * interrupt on GPIO 22 can then be read from the driver with
+ * The write time to OUTPUT_GPIO and the reception time of the
+ * interrupt on INTRPT_GPIO can then be read from the driver with
  * the read() function.
  *
  * Writing a 0 to the driver will then re-enable the interrupt
- * on GPIO 4.
+ * on PPS_GPIO.
  *
  * 3. This driver can also be used to inject an offset in whole
  * seconds to the system time by writing a pair of integers to
@@ -81,19 +81,6 @@
 #include <asm/uaccess.h>
 #include <linux/buffer_head.h>
 
-/* GPIO_4 (pin 7 on P5 Raspberry Pi rev. 2 board)
- will accept the PPS interrupt */
-#define GPIO_4 4
-
-/* GPIO_17 (pin 11 on P5 Raspberry Pi rev. 2 board)
- is an output pin */
-#define GPIO_17 17
-
-/* GPIO_22 (pin 15 on P5 Raspberry Pi rev. 2 board)
- will trigger a second interrupt for calibrating
- the interrupt delay */
-#define GPIO_22 22
-
 /* The text below will appear in output from 'cat /proc/interrupt' */
 #define INTERRUPT_NAME "gps-pps-io"
 
@@ -102,15 +89,18 @@ const char *version = "gps-pps-io v1.0.0";
 static int major = 0;							/* dynamic by default */
 module_param(major, int, 0);					/* but can be specified at load time */
 
-/* The interrupt line is undefined by default. */
-static int irq1 = -1;
-static int irq2 = -1;
+static int PPS_GPIO = 0;
+module_param(PPS_GPIO, int, 0);					/* Specify PPS_GPIO at load time */
+
+static int OUTPUT_GPIO = 0;
+module_param(OUTPUT_GPIO, int, 0);				/* Specify OUTPUT_GPIO at load time */
+
+static int INTRPT_GPIO = 0;
+module_param(INTRPT_GPIO, int, 0);				/* Specify INTRPT_GPIO at load time */
 
 volatile int pps_irq1 = -1;
 volatile int pps_irq2 = -1;
-
-module_param(irq1, int, 0);						/* If desired, specify the interrupt at load time */
-module_param(irq2, int, 0);						/* If desired, specify the interrupt at load time */
+volatile int gpio_out = 0;
 
 MODULE_AUTHOR ("Raymond Connell");
 MODULE_LICENSE("Dual BSD/GPL");
@@ -123,7 +113,6 @@ int read1_OK = 0;
 int read2_OK = 0;
 bool readIntr2 = false;
 
-int gpio_out = 0;
 unsigned long j_delay;
 
 static atomic_t driver_available = ATOMIC_INIT(1);
@@ -177,20 +166,20 @@ int pps_release (struct inode *inode, struct file *filp)
 }
 
 /**
- * Reads the reception times of interrupts on GPIO 4 and GPIO 22
- * and the time an output write arrived at GPIO 17 from
+ * Reads the reception times of interrupts on PPS_GPIO and INTRPT_GPIO
+ * and the time an output write arrived at OUTPUT_GPIO from
  * __user *buf.
  *
- * When reading the time of an interrupt on GPIO 4 __user *buf is
+ * When reading the time of an interrupt on PPS_GPIO __user *buf is
  * interpreted to be a two-element int array mapping a struct timeval
  * tv. The int with index 0 contains tv.tv_sec and the int with index
  * 1 contains tv.tv_usec. In this case count is 2 * sizeof(int).
  *
- * When reading the time of an interrupt on GPIO 22 __user *buf is
+ * When reading the time of an interrupt on INTRPT_GPIO __user *buf is
  * interpreted to be a six-element int array mapping three struct
  * timeval objects as int pairs. The first int pair is not used.
- * The second int pair contains the time a write arrived at GPIO 17,
- * as above, and the third int pair contains the time the GPIO 22
+ * The second int pair contains the time a write arrived at OUTPUT_GPIO,
+ * as above, and the third int pair contains the time the INTRPT_GPIO
  * interrupt was recognized. In this case count is 6 * sizeof(int).
  *
  * If this function is called before an interrupt is triggered then the
@@ -280,12 +269,12 @@ ssize_t pps_i_read (struct file *filp, char __user *buf, size_t count, loff_t *f
  * Provides three functions:
  *   1. Writing an integer with a value of 1 to __user *buf
  *   records the time of the write to pps_buffer[2]-[3],
- *   disables pps_irq1 then sets GPIO 17 (high). This allows
+ *   disables pps_irq1 then sets OUTPUT_GPIO (high). This allows
  *   pps_irq2 to be used alternately with pps_irq1. count
  *   is provided with a value of sizeof(int).
  *
  *   2. Writing an integer with a value of 0 to __user *buf
- *   enables pps_irq1 and resets GPIO 17 (low). count is
+ *   enables pps_irq1 and resets OUTPUT_GPIO (low). count is
  *   provided with a value of sizeof(int).
  *
  *   3. Writing a pair of integers where the first is greater
@@ -357,7 +346,7 @@ struct file_operations pps_i_fops = {
 };
 
 /**
- * On recognition of the interrupt on GPIO_4 copies
+ * On recognition of the interrupt on PPS_GPIO copies
  * the time of day to pps_buffer[0]-[1], sets the
  * read1_OK flag and wakes up the reading process.
  */
@@ -377,7 +366,7 @@ irqreturn_t pps_interrupt1(int irq, void *dev_id)
 }
 
 /**
- * On recognition of the interrupt on GPIO_22 copies
+ * On recognition of the interrupt on INTRPT_GPIO copies
  * the time of day to pps_buffer[4]-[5], sets the
  * read2_OK flag and wakes up the reading process.
  */
@@ -412,8 +401,8 @@ int configureInterruptOn(int gpio_num) {
 	   return -1;
    }
 
-   if (gpio_num == GPIO_4){
-	   if ( (pps_irq1 = gpio_to_irq(gpio_num)) < 0 ) {
+   if (gpio_num == PPS_GPIO){
+	   if ( (pps_irq1 = gpio_to_irq(PPS_GPIO)) < 0 ) {
 	      printk(KERN_INFO "gps-pps-io: GPIO to IRQ mapping failed\n");
 	      return -1;
 	   }
@@ -430,8 +419,8 @@ int configureInterruptOn(int gpio_num) {
 	   }
    }
 
-   if (gpio_num == GPIO_22){
-	   if ( (pps_irq2 = gpio_to_irq(gpio_num)) < 0 ) {
+   if (gpio_num == INTRPT_GPIO){
+	   if ( (pps_irq2 = gpio_to_irq(INTRPT_GPIO)) < 0 ) {
 	      printk(KERN_INFO "gps-pps-io: GPIO to IRQ mapping failed\n");
 	      return -1;
 	   }
@@ -483,9 +472,9 @@ void pps_cleanup(void)
 	if (pps_buffer)
 		free_page((unsigned long)pps_buffer);
 
-	gpio_free(GPIO_4);
-	gpio_free(GPIO_22);
-	gpio_free(GPIO_17);
+	gpio_free(PPS_GPIO);
+	gpio_free(INTRPT_GPIO);
+	gpio_free(OUTPUT_GPIO);
 
 	printk(KERN_INFO "gps-pps-io: removed\n");
 }
@@ -542,9 +531,6 @@ int pps_init(void)
 
 	j_delay = timespec_to_jiffies(&value);
 
-	pps_irq1 = irq1;
-	pps_irq2 = irq2;
-
 	result = register_chrdev(major, "gps-pps-io", &pps_i_fops);
 	if (result < 0) {
 		printk(KERN_INFO "gps-pps-io: can't get major number\n");
@@ -556,19 +542,19 @@ int pps_init(void)
 
 	pps_buffer = (int *)__get_free_pages(GFP_KERNEL,0);
 
-	if (configureInterruptOn(GPIO_4) == -1){
+	if (configureInterruptOn(PPS_GPIO) == -1){
 		printk(KERN_INFO "gps-pps-io: failed installation\n");
 		pps_cleanup();
 		return -1;
 	}
 
-	if (configureInterruptOn(GPIO_22) == -1){
+	if (configureWriteOn(OUTPUT_GPIO) == -1){
 		printk(KERN_INFO "gps-pps-io: failed installation\n");
 		pps_cleanup();
 		return -1;
 	}
 
-	if (configureWriteOn(GPIO_17) == -1){
+	if (configureInterruptOn(INTRPT_GPIO) == -1){
 		printk(KERN_INFO "gps-pps-io: failed installation\n");
 		pps_cleanup();
 		return -1;

@@ -48,7 +48,7 @@
  */
 extern int adjtimex (struct timex *timex);
 
-const char *version = "1.1.2";							//!< The program version number.
+const char *version = "1.2.0";							//!< The program version number.
 
 struct G g;												//!< Declares the global variables defined in pps-client.h.
 
@@ -935,7 +935,6 @@ void waitForPPS(bool verbose, int pps_fd){
 
 	rv = readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
 	if (rv == -1){
-
 		goto end1;
 	}
 
@@ -1005,9 +1004,68 @@ end:
 	freeSNTPThreads(&tcp);
 end1:
 	if (pbuf != NULL){
-		delete pbuf;
+		delete[] pbuf;
 	}
 	return;
+}
+
+/**
+ * Reads pps-client driver GPIO number assignments from
+ * "/etc/pps-client.conf" and stores them as temporary
+ * values in the global variables struct to be passed
+ * to the pps-client driver when it is loaded.
+ *
+ * These values are not persistent.
+ *
+ * @returns 0 on success else -1.
+ */
+int getDriverGPIOvals(void){
+	memset(&g, 0, sizeof(struct G));
+
+	char *configVals[32];
+	int value;
+	int rv = 0;
+
+	char *pbuf = new char[CONFIG_FILE_SZ];
+	if (pbuf == NULL){
+		sprintf(g.logbuf, "Error: getDriverGPIOvals(): Unable to allocate memory for config file.\n");
+		printf(g.logbuf);
+		writeToLog(g.logbuf);
+		return -1;
+	}
+
+	rv = readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
+	if (rv == -1){
+		goto err_end;
+	}
+
+	if (configHasValue(PPS_GPIO, configVals, &value)){
+		g.ppsGPIO = value;
+	}
+	else {
+		goto err_end;
+	}
+
+	if (configHasValue(OUTPUT_GPIO, configVals, &value)){
+		g.outputGPIO = value;
+	}
+	else {
+		goto err_end;
+	}
+
+	if (configHasValue(INTRPT_GPIO, configVals, &value)){
+		g.intrptGPIO = value;
+	}
+	else {
+		goto err_end;
+	}
+
+	delete[] pbuf;
+	return rv;
+
+err_end:
+	delete[] pbuf;
+	return -1;
 }
 
 /**
@@ -1079,7 +1137,14 @@ int main(int argc, char *argv[])
 		writeToLog(g.logbuf);
 	}
 
-	if (driver_load() == -1){
+	if(getDriverGPIOvals() == -1){
+		sprintf(g.logbuf, "Could not get GPIO vals for driver. Exiting.\n");
+		printf(g.logbuf);
+		writeToLog(g.logbuf);
+		goto end0;
+	}
+
+	if (driver_load(g.ppsGPIO, g.outputGPIO, g.intrptGPIO) == -1){
 		sprintf(g.logbuf, "Could not load pps-client driver. Exiting.\n");
 		printf(g.logbuf);
 		writeToLog(g.logbuf);
