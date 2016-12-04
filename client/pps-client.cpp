@@ -48,7 +48,7 @@
  */
 extern int adjtimex (struct timex *timex);
 
-const char *version = "1.2.0";							//!< The program version number.
+const char *version = "1.2.1";							//!< The program version number.
 
 struct G g;												//!< Declares the global variables defined in pps-client.h.
 

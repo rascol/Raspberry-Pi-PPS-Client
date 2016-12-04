@@ -409,8 +409,6 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 		return -1;
 	}
 
-	memset(fbuf, 0, size);
-
 	int rvs = stat(config_file, &f.configFileStat);
 	if (rvs == -1){
 		sprintf(g.logbuf, "readConfigFile(): Config file not found.\n");
@@ -420,7 +418,7 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 
 	timespec t = f.configFileStat.st_mtim;
 
-	if (g.seq_num > 0 && f.modifyTime == t.tv_sec){
+	if (g.configWasRead && g.seq_num > 0 && f.modifyTime == t.tv_sec){
 		return 0;									// Config file unchanged from last read
 	}
 
@@ -441,30 +439,35 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 	}
 
 	int rv = read_logerr(fd, fbuf, sz, config_file);
-	if (rv == -1){
+	if (rv == -1 || sz != rv){
 		return -1;
 	}
 	close(fd);
 
+	fbuf[sz] = '\0';
+
 	int nCfgStrs = 0;
 	int i;
 
-	char *pToken = strtok(fbuf, "\n");					// Separate tokens at "\n" and space
+	char *pToken = strtok(fbuf, "\n");					// Separate tokens at "\n".
 
 	while (pToken != NULL){
-		if (strlen(pToken) != 0){						// If not a blank line
-			for (int j = 0; j < 10; j++){				// Remove leading spaces
+		if (strlen(pToken) != 0){						// If not a blank line.
+			for (int j = 0; j < 10; j++){				// Skip leading spaces.
 				if (pToken[0] == ' '){
 					pToken += 1;
 				}
+				else {
+					break;								// Break on first non-space character.
+				}
 			}
 
-			if (pToken[0] != '#'){						// Ignore comment lines
+			if (pToken[0] != '#'){						// Ignore comment lines.
 				config_str[nCfgStrs] = pToken;
 				nCfgStrs += 1;
 			}
 		}
-		pToken = strtok(NULL, "\n");					// Get the next token
+		pToken = strtok(NULL, "\n");					// Get the next token.
 	}
 
 	if (nCfgStrs == 0){
@@ -492,7 +495,7 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 		if (found != NULL){
 			g.config_select |= 1 << i;					// Set a bit in config_select
 
-			value = strpbrk(found, "=");
+			value = strpbrk(found, "=");				// Get the value string following '='.
 			value += 1;
 
 			configVal[i] = value;						// Point to config_str[i] value string in fbuf
@@ -510,6 +513,10 @@ int readConfigFile(char *config_str[], char *fbuf, int size){
 				*value = 0;
 			}
 		}
+	}
+
+	if (g.seq_num > 0){
+		g.configWasRead = true;							// Insures that config file read at least once.
 	}
 
 	return 0;

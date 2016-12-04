@@ -142,6 +142,8 @@ struct G {
 
 	bool isVerbose;									//!< Enables continuous printing of state status params when "true".
 
+	bool configWasRead;								//!< True if pps-client.conf was read at least once.
+
 	unsigned int seq_num;							//!< Advancing count of the number of PPS interrupt timings that have been received.
 
 	bool isAcquiring;								//!< Set "true" by getAcquireState() when the control loop can begin to control the system clock frequency.
