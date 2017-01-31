@@ -13,11 +13,6 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 - [Installing](#installing)
 - [Uninstalling](#uninstalling)
 - [Reinstalling](#reinstalling)
-- [Building from Source](#building-from-source)
-  - [Locate the Kernel Source](#locate-the-kernel-source)
-    - [Latest Version Source](#latest-version-source)
-    - [Earlier Version Source](#earlier-version-source)
-  - [Building](#building)
 - [Running pps-client](#running-pps-client)
 - [Practical Limits to Time Measurement](#practical-limits-to-time-measurement)
   - [Flicker Noise](#flicker-noise)
@@ -79,56 +74,87 @@ NTP is provided out the box on Raspian. NTP sets the whole seconds of the initia
 
 ## The chkconfig system services manager 
  
-`$ sudo apt-get install chkconfig`
+`~ $ sudo apt-get install chkconfig`
 
 This is necessary if you want to install pps-client as a system service.
 
 # Installing
 ---
 
-The pps-client program has a built-in Linux kernel driver. It is a Linux requirement that kernel drivers must be compiled on the Linux version on which they are used. This means that there is a different version of PPS-Client for every version of Linux that has been released since Linux 4.0 ! Since there have been more than one hundred of these, it is impractical to provide a pre-compiled pps-client installer for every one.
+The pps-client program has a built-in Linux kernel driver. It is a Linux requirement that kernel drivers must be compiled on the Linux version on which they are used. This means that there is a different version of PPS-Client for every version of Linux that has been released since Linux 4.0. Because Linux versions roll over very frequently, it is impractical to provide a pre-compiled pps-client installer for every one. Consequently, the pps-client installer will be built from source. 
 
-So this is our compromise: A few pre-compiled installers are provided on the server for the most current stable versions of Linux. However, instructions for [installing from source](#building-from-source) for any version of Linux 4 are also provided below.
+This situation is far from ideal because it means that pps-client has to be reinstalled whenever the Linux kernel in the RPi is upgraded. If there is interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
-One possibility is to download and install a fresh copy of [Raspian](https://www.raspberrypi.org/downloads/raspbian/) and use the pps-client installer from our website to try out pps-client. Then later install pps-client from source for earlier an version of Linux.
+In principle the build can be done on a cross-compiler. However, bulding directly on the Rasperry Pi is less error prone. The kernel source is downloaded and compiled and then the pps-client installer is compiled using the kernel build system.
 
-After downloading and installing the fresh copy of **Raspian**, do,
-```
-$ sudo apt-get update
-...
-$ sudo apt-get upgrade
-...
-$ sudo reboot
-```
-These steps are all critical in order to correctly synchronize to the latest **stable** version of Linux (which is frequently behind the latest version listed at https://github.com/raspberrypi/linux).
+The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. The entire installation takes about 40 minutes on Raspberry Pi 3.
 
-After rebooting check the Linux version:
+Before compiling the kernel be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case the Linux kernel version was updated.
 ```
-$ uname -r
-$ 4.4.32-v7+
+~ $ sudo apt-get update
+~ $ sudo apt-get upgrade
+~ $ sudo reboot
 ```
-That Linux version must match the installer version that you use from our website. Now copy the installer and run it (if necessary, substituting the appropriate version number in `wget` command):
+In your home folder on your Raspberry Pi, you might want to first set up a build folder:
 ```
-$ wget "https://github.com/rascol/Raspberry-Pi-PPS-Client/raw/master/pps-client-4.4.32-v7%2B"
-$ chmod +x pps-client-4.4.32-v7+
-$ sudo ./pps-client-4.4.32-v7+
+~ $ mkdir rpi
+~ $ cd rpi
 ```
-That completes the installation.
+For retrieving the Linux source get the rpi-source script:
+```
+~/rpi $ sudo wget https://raw.githubusercontent.com/notro/rpi-source/master/rpi-source -O /usr/bin/rpi-source && sudo chmod +x /usr/bin/rpi-source && /usr/bin/rpi-source -q --tag-update
+```
 
-This is not an ideal installation solution because it means that pps-client has to be re-installed when the Linux kernel is upgraded. When that happens, this website will have a pps-client installer for that kernel. If there is interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
+Run the script to download the Linux source matching the installed version of Linux on your RPi:
+```
+~/rpi $ rpi-source -d ./ --nomake --delete
+```
+Get missing dependencies:
+```
+~/rpi $ sudo apt-get install bc
+```
+Configure the kernel:
+```
+~/rpi $ cd linux
+~/rpi/linux $ KERNEL=kernel7
+~/rpi/linux $ make bcm2709_defconfig
+```
+Now compile the kernel (takes about half an hour on Pi 2, 20 minutes on Pi 3):
+```
+~/rpi/linux $ make -j4 zImage
+```
+If there are no compile errors, the last message from the compiler will be,
+```
+Kernel: arch/arm/boot/zImage is ready
+```
+If all went well, you have the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:
+```
+~/rpi/linux $ cd ..
+~/rpi $ git clone --depth=1 https://github.com/rascol/Raspberry-Pi-PPS-Client
+~/rpi $ cd PPS-Client
+```
+Now make the pps-client installer. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type or copy the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
+```
+~/rpi/PPS-Client $ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
+```
+That will build the installer. Run it on the RPi as root:
+```
+~/rpi/PPS-Client $ sudo ./pps-client-`uname -r`
+```
+That completes the pps-client installation.
 
 # Uninstalling
 ---
 
 Uninstall pps-client on the RPi with:
 ```
-$ sudo pps-client-stop
-$ sudo pps-client-remove
+~ $ sudo pps-client-stop
+~ $ sudo pps-client-remove
 ```
 This removes everything **except** the configuration file which you might want to keep if it has been modified and you intend to reinstall pps-client. To remove everything do:
 
 ```
-$ sudo pps-client-remove -a
+~ $ sudo pps-client-remove -a
 ```
 
 # Reinstalling
@@ -136,115 +162,17 @@ $ sudo pps-client-remove -a
 
 To reinstall, first uninstall as [described above](#uninstalling) then install.
 
-# Building from Source
----
-The pps-client contains a Linux kernel driver. Consequently, as with all kernel drivers, building pps-client requires that a compiled Linux kernel with the same version as the version present on the RPi must also be available when pps-client is compiled. This is a two step process. First the appropriate Linux kernel source is downloaded and compiled. Then the pps-client project is compiled with access to the compiled kernel object files. 
-
-In principle that can be done on a cross-compiler. However building on the Raspberry Pi is better because if the source code of the released Linux kernel has problems, a fallback is available to the Pi that is not available to a cross-compiler: Once the Linux team has recognized that there were problems, `apt-get upgrade` will automatically revert the OS to a previous known good kernel that matches the downloaded source code (which the Linux team will also have reverted to the known good kernel).
-
-The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. This build installation takes about 40 minutes on Raspberry Pi 3.
-
-## Locate the Kernel Source
-
-Before attempting to compile the kernel be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case the Linux kernel version was  updated.
-```
-$ sudo apt-get update
-$ sudo apt-get upgrade
-$ sudo reboot
-```
-After reboot determine the Linux kernel version on the Raspberry Pi by running `uname -r` from a connected terminal. Then from a web browser go to https://github.com/raspberrypi/linux. Scroll down the page and examine the `Makefile` line. That line will contain the version number of the latest Linux version (for example `Linux 4.4.35`). For the moment, ignore the **third** number. If the **first two** numbers of the version are the same as the first two numbers of the kernel version running on your RPi, it is running the latest kernel (Linux 4.4). 
-
-In that case, use the procedure in section [Latest Version Source](#latest-version-source) to retrieve the kernel source that you need. Otherwise you will need to use the procedure given in the section [Earlier Version Source](#earlier-version-source) to retrieve the required kernel.
-
-### Latest Version Source
-
-Chances are, as indicated by the **third** number in the kernel version on your RPi, the RPi kernel is earlier than the latest Linux bugfix version. You can find the kernel source that you need by browsing to https://github.com/raspberrypi/linux/commits/rpi-4.4.y (assuming that `Linux 4.4` is the latest kernel). 
-
-That page lists all of the commits made for `Linux 4.4`. Scroll down the page (clicking the `Older` button at the bottom of the page as necessary) until you find the version commit line for the version that matches your installed RPi kernel (listed as `Linux 4.4.32` for example). Click on `Linux 4.4.32`. That will take you to the commit page. Now click on the `Browse files` button on the right in the title line. That will take you to the source page that you need in the build steps below.
-
-### Earlier Version Source
-
-From a browser go to, for example, https://github.com/raspberrypi/linux/commits/rpi-4.1.y (the **second** number must agree with your Linux kernel version). Scroll down the page (clicking the `Older` button at the bottom of the page as necessary) until you find the version commit line for the version that matches the installed kernel on your RPi (listed as `Linux 4.1.19` for example). Click on `Linux 4.1.19`. That will take you to the commit page. Now click on the `Browse files` button on the right in the title line. That will take you to the source page that you need in the build steps below.
-
-It is possible that you might not be able to locate the kernel version that you need. In this case you could update your RPi to the latest bugfix kernel (`Linux 4.1.21` in this example). Bugfix updates are intended to only make changes that will not break existing code. But, there are no guarantees. If you later run into a problem, the kernel you replaced has been saved on your RPi so you can always revert to it.
-
-To update your RPi kernel you will need to use the `rpi-update` utility. If necessary install it with `sudo apt-get install rpi-update`.
-
-Then update to the latest bugfix for your kernel version (in this example `Linux 4.1`) with
-```
-$ sudo BRANCH=rpi-4.1.y rpi-update
-```
-Now browse back to  https://github.com/raspberrypi/linux/commits/rpi-4.1.y and click on the Linux commit entry (`Linux 4.1.21` was the latest). That will take you to the latest commit page for `Linux 4.1`. Click on the `Browse files` button on the right in the title. That will take you to the source page you need in the build steps below.
-
-## Building
-
-You might want to create a folder to hold the kernel and pps-client project. For example,
-```
-$ mkdir ~/rpi
-$ cd ~/rpi
-```
-Assuming that you are on a workstation or Raspberry Pi that has an open terminal to the RPi and also have the [kernel sources page](#locate-the-kernel-source) open in a web browser, click on the green `Clone or download` button on the right side of the browser page. That will open an entry box. Hover over the `Download ZIP` box at the bottom of the entry box, right click on it and select `Copy link address`. Paste that address onto the command line of the RPi terminal. Surround it with quotes and prefix it with `wget` as in this example:
-```
-$ wget "https://github.com/raspberrypi/linux/archive/887b692a469f9a9a666654e607103f5204ac5eb7.zip"
-```
-Execute the command and wait a few minutes for the download to complete.
-
-Now unzip the download.
-```
-$ unzip -q 887b692a469f9a9a666654e607103f5204ac5eb7.zip
-```
-Wait a few more minutes for it to unzip then rename it to `linux`:
-```
-$ mv linux-887b692a469f9a9a666654e607103f5204ac5eb7 linux
-```
-Get missing dependencies:
-```
-$ sudo apt-get install bc
-```
-Configure the kernel:
-```
-$ cd ~/rpi/linux
-$ KERNEL=kernel7
-$ make bcm2709_defconfig
-```
-Now compile the kernel (takes about half an hour on Pi 2, 20 minutes on Pi 3):
-```
-$ make -j4 zImage
-```
-If there are no compile errors, the last message from the compiler will be,
-```
-$ Kernel: arch/arm/boot/zImage is ready
-```
-If there are errors and you need to recompile be sure to first clean the Linux folders with,
-```
-$ make mrproper
-```
-If all went well, you have the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:
-```
-$ cd ..
-$ git clone --depth=1 https://github.com/rascol/Raspberry-Pi-PPS-Client
-$ cd PPS-Client
-```
-Now make the pps-client project. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type or copy the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
-```
-$ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
-```
-That will build the installer. Run it on the RPi as root:
-```
-$ sudo ./pps-client-`uname -r`
-```
-That completes the pps-client installation.
 
 # Running pps-client
 ---
 
 The pps-client requires that a PPS hardware signal is available from a GPS module and all wired connections for the GPS module [are in place](#hardware-requirements). Once the GPS is connected and the PPS output is present on GPIO 4 you can do a quick try-out with,
 ```
-$ sudo pps-client
+~ $ sudo pps-client
 ```
 That installs pps-client as a daemon. To watch the controller acquire you can subsequently enter
 ```
-$ pps-client -v
+~ $ pps-client -v
 ```
 That runs a secondary copy of pps-client that just displays a status printout that the pps-client daemon continuously generates and saves to a memory file. When pps-client starts up you can expect to see something like the following in the status printout:
 
@@ -273,20 +201,20 @@ To stop the display type ctrl-c.
 
 The daemon will continue to run until you reboot the system or until you stop the daemon with
 ```
-$ sudo pps-client-stop
+~ $ sudo pps-client-stop
 ```
 
 To have the pps-client daemon be installed as a system service and loaded on system boot, from an RPi terminal enter:
 ```
-$ sudo chkconfig --add pps-client
+~ $ sudo chkconfig --add pps-client
 ```
 If you have installed pps-client as a system service you should start it with 
 ```
-$ sudo service pps-client start
+~ $ sudo service pps-client start
 ```
 and you should stop it with
 ```
-$ sudo service pps-client stop
+~ $ sudo service pps-client stop
 ```
 The "`pps-client -v`" command continues to work as described above.
 
