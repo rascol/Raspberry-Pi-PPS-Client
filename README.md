@@ -131,15 +131,15 @@ If all went well, you have the necessary kernel object files to build the pps-cl
 ```
 ~/rpi/linux $ cd ..
 ~/rpi $ git clone --depth=1 https://github.com/rascol/Raspberry-Pi-PPS-Client
-~/rpi $ cd PPS-Client
+~/rpi $ cd Raspberry-Pi-PPS-Client
 ```
 Now make the pps-client installer. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type or copy the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
 ```
-~/rpi/PPS-Client $ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
+~/rpi/Raspberry-Pi-PPS-Client $ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
 ```
 That will build the installer. Run it on the RPi as root:
 ```
-~/rpi/PPS-Client $ sudo ./pps-client-`uname -r`
+~/rpi/Raspberry-Pi-PPS-Client $ sudo ./pps-client-`uname -r`
 ```
 That completes the pps-client installation.
 
