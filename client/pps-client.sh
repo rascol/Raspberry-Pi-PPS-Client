@@ -15,7 +15,7 @@
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="synchronizes the local clock to a PPS device"
+DESC="local clock to PPS device synchronizer"
 NAME=pps-client
 DAEMON=/usr/sbin/$NAME
 DAEMON_ARGS="$2"
@@ -67,7 +67,6 @@ do_stop()
 	[ "$RETVAL" = 2 ] && return 2
 	# Wait for child to finish too.
 
-	#start-stop-daemon --stop --quiet --oknodo --retry=-17/1/KILL/5 --exec $DAEMON
     start-stop-daemon --stop --quiet --oknodo --retry=TERM/2/KILL/5 --exec $DAEMON
 	[ "$?" = 2 ] && return 2
 

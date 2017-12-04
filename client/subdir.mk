@@ -3,12 +3,12 @@
 OBJS += \
 ./pps-client.o \
 ./pps-files.o \
-./pps-sntp.o 
+./pps-sntp.o
 
 CPP_DEPS += \
 ./pps-client.d \
 ./pps-files.d \
-./pps-sntp.d 
+./pps-sntp.c
 
 # Each subdirectory must supply rules for building sources it contributes
 %.o: ./%.cpp

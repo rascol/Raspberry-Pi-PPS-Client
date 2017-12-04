@@ -1,19 +1,23 @@
-# Raspberry Pi PPS Client
+# PPS-Client for Raspberry Pi
 
 <p align="center"><img src="figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" width="400"/></p>
 
-The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi that synchronizes the Raspberry Pi system time clock to a GPS time clock. 
+The PPS-Client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi that synchronizes the Raspberry Pi system time clock to a GPS time clock. 
 
 - [Summary](#summary)
 - [Hardware Requirements](#hardware-requirements)
 - [Software Requirements](#software-requirements)
   - [The Raspian OS](#the-raspian-os)
   - [The NTP daemon](#the-ntp-daemon)
+    - [No NTP](#no-ntp)
   - [The chkconfig system services manager](#the-chkconfig-system-services-manager)
 - [Installing](#installing)
+  - [Get the Files](#get-the-files)
+  - [Compile the Kernel](#compile-the-kernel)
+  - [Build PPS-Client](#build-pps-client)
 - [Uninstalling](#uninstalling)
 - [Reinstalling](#reinstalling)
-- [Running pps-client](#running-pps-client)
+- [Running PPS-Client](#running-pps-client)
 - [Practical Limits to Time Measurement](#practical-limits-to-time-measurement)
   - [Flicker Noise](#flicker-noise)
   - [Linux OS Real-Time Latency](#linux-os-real-time-latency)
@@ -21,9 +25,9 @@ The pps-client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The pps-client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average timekeeping accuracy of 2 microseconds on the Raspberry Pi 3 (verified on 10 test units).
+The PPS-Client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average timekeeping accuracy of 2 microseconds on the Raspberry Pi 3 (verified on 10 test units).
 
-Figure 1 is a distribution of time adjustments made by the pps-client controller to the system clock. 
+Figure 1 is a distribution of time adjustments made by the PPS-Client controller to the system clock. 
 
 <p align="center"><img src="figures/offset-distrib.png" alt="Jitter and Corrections Distrib" width="608"/></p>
 
@@ -49,7 +53,7 @@ The peak of the distribution in Figure 4 is the average error for this test unit
 
 Figure 4 also shows that there are limits to accurate single-event time measurement set by clock oscillator jitter and the response time (latency) of the Linux kernel. This is discussed below in [Practical Limits to Time Measurement](#practical-limits-to-time-measurement).
 
-For a detailed description of the pps-client controller and accuracy testing run Doxygen in `/usr/share/doc/pps-client` on the RPi to generate the documentation or visit the [PPS-Client-Pages](https://rascol.github.io/Raspberry-Pi-PPS-Client) website.
+For a detailed description of the PPS-Client controller and accuracy testing run Doxygen in `/usr/share/doc/pps-client` on the RPi to generate the documentation or visit the [PPS-Client-Pages](https://rascol.github.io/Raspberry-Pi-PPS-Client) website.
 
 # Hardware Requirements
 ---
@@ -66,59 +70,115 @@ For a detailed description of the pps-client controller and accuracy testing run
 ---
 ## The Raspian OS
 
-Versions of Linux kernel 4.1 and later are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded. If there is enough interest in using alternative OS's, these install locations could be determined by the pps-client config file.
+Versions of Linux kernel 4.1 and later are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded. If there is enough interest in using other OS's, these install locations could be determined by the PPS-Client config file.
 
 ## The NTP daemon
 
-NTP is provided out the box on Raspian. NTP sets the whole seconds of the initial date and time and SNTP maintains the date and time through DST and leap second changes.
+At one time NTP was provided out of the box on Raspian. It no longer is because the NTP clock discipline code is now built into the kernel **and is active**. Even if you want to use an external program to set the time of day, NTP must be installed so that PPS-Client can access the NTP config file to disable it. If NTP is not already installed do
+```
+~ $ sudo apt-get install ntp
+~ $ sudo reboot
+```
+The reboot is necessary to insure that NTP is actively checking its config file.
+
+The PPS-Client default program for setting the whole second time of day is SNTP included in the NTP package. PPS-Client has been updated to use the SNTP version included in the latest NTP distribution (1:4.2.8p10+dfsg-3+deb9u1). By default SNTP maintains the date and time through DST and leap second changes and PPS-Client disciplines the system clock fractional second to the PPS. However, SNTP requires a file **/var/db/ntp-kod** that it no longer installs (see option -K in `man sntp`). If you are upgrading from an earlier version of NTP, see if the file already exists. If not, do something like this
+
+```
+~ $ sudo mkdir /var/db; sudo touch /var/db/ntp-kod; sudo chmod 666 /var/db/ntp-kod
+```
+
+### No NTP
+
+Alternatively, you can provide a different program to handle setting time-of-day updates (**but NTP must be installed** - see above) by disabling SNTP in **/etc/pps-client.conf**:
+```
+~ $ sudo nano /etc/pps-client.conf
+```
+Scroll down to the line,
+```
+#sntp=disable
+```
+and uncomment it. PPS-Client will no longer care about time-of-day or how it gets set. But PPS-Client will continue to synchronize the roll-over of the second to the PPS signal.
 
 ## The chkconfig system services manager 
  
-`~ $ sudo apt-get install chkconfig`
+```
+~ $ sudo apt-get install chkconfig
+```
 
-This is necessary if you want to install pps-client as a system service.
+This is necessary if you want to install PPS-Client as a system service.
 
 # Installing
 ---
 
-The pps-client program has a built-in Linux kernel driver. It is a Linux requirement that kernel drivers must be compiled on the Linux version on which they are used. This means that there is a different version of PPS-Client for every version of Linux that has been released since Linux 4.0. Because Linux versions roll over very frequently, it is impractical to provide a pre-compiled pps-client installer for every one. Consequently, the pps-client installer will be built from source. 
+The PPS-Client program has a built-in Linux kernel driver. It is a Linux requirement that kernel drivers must be compiled on the Linux version on which they are used. This means that there is a different version of PPS-Client for every version of Linux that has been released since Linux 4.0. Because Linux versions roll over very frequently, it is impractical to provide a pre-compiled PPS-Client installer for every one. Consequently, the PPS-Client installer is built from source. 
 
-This situation is far from ideal because it means that pps-client has to be reinstalled whenever the Linux kernel in the RPi is upgraded. If there is interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
+This situation is far from ideal because it means that PPS-Client has to be reinstalled whenever the Linux kernel in the RPi is upgraded. If there is interest in this project, the driver may be accepted into mainline in the upstream kernel and the versioning problem will go away.
 
-In principle the build can be done on a cross-compiler. However, bulding directly on the Rasperry Pi is less error prone. The kernel source is downloaded and compiled and then the pps-client installer is compiled using the kernel build system.
+In principle the build can be done on a cross-compiler. However, bulding directly on the Rasperry Pi is less error prone. The kernel source is downloaded and compiled and then the PPS-Client installer is compiled using the kernel build system.
 
 The steps below don't do a complete kernel installation. Only enough is done to get the object files that are necessary for compiling a kernel driver. The entire installation takes about 40 minutes on Raspberry Pi 3.
 
-Before compiling the kernel be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case the Linux kernel version was updated.
+## Get the Files
+
+Before compiling the kernel, be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case the Linux kernel version was updated.
 ```
 ~ $ sudo apt-get update
 ~ $ sudo apt-get upgrade
 ~ $ sudo reboot
 ```
+
 In your home folder on your Raspberry Pi, you might want to first set up a build folder:
 ```
 ~ $ mkdir rpi
 ~ $ cd rpi
 ```
+First get missing dependencies:
+```
+~/rpi $ sudo apt-get install bc
+```
 For retrieving the Linux source get the rpi-source script:
 ```
 ~/rpi $ sudo wget https://raw.githubusercontent.com/notro/rpi-source/master/rpi-source -O /usr/bin/rpi-source && sudo chmod +x /usr/bin/rpi-source && /usr/bin/rpi-source -q --tag-update
 ```
-
-Run the script to download the Linux source matching the installed version of Linux on your RPi:
+Run the script to download the Linux source that matches the installed version of Linux on your RPi:
 ```
 ~/rpi $ rpi-source -d ./ --nomake --delete
 ```
-Get missing dependencies:
+The script might complain about not getting the version of the compiler. If so, re-run it with the suggested flag. 
+
+You should now have the kernel source. But before you go further, **double check that the script down loaded the correct source version**. To determine your RPi kernel version use
 ```
-~/rpi $ sudo apt-get install bc
+~/rpi $ uname -r
 ```
-Configure the kernel:
+Then run
+```
+~/rpi $ nano linux/Makefile
+```
+
+You should see something like this at the top of the Makefile
+```
+VERSION = 4
+PATCHLEVEL = 9
+SUBLEVEL = 59
+EXTRAVERSION =
+NAME = Roaring Lionus
+ ...
+```
+The revision numbers must match the version of your Linux kernel exactly. If they do not, don't use this kernel source. Delete it and, as a fall back, retrieve the Linux kernel source for your RPi from https://github.com/raspberrypi/linux/releases. Sources are indexed by creation date. To determine the creation date of the Linux kernel on your RPi run
+```
+~ $ uname -a
+```
+Locate the source you need, download it and unzip it into a directory called "linux" on the RPi in the `~/rpi` directory.
+
+## Compile the Kernel
+
+On the RPi,
 ```
 ~/rpi $ cd linux
 ~/rpi/linux $ KERNEL=kernel7
 ~/rpi/linux $ make bcm2709_defconfig
 ```
+
 Now compile the kernel (takes about half an hour on Pi 2, 20 minutes on Pi 3):
 ```
 ~/rpi/linux $ make -j4 zImage
@@ -127,13 +187,17 @@ If there are no compile errors, the last message from the compiler will be,
 ```
 Kernel: arch/arm/boot/zImage is ready
 ```
-If all went well, you have the necessary kernel object files to build the pps-client driver. If you have not already downloaded the pps-client project, do it now:
+If all went well, you have the necessary kernel object files to build the PPS-Client driver. 
+
+## Build PPS-Client
+
+If you have not already downloaded the PPS-Client project, do it now:
 ```
 ~/rpi/linux $ cd ..
 ~/rpi $ git clone --depth=1 https://github.com/rascol/Raspberry-Pi-PPS-Client
 ~/rpi $ cd Raspberry-Pi-PPS-Client
 ```
-Now make the pps-client installer. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type or copy the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
+Now make the PPS-Client installer. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type or copy the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
 ```
 ~/rpi/Raspberry-Pi-PPS-Client $ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
 ```
@@ -141,32 +205,32 @@ That will build the installer. Run it on the RPi as root:
 ```
 ~/rpi/Raspberry-Pi-PPS-Client $ sudo ./pps-client-`uname -r`
 ```
-That completes the pps-client installation.
+That completes the PPS-Client installation.
 
 # Uninstalling
 ---
 
-Uninstall pps-client on the RPi with:
+Uninstall PPS-Client on the RPi with:
 ```
 ~ $ sudo pps-client-stop
 ~ $ sudo pps-client-remove
 ```
-This removes everything **except** the configuration file which you might want to keep if it has been modified and you intend to reinstall pps-client. To remove everything do:
-
+This removes everything **except** the configuration file which you might want to keep if it has been modified and you intend to reinstall PPS-Client. To remove everything do:
 ```
 ~ $ sudo pps-client-remove -a
 ```
-
 # Reinstalling
 ---
 
-To reinstall, first uninstall as [described above](#uninstalling) then install.
+To reinstall, first uninstall as [described above](#uninstalling) then install. If you are recompiling existing PPS-Client code first `make clean`. 
+
+Occasionally the contents of the `/etc/pps-client.conf` file will change. Check the online revison notes for config file changes. You can make these changes manually if you do not elect to remove your old config file.
 
 
-# Running pps-client
+# Running PPS-Client
 ---
 
-The pps-client requires that a PPS hardware signal is available from a GPS module and all wired connections for the GPS module [are in place](#hardware-requirements). Once the GPS is connected and the PPS output is present on GPIO 4 you can do a quick try-out with,
+PPS-Client requires that a PPS hardware signal is available from a GPS module and all wired connections for the GPS module [are in place](#hardware-requirements). Once the GPS is connected and the PPS output is present on GPIO 4 you can do a quick try-out with,
 ```
 ~ $ sudo pps-client
 ```
@@ -174,7 +238,7 @@ That installs pps-client as a daemon. To watch the controller acquire you can su
 ```
 ~ $ pps-client -v
 ```
-That runs a secondary copy of pps-client that just displays a status printout that the pps-client daemon continuously generates and saves to a memory file. When pps-client starts up you can expect to see something like the following in the status printout:
+That runs a secondary copy of PPS-Client that just displays a status printout that the PPS-Client daemon continuously generates and saves to a memory file. When PPS-Client starts up you can expect to see something like the following in the status printout:
 
 <p align="center"><img src="figures/StatusPrintoutOnStart.png" alt="Status Printout on Startup" width="634"/></p>
 
@@ -184,12 +248,12 @@ The `jitter` value is showing the fractional second offset of the PPS signal acc
 
 The `jitter` is displaying small numbers. The time of the rising edge of the PPS signal is shown in the second column. The `clamp` value on the far right indicates that the maximum time correction applied to the system clock is being limited to one microsecond. The system clock is synchronized to the PPS signal to a precision of one microsecond (but with an absolute accuracy limited by clock oscillator noise which could have as much as 1 microsecond of [RMS](https://en.wikipedia.org/wiki/Root_mean_square) jitter).
 
-It can take as long as 20 minutes for pps-client to fully acquire the first time it runs. This happens if the `jitter` shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount on a cold start. In this case pps-client may restart several times as it slowly reduces the `jitter` offset. That happens because system functions that pps-client calls internally prevent time changes of more than about 500 microseconds in each second.
+It can take as long as 20 minutes for PPS-Client to fully acquire the first time it runs. This happens if the `jitter` shown in the status printout is on the order of 100,000 microseconds or more. It's quite common for the NTP fractional second to be off by that amount on a cold start. In this case PPS-Client may restart several times as it slowly reduces the `jitter` offset. That happens because system functions that PPS-Client calls internally prevent time changes of more than about 500 microseconds in each second.
 
 These are the parameters shown in the status printout:
 
  * First two columns - date and time of the rising edge of the PPS signal.
- * Third column - the sequence count, i.e., the total number of PPS interrupts received since pps-client was started.
+ * Third column - the sequence count, i.e., the total number of PPS interrupts received since PPS-Client was started.
  * jitter - the time deviation in microseconds recorded at the reception of the PPS interrupt.
  * freqOffset - the frequency offset of the system clock in parts per million of the system clock frequency.
  * avgCorrection - the time corrections (in microseconds) averaged over the previous minute.
@@ -204,11 +268,11 @@ The daemon will continue to run until you reboot the system or until you stop th
 ~ $ sudo pps-client-stop
 ```
 
-To have the pps-client daemon be installed as a system service and loaded on system boot, from an RPi terminal enter:
+To have the PPS-Client daemon be installed as a system service and loaded on system boot, from an RPi terminal enter:
 ```
 ~ $ sudo chkconfig --add pps-client
 ```
-If you have installed pps-client as a system service you should start it with 
+If you have installed PPS-Client as a system service you should start it with 
 ```
 ~ $ sudo service pps-client start
 ```
@@ -221,7 +285,7 @@ The "`pps-client -v`" command continues to work as described above.
 # Practical Limits to Time Measurement
 ---
 
-While pps-client will synchronize the system clock to a GPS clock with an average accuracy of two microseconds, there are practical limits imposed by the hardware and the operating system that limit single-event timing accuracy. The hardware limit is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise), a kind of low frequency noise that is present in all crystal oscillators. The operating system limit is the real-time performance of the Linux OS.
+While PPS-Client will synchronize the system clock to a GPS clock with an average accuracy of two microseconds, there are practical limits imposed by the hardware and the operating system that limit single-event timing accuracy. The hardware limit is [flicker noise](https://en.wikipedia.org/wiki/Flicker_noise), a kind of low frequency noise that is present in all crystal oscillators. The operating system limit is the real-time performance of the Linux OS.
 
 ## Flicker Noise
 
@@ -239,5 +303,5 @@ The Linux OS was never designed to be a real-time operating system. Nevertheless
 
 Figure 5 is a typical accumulation of single-event timings for external interrupts at 800,000 microseconds after the PPS interrupt. The main peak is the result of reasonably constant system latency and clock oscillator flicker noise having a standard deviation of about 0.8 microsecond. The secondary peak at about 800,003 microseconds is one of many such features introduced by OS latency that can appear for hours or days or disappear altogether. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal also introduced by OS latency.
 
-Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click to a few microseconds (~1 μsec SD), the real-time performance of the Linux OS (as of v4.4.14-v7+) sets the timing accuracy of external events to about 20 microseconds (Pi 3) because of sporadic system interrupt latency.
+Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click to a few microseconds (~1 μsec SD), the real-time performance of the Linux OS (as of v4.4.14-v7+) sets the accuracy of timing external events to about 20 microseconds (Pi 3) because of sporadic system interrupt latency.
 

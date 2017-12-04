@@ -1,10 +1,10 @@
 /**
  * @file pps-client.cpp
- * @brief The pps-client.cpp file contains the principal pps-client controller functions and structures.
+ * @brief The pps-client.cpp file contains the principal PPS-Client controller functions and structures.
  *
- * The pps-client daemon synchronizes the system clock to a Pulse-Per-Second (PPS)
+ * The PPS-Client daemon synchronizes the system clock to a Pulse-Per-Second (PPS)
  * source to a resolution of one microsecond with an absolute accuracy
- * of a few microseconds. To obtain this level of performance pps-client
+ * of a few microseconds. To obtain this level of performance PPS-Client
  * provides offset corrections every second and frequency corrections every
  * minute. This and removal of jitter in the reported PPS time keeps the
  * system clock continuously synchronized to the PPS source.
@@ -13,7 +13,7 @@
  * is provided by the rising edge of that PPS source which is connected to
  * GPIO 4.
  *
- * The executeable for this daemon is "/usr/sbin/pps-client"
+ * The executable for this daemon is "/usr/sbin/pps-client"
  *
  * The daemon script is "/etc/init.d/pps-client"
  *
@@ -24,7 +24,7 @@
  *
  * Created on: Nov 17, 2015
  *
- * Copyright (C) 2016  Raymond S. Connell
+ * Copyright (C) 2016, 2017 Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@
  */
 extern int adjtimex (struct timex *timex);
 
-const char *version = "1.2.1";							//!< The program version number.
+const char *version = "1.3.0";							//!< Program version 1.3.0 created on 4 Dec 2017.
 
 struct G g;												//!< Declares the global variables defined in pps-client.h.
 
@@ -80,12 +80,10 @@ void initialize(bool verbose){
 	g.hardLimit = HARD_LIMIT_NONE;
 	g.exitOnLostPPS = true;
 	g.doCalibration = true;
+	g.doNTPsettime = true;
 
 	g.t3.modes = ADJ_FREQUENCY;			// Initialize system clock
 	g.t3.freq = 0;						// frequency offset to zero.
-	adjtimex(&g.t3);
-
-	setDelayTrackers();
 }
 
 /**
@@ -115,7 +113,7 @@ bool getAcquireState(void){
 		g.slewIsLow = true;									// that the controller can begin locking
 	}														// at limitValue == HARD_LIMIT_NONE
 
-	return (g.slewIsLow && g.seq_num >= SECS_PER_MINUTE);	// The g.seq_num reqirement sets a limit on the
+	return (g.slewIsLow && g.seq_num >= SECS_PER_MINUTE);		// The g.seq_num requirement sets a limit on the
 }															// length of time to run the Type 1 controller
 															// that initially pushes avgSlew below SLEW_MAX.
 
@@ -143,8 +141,8 @@ void setHardLimit(double avgCorrection){
 	}
 
 	if (abs(g.avgSlew) > SLEW_MAX){							// As long as average time slew is
-		int d_4 = abs(g.avgSlew) * 4;						// ouside of range SLEW_MAX this keeps
-		while (g.hardLimit < d_4							// g.hardLimit above 4 * g.avgSlew
+		int d_4 = abs(g.avgSlew) * 4;						// outside of range SLEW_MAX this keeps
+		while (g.hardLimit < d_4								// g.hardLimit above 4 * g.avgSlew
 				&& g.hardLimit < HARD_LIMIT_NONE){			// which is high enough to allow the
 			g.hardLimit = g.hardLimit << 1;					// controller to pull avgSlew within
 		}													// SLEW_MAX.
@@ -159,11 +157,11 @@ void setHardLimit(double avgCorrection){
 	else if (avgMedianMag < HARD_LIMIT_05){
 		g.hardLimit = HARD_LIMIT_1;
 	}
-	else if (avgMedianMag < (g.hardLimit >> 2)){	// If avgCorrection is below 1/4 of limitValue
-		g.hardLimit = g.hardLimit >> 1;				// then halve limitValue.
+	else if (avgMedianMag < (g.hardLimit >> 2)){				// If avgCorrection is below 1/4 of limitValue
+		g.hardLimit = g.hardLimit >> 1;						// then halve limitValue.
 	}
-	else if (avgMedianMag > (g.hardLimit >> 1)){	// If avgCorrection is above 1/2 of limitValue
-		g.hardLimit = g.hardLimit << 1;				// then double limitValue.
+	else if (avgMedianMag > (g.hardLimit >> 1)){				// If avgCorrection is above 1/2 of limitValue
+		g.hardLimit = g.hardLimit << 1;						// then double limitValue.
 
 		if (g.hardLimit > HARD_LIMIT_NONE){
 			g.hardLimit = HARD_LIMIT_NONE;
@@ -188,7 +186,7 @@ bool detectDelaySpike(int rawError){
 	if (g.hardLimit <= HARD_LIMIT_4 && rawError >= g.noiseLevel){
 
 		if (g.nDelaySpikes < MAX_SPIKES) {
-			g.nDelaySpikes += 1;					// Record unbroken sequence of delay spikes
+			g.nDelaySpikes += 1;						// Record unbroken sequence of delay spikes
 
 			isDelaySpike = true;
 		}
@@ -267,7 +265,7 @@ int clampJitter(int rawError){
  * These integrals are then averaged to G.avgIntegral
  * just before the minute rolls over. The use of this
  * average of the last 10 integrals to correct the
- * frequency offset of thesystem clock provides a modest
+ * frequency offset of the system clock provides a modest
  * improvement over using only the single last integral.
  *
  * @param[in] avgCorrection The average correction
@@ -296,7 +294,7 @@ void makeAverageIntegral(double avgCorrection){
 	if (g.correctionFifo_idx == SECS_PER_MINUTE - 1				// just before the minute rolls over.
 			&& g.integralCount == NUM_INTEGRALS){
 
-		g.avgIntegral *= PER_NUM_INTEGRALS;						// Normaloze g.avgIntegral.
+		g.avgIntegral *= PER_NUM_INTEGRALS;						// Normalize g.avgIntegral.
 	}
 }
 
@@ -338,7 +336,7 @@ bool integralIsReady(void){
  * timeCorrection which is forced to be zero by the controller
  * also corresponds to the time delay where the number of
  * positive and negative corrections are equal and thus this
- * time delay, although not directly measureable, is the
+ * time delay, although not directly measurable, is the
  * median of the time delays causing the corrections.
  *
  * @param[in] timeCorrection The time correction value
@@ -354,18 +352,18 @@ double getAverageCorrection(int timeCorrection){
 		buildErrorDistrib(timeCorrection);
 	}
 
-	g.correctionAccum += timeCorrection;			// Add the new timeCorrection into the error accumulator.
+	g.correctionAccum += timeCorrection;				// Add the new timeCorrection into the error accumulator.
 
-	if (g.correctionFifoCount == SECS_PER_MINUTE){	// Once the fifo is full, maintain the continuous
+	if (g.correctionFifoCount == SECS_PER_MINUTE){	// Once the FIFO is full, maintain the continuous
 													// rolling sum accumulator by subtracting the
 		int oldError = g.correctionFifo[g.correctionFifo_idx];
 		g.correctionAccum -= oldError;				// old timeCorrection value at the current correctionFifo_idx.
 	}
 
-	g.correctionFifo[g.correctionFifo_idx] = timeCorrection;	// and replacing the old value in the fifo with the new.
+	g.correctionFifo[g.correctionFifo_idx] = timeCorrection;	// and replacing the old value in the FIFO with the new.
 
 	if (g.correctionFifoCount < SECS_PER_MINUTE){	// When correctionFifoCount == SECS_PER_MINUTE
-		g.correctionFifoCount += 1;					// the fifo is full and ready to use.
+		g.correctionFifoCount += 1;					// the FIFO is full and ready to use.
 	}
 
 	avgCorrection = g.correctionAccum * PER_MINUTE;
@@ -375,12 +373,12 @@ double getAverageCorrection(int timeCorrection){
 /**
  * Sets the system time whenever there is an error
  * relative to the whole seconds obtained from
- * internet SNTP servers by writing the whole
+ * Internet SNTP servers by writing the whole
  * second correction to the PPS kernel driver.
  *
  * Errors are infrequent: DST change twice a year or
  * leap seconds less frequently. The whole seconds
- * of system clock are set immedately to the correct
+ * of system clock are set immediately to the correct
  * time though the gps-pps-io device driver.
  *
  * @param[in] pps_fd The gps-pps-io device driver file
@@ -388,20 +386,48 @@ double getAverageCorrection(int timeCorrection){
  */
 void setClockToNTPtime(int pps_fd){
 
-	sprintf(g.logbuf, "seq_num: %d consensisTimeError: %d\n", g.seq_num, g.consensisTimeError);
+	sprintf(g.logbuf, "seq_num: %d consensusTimeError: %d\n", g.seq_num, g.consensusTimeError);
 	writeToLog(g.logbuf);
 
 	int msg[2];
 	msg[0] = 3;
-	msg[1] = g.consensisTimeError;
+	msg[1] = g.consensusTimeError;
 	write(pps_fd, msg, 2 * sizeof(int));
 
-	g.consensisTimeError = 0;
+	g.consensusTimeError = 0;
+}
+
+/**
+ * Corrects the system time whenever the system clock is
+ * set externally.
+ *
+ * The external device that sets the clock may inject a
+ * non-zero fractional second along with the whole seconds.
+ * This is removed by effectively inverting the sign of any
+ * detected fractional second and immediately applying it
+ * as a clock correction.
+ *
+ * @param[in] correction The fractional correction value in
+ * microseconds.
+ *
+ * @param[in] pps_fd The gps-pps-io device driver file
+ * descriptor.
+ */
+void setClockFractionalSecond(int correction, int pps_fd){
+
+	sprintf(g.logbuf, "seq_num: %d Made fractional second correction: %d\n", g.seq_num, correction);
+	writeToLog(g.logbuf);
+
+	int msg[2];
+	msg[0] = 2;
+	msg[1] = correction;						// Make a correction equal and opposite to the fractional
+											// second that was set externally in order to cancel it.
+	write(pps_fd, msg, 2 * sizeof(int));
 }
 
 /**
  * Constructs an exponentially decaying distribution
- * of rawError with a halflife on indivdual samples
+ * of rawError with a half life on individual samples
  * of 1 hour.
  *
  * @param[in] rawError The distribution values.
@@ -455,7 +481,7 @@ int removeNoise(int rawError){
 		buildJitterDistrib(rawError);
 	}
 
-	g.isDelaySpike = detectDelaySpike(rawError);	// g.isDelaySpike == true will prevent time and
+	g.isDelaySpike = detectDelaySpike(rawError);		// g.isDelaySpike == true will prevent time and
 													// frequency updates during a delay spike.
 	if (g.isDelaySpike){
 		return 0;
@@ -466,7 +492,7 @@ int removeNoise(int rawError){
 	setHardLimit(g.avgCorrection);
 	zeroError = clampJitter(rawError);				// Recover the time error by
 													// limiting away the jitter.
-	if (g.isAcquiring){
+	if (g.isControlling){
 		g.invProportionalGain = INV_GAIN_1;
 	}
 	return zeroError;
@@ -507,7 +533,7 @@ double getIntegral(void){
  * rising edge returned by the system.
  *
  * @param[in] timeCorrection The correction to
- * be applied to get the backdated time of the
+ * be applied to get the back dated time of the
  * PPS rising edge.
  */
 void getPPStime(timeval t, int timeCorrection){
@@ -557,35 +583,60 @@ int getFractionalSeconds(timeval pps_t){
  * file descriptor.
  */
 void makeTimeCorrection(timeval pps_t, int pps_fd){
+	if (g.seq_num == 0){
+		g.tm_secs = pps_t.tv_sec - 1;
+	}
 	g.interruptReceived = true;
 
-	if (g.consensisTimeError != 0){						// When an NTP time correction is needed
+	if (g.doNTPsettime && g.consensusTimeError != 0){		// When an NTP time correction is needed
 		setClockToNTPtime(pps_fd);						// apply it here.
+	}
+
+	bool detected_setClock = false;
+
+	if (g.isControlling && g.seq_num > SECS_PER_10_MIN) {
+		if (pps_t.tv_usec > 500000){						// Fractional second is large so PPS caught the second just before it
+			if (pps_t.tv_sec != g.tm_secs){				// rolled over so these should be equal unless clock was set externally.
+				detected_setClock = true;				// The clock was set externally.
+				g.tm_secs = pps_t.tv_sec;				// Update the seconds counter.
+			}
+		}
+		else {											// Fractional second is small so PPS caught the second just after it
+			if (pps_t.tv_sec != g.tm_secs + 1){			// rolled over so pps_t.tv_sec should be one second ahead of g.tm_secs.
+				detected_setClock = true;     			// Else the clock was set externally.
+				g.tm_secs = pps_t.tv_sec - 1;			// Update the seconds counter.
+			}
+		}
+	}
+
+	if (detected_setClock){								// If the time was changed by an external clock setting,
+		int correction = -getFractionalSeconds(pps_t);	// this should exactly cancel the change that may have
+		setClockFractionalSecond(correction, pps_fd);	// been made to the fractional second.
+		pps_t.tv_usec = g.sysDelay;						// Temporarily zero the time correction.
 	}
 
 	g.seq_num += 1;
 
 	g.interruptTime = getFractionalSeconds(pps_t);
-
 	g.rawError = g.interruptTime - g.sysDelay;			// References the controller to g.sysDelay which sets the time
 														// of the PPS rising edge to zero at the start of each second.
 	g.zeroError = removeNoise(g.rawError);
 
-	if (g.isDelaySpike){								// Skip a delay spike.
+	if (g.isDelaySpike){									// Skip a delay spike.
 		getPPStime(pps_t, 0);
 		return;
 	}
 
 	g.timeCorrection = -g.zeroError
-			/ g.invProportionalGain;					// Apply controller proportional gain factor.
+			/ g.invProportionalGain;						// Apply controller proportional gain factor.
 
 	g.t3.modes = ADJ_OFFSET_SINGLESHOT;					// Adjust the time slew. adjtimex() limits the maximum
 	g.t3.offset = g.timeCorrection;						// correction to about 500 microseconds each second so
+														// it can take up to 20 minutes to start pps-client.
+	adjtimex(&g.t3);
 
-	adjtimex(&g.t3);									// it can take up to 20 minutes to start pps-client.
-
-	g.isAcquiring = getAcquireState();					// Provides enough time to reduce time slew on startup.
-	if (g.isAcquiring){
+	g.isControlling = getAcquireState();					// Provides enough time to reduce time slew on startup.
+	if (g.isControlling){
 
 		g.avgCorrection = getAverageCorrection(g.timeCorrection);
 
@@ -597,7 +648,7 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 
 			g.t3.modes = ADJ_FREQUENCY;
 			g.t3.freq = (long)round(ADJTIMEX_SCALE * g.freqOffset);
-			adjtimex(&g.t3);							// Adjust the system clock frequency.
+			adjtimex(&g.t3);								// Adjust the system clock frequency.
 		}
 
 		recordOffsets(g.timeCorrection);
@@ -605,6 +656,9 @@ void makeTimeCorrection(timeval pps_t, int pps_fd){
 		g.activeCount += 1;
 		writeSysDelay();
 	}
+	else {
+		g.tm_secs = pps_t.tv_sec - 1;					// Unless g.isControlling let g.tm_secs copy pps_t.tv_sec.
+	}													// While g.isControlling g.tm_secs is an independent counter.
 
 	getPPStime(pps_t, g.timeCorrection);
 	return;
@@ -765,13 +819,13 @@ struct timespec setSyncDelay(int timeAt, int fracSec){
  * of that interrupt by the system.
  *
  * Both the write time and the recognition time are
- * read from the pps-client kernel driver approximately
+ * read from the PPS-Client kernel driver approximately
  * each second. The time interval is then calculated
  * along with its median value. The median value,
  * generated with one-minute weighting, is the approximate
  * interrupt delay and is assigned to G.sysDelay.
  *
- * @param[in] pps_fd The pps-client device driver file
+ * @param[in] pps_fd The PPS-Client device driver file
  * descriptor.
  */
 void getInterruptDelay(int pps_fd){
@@ -835,7 +889,7 @@ void getInterruptDelay(int pps_fd){
  * more than about 500 microseconds each second. As a result,
  * pps-client will make a partial correction each minute and
  * will restart several times before the slew is small enough
- * that getAcquireState() will set G.isAcquiring to "true".
+ * that getAcquireState() will set G.isControlling to "true".
  * This looping will eventually converge  but can take as
  * long as 20 minutes.
  *
@@ -866,23 +920,28 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 		g.interruptLost = true;
 	}
 	else {
-		g.t.tv_sec = g.tm[0];
-		g.t.tv_usec = g.tm[1];
+		g.t.tv_sec = g.tm[0];					// Seconds value read by gps-pps-io driver from system clock
+												// at rising edge of PPS signal.
+		g.t.tv_usec = g.tm[1];					// Fractional seconds read from clock at rising edge of PPS signal.
 
 		makeTimeCorrection(g.t, pps_fd);
 
-		if ((! g.isAcquiring && g.seq_num >= SECS_PER_MINUTE)		// If time slew on startup is too large
-				|| (g.isAcquiring && g.hardLimit > HARD_LIMIT_1024	// or if g.avgSlew becomes too large
+		if ((! g.isControlling && g.seq_num >= SECS_PER_MINUTE)		// If time slew on startup is too large
+				|| (g.isControlling && g.hardLimit > HARD_LIMIT_1024	// or if g.avgSlew becomes too large
 				&& abs(g.avgSlew) > SLEW_MAX)){						// after acquiring
 
 			sprintf(g.logbuf, "pps-client is restarting...\n");
 			writeToLog(g.logbuf);
 
-			initialize(verbose);									// then restart the controller.
+			initialize(verbose);					// then restart the controller.
+			adjtimex(&g.t3);
+			setDelayTrackers();
 
 			restart = true;
 		}
 	}
+
+	g.tm_secs += 1;								// Advances by one on each pass to track the clock seconds.
 
 	return restart;
 }
@@ -922,37 +981,30 @@ bool readPPS_SetTime(bool verbose, int pps_fd){
 void waitForPPS(bool verbose, int pps_fd){
 	struct timeval tv1;
 	struct timespec ts2;
-
-	char *configVals[MAX_CONFIGS];
 	int timePPS;
 	int rv;
-	char *pbuf = NULL;
 	timeCheckParams tcp;
 	int restart = 0;
 
-	pbuf = new char[CONFIG_FILE_SZ];
-	initialize(verbose);
+	adjtimex(&g.t3);
+	setDelayTrackers();
 
-	rv = readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
-	if (rv == -1){
-		goto end1;
-	}
-
-	rv = allocInitializeSNTPThreads(&tcp);
-	if (rv == -1){
-		goto end;
+	if (g.doNTPsettime){
+		rv = allocInitializeSNTPThreads(&tcp);
+		if (rv == -1){
+			goto end;
+		}
 	}
 
 	signal(SIGHUP, HUPhandler);			// Handler used to ignore SIGHUP.
 	signal(SIGTERM, TERMhandler);		// Handler for the termination signal.
 
-	sprintf(g.logbuf, "pps-client v%s is starting ...\n", version);
+	sprintf(g.logbuf, "PPS-Client v%s is starting ...\n", version);
 	writeToLog(g.logbuf);
 										// Set up a one-second delay loop that stays in synch by
-	timePPS = -150;		    			// continuously re-timing to before the roll-over of the second.
+	timePPS = -150;		    				// continuously re-timing to before the roll-over of the second.
 										// This allows for a delay of about 50 microseconds coming out
 										// of sleep plus interrupt latencies up to 100 microseconds.
-
 	gettimeofday(&tv1, NULL);
 	ts2 = setSyncDelay(timePPS, tv1.tv_usec);
 
@@ -960,7 +1012,7 @@ void waitForPPS(bool verbose, int pps_fd){
 
 	for (;;){							// Delay loop
 		if (g.exit_requested){
-			sprintf(g.logbuf, "pps-client stopped.\n");
+			sprintf(g.logbuf, "PPS-Client stopped.\n");
 			writeToLog(g.logbuf);
 			break;
 		}
@@ -970,7 +1022,7 @@ void waitForPPS(bool verbose, int pps_fd){
 		restart = readPPS_SetTime(verbose, pps_fd);
 
 		if (restart == true) {
-			readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
+			readConfigFile();
 		}
 		else{
 			if (checkPPSInterrupt(pps_fd) != 0){
@@ -988,10 +1040,12 @@ void waitForPPS(bool verbose, int pps_fd){
 					getInterruptDelay(pps_fd);
 				}
 
-				processFiles(configVals, pbuf, CONFIG_FILE_SZ);
+				processFiles();
 			}
 
-			makeSNTPTimeQuery(&tcp);
+			if (g.doNTPsettime){
+				makeSNTPTimeQuery(&tcp);
+			}
 
 			writeStatusStrings();
 		}
@@ -1001,71 +1055,10 @@ void waitForPPS(bool verbose, int pps_fd){
 		ts2 = setSyncDelay(timePPS, tv1.tv_usec);
 	}
 end:
-	freeSNTPThreads(&tcp);
-end1:
-	if (pbuf != NULL){
-		delete[] pbuf;
+	if (g.doNTPsettime){
+		freeSNTPThreads(&tcp);
 	}
 	return;
-}
-
-/**
- * Reads pps-client driver GPIO number assignments from
- * "/etc/pps-client.conf" and stores them as temporary
- * values in the global variables struct to be passed
- * to the pps-client driver when it is loaded.
- *
- * These values are not persistent.
- *
- * @returns 0 on success else -1.
- */
-int getDriverGPIOvals(void){
-	memset(&g, 0, sizeof(struct G));
-
-	char *configVals[32];
-	int value;
-	int rv = 0;
-
-	char *pbuf = new char[CONFIG_FILE_SZ];
-	if (pbuf == NULL){
-		sprintf(g.logbuf, "Error: getDriverGPIOvals(): Unable to allocate memory for config file.\n");
-		printf(g.logbuf);
-		writeToLog(g.logbuf);
-		return -1;
-	}
-
-	rv = readConfigFile(configVals, pbuf, CONFIG_FILE_SZ);
-	if (rv == -1){
-		goto err_end;
-	}
-
-	if (configHasValue(PPS_GPIO, configVals, &value)){
-		g.ppsGPIO = value;
-	}
-	else {
-		goto err_end;
-	}
-
-	if (configHasValue(OUTPUT_GPIO, configVals, &value)){
-		g.outputGPIO = value;
-	}
-	else {
-		goto err_end;
-	}
-
-	if (configHasValue(INTRPT_GPIO, configVals, &value)){
-		g.intrptGPIO = value;
-	}
-	else {
-		goto err_end;
-	}
-
-	delete[] pbuf;
-	return rv;
-
-err_end:
-	delete[] pbuf;
-	return -1;
 }
 
 /**
@@ -1100,42 +1093,46 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	int prStat = accessDaemon(argc, argv);			// Send commands to the daemon.
-	if (prStat == 0 || prStat == -2){				// Program is running or an error occurred.
+	int prStat = accessDaemon(argc, argv);				// Send commands to the daemon.
+	if (prStat == 0 || prStat == -2){					// Program is running or an error occurred.
 		return rv;
 	}
 
-	if (geteuid() != 0){							// Superuser only!
+	if (geteuid() != 0){									// Superuser only!
 		printf("pps-client is not running. \"sudo pps-client\" to start.\n");
 		return rv;
 	}
 
-	pid_t pid = fork();								// Fork a duplicate child of this process.
+	pid_t pid = fork();									// Fork a duplicate child of this process.
 
-	if (pid > 0){									// This is the parent process.
+	if (pid > 0){										// This is the parent process.
 		bufferStatusMsg("Spawning pps-client daemon.\n");
-		return rv;									// Return from the parent process and leave
-	}												// the child running.
+		return rv;										// Return from the parent process and leave
+	}													// the child running.
 
-	if (pid == -1){									// Error: unable to fork a child from parent,
+	if (pid == -1){										// Error: unable to fork a child from parent,
 		sprintf(g.logbuf, "Fork in main() failed: %s\n", strerror(errno));
 		writeToLog(g.logbuf);
 		return pid;
 	}
-						// pid == 0 for the child process which now will run this code as a daemon.
+						// pid == 0 for the child process which now will run this code as a daemon
 
-	struct sched_param param;						// Process must be run as root
-
+	struct sched_param param;							// Process must be run as root
 	mlockall(MCL_CURRENT | MCL_FUTURE);
 
-	param.sched_priority = 99;						// to get real-time priority.
-	sched_setscheduler(0, SCHED_FIFO, &param);		// SCHED_FIFO: Don't yield to scheduler until sleep.
-
-	if (waitForNTPServers() <= 0){					// Try to get accessible NTP servers
-		sprintf(g.logbuf, "Warning: Starting pps-client without NTP.\n");
-		printf(g.logbuf);
-		writeToLog(g.logbuf);
+	initialize(verbose);
+	rv = processFiles();
+	if (rv == -1){
+		goto end0;
 	}
+
+	rv = disableNTP();									// Always disable NTP, to prevent it from disciolining the clock.
+	if (g.doNTPsettime && rv != 0){						// But disableNTP() warns if it fails.
+		goto end0;
+	}
+
+	param.sched_priority = 99;							// to get real-time priority.
+	sched_setscheduler(0, SCHED_FIFO, &param);			// SCHED_FIFO: Don't yield to scheduler until sleep.
 
 	if(getDriverGPIOvals() == -1){
 		sprintf(g.logbuf, "Could not get GPIO vals for driver. Exiting.\n");
@@ -1145,48 +1142,44 @@ int main(int argc, char *argv[])
 	}
 
 	if (driver_load(g.ppsGPIO, g.outputGPIO, g.intrptGPIO) == -1){
-		sprintf(g.logbuf, "Could not load pps-client driver. Exiting.\n");
+		sprintf(g.logbuf, "Could not load PPS-Client driver. Exiting.\n");
 		printf(g.logbuf);
 		writeToLog(g.logbuf);
 		rv = -1;
 		goto end0;
 	}
 
-	rv = disableNTP();
-	if (rv != 0){
-		writeToLog(g.logbuf);
+	ppid = createPIDfile();								// Create the PID file for this process.
+	if (ppid == -1){										// Either already running or could not
+		rv = -1;											// create a pid file. In either case, exit.
 		goto end1;
 	}
 
-	ppid = createPIDfile();							// Create the PID file for this process.
-	if (ppid == -1){								// Either already running or could not
-		rv = -1;									// create a pid file. In either case, exit.
-		goto end1;
-	}
-
-	pps_fd = open_logerr("/dev/gps-pps-io", O_RDWR);// Open the gps-pps-io device driver.
+	pps_fd = open_logerr("/dev/gps-pps-io", O_RDWR);		// Open the gps-pps-io device driver.
 	if (pps_fd == -1){
 		rv = -1;
 		goto end2;
 	}
 
-	sprintf(g.msgbuf, "Process PID: %d\n", ppid);	// PPS client is starting.
+	sprintf(g.msgbuf, "Process PID: %d\n", ppid);		// PPS client is starting.
 	bufferStatusMsg(g.msgbuf);
 
-	waitForPPS(verbose, pps_fd);					// Synchronize to the PPS.
+	waitForPPS(verbose, pps_fd);							// Synchronize to the PPS.
 
-	close(pps_fd);									// Close the interrupt device driver.
+	close(pps_fd);										// Close the interrupt device driver.
 
-	sprintf(g.logbuf, "pps-client exiting.\n");
+	sprintf(g.logbuf, "PPS-Client closed driver\n");
 	writeToLog(g.logbuf);
 
 end2:
-	system("rm /var/run/pps-client.pid");			// Remove PID file with system() which blocks until
-end1:												// rm completes keeping shutdown correcty sequenced.
-	enableNTP();
+	system("rm /var/run/pps-client.pid");				// Remove PID file with system() which blocks until
+end1:													// rm completes keeping shutdown correctly sequenced.
+	enableNTP();											// Always re-enable NTP on shutdown.
 
-	sleep(5);										// Wait for the driver to close.
-	driver_unload();								// Driver is unloaded last to avoid system inability
+	driver_unload();										// Driver will not be unloaded until a timeout occurs to
+														// prevent driver from being unloaded before being closed
+	sprintf(g.logbuf, "PPS-Client unloaded driver.\n");	// by OS.
+	writeToLog(g.logbuf);
 end0:
 	return rv;
 }
