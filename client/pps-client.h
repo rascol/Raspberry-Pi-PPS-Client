@@ -2,7 +2,7 @@
  * @file pps-client.h
  * @brief The pps-client.h file contains includes, defines and structures for PPS-Client.
  *
- * Copyright (C) 2016  Raymond S. Connell
+ * Copyright (C) 2016-2018  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,8 +72,11 @@
 
 #define INTERRUPT_LOST 15				//!< Number of consecutive lost interrupts at which a warning starts
 
-#define MAX_SERVERS 10					//!< Maximum number of SNTP time servers to use
+#define MAX_SERVERS 4					//!< Maximum number of SNTP time servers to use
 #define CHECK_TIME 1024					//!< Interval between Internet time checks (about 17 minutes)
+#define BLOCK_FOR_10 10					//!< Blocks detection of external system clock changes for 10 seconds
+#define BLOCK_FOR_3 3					//!< Blocks detection of external system clock changes for 3 seconds
+#define CHECK_TIME_SERIAL 600			//!< Interval between serial port time checks (about 10 minutes)
 
 #define MAX_SPIKES 30					//!< Maximum microseconds to suppress a burst of positive jitter
 
@@ -105,7 +108,7 @@
 
 #define MAX_CONFIGS 32
 
-#define ERROR_DISTRIB 1
+#define ERROR_DISTRIB 1				// Configuration Keys
 #define ALERT_PPS_LOST 2
 #define JITTER_DISTRIB 4
 #define CALIBRATE 8
@@ -115,23 +118,28 @@
 #define PPS_GPIO 128
 #define OUTPUT_GPIO 256
 #define INTRPT_GPIO 512
-#define NTP 1024
+#define SNTP 1024
+#define SERIAL 2048
+#define SERIAL_PORT 4096
 
 /*
  * Struct for passing arguments to and from threads
- * querying SNTP servers.
+ * querying time servers.
  */
 struct timeCheckParams {
 	pthread_t *tid;				//!< Thread id
 	pthread_attr_t attr;			//!< Thread attribute object
 	int serverIndex;				//!< Identifying index from the list of active SNTP servers
 	int *serverTimeDiff;			//!< Time difference between local time and server time
-	char **ntp_server;			//!< The active SNTP server list
+	char **ntp_server;			//!< The active SNTP server list when SNTP is used
+	char *serialPort;			//!< The serial port filename when serial time is used
 	char *buf;					//!< Space for the active SNTP server list
+	bool doReadSerial;
 	char *strbuf;				//!< Space for messages and query strings
 	char *logbuf;				//!< Space for returned log messages
-	bool *threadIsBusy;			//!< True while thread is waiting for or processing a server query
-};								//!< Struct for passing arguments to and from threads querying SNTP servers.
+	bool *threadIsBusy;			//!< True while thread is waiting for or processing a time query
+	int rv;						//!< Return value
+};								//!< Struct for passing arguments to and from threads querying time servers.
 
 /*
  * Struct for program-wide global variables.
@@ -158,7 +166,12 @@ struct G {
 	int interruptTime;								//!< Fractional second part of G.t received from PPS-Client device driver.
 
 	int tm[6];										//!< Returns the interrupt calibration reception and response times from the PPS-Client device driver.
-	int tm_secs;										//!< Whole seconds counted at rising edge of PPS signal.
+
+	int t_now;										//!< Whole seconds of current time reported by gettimeofday().
+	int t_count;										//!< Whole seconds counted at the time of t_now.
+	double t_mono_now;
+	double t_mono_last;
+	double zeroAccum;
 
 	int intrptDelay;									//!< Value of the interrupt delay calibration measurement received from the PPS-Client device driver.
 	int intrptError;									//!< Set equal to "intrptDelay - sysDelay" in getInterruptDelay().
@@ -232,6 +245,11 @@ struct G {
 	bool doCalibration;
 	bool doNTPsettime;
 
+	bool doSerialsettime;
+	int blockDetectClockChange;
+
+	int serialTimeError;
+
 	int recIndex;
 	int recIndex2;
 
@@ -275,6 +293,7 @@ struct G {
 	double freqOffsetRec2[SECS_PER_10_MIN];
 	__time_t timestampRec[NUM_5_MIN_INTERVALS];
 	int offsetRec[SECS_PER_10_MIN];
+	char serialPort[50];
 	char configBuf[CONFIG_FILE_SZ];
 	/**
 	 * @endcond
@@ -292,20 +311,27 @@ void freeSNTPThreads(timeCheckParams *);
 void makeSNTPTimeQuery(timeCheckParams *);
 int waitForNTPServers(void);
 
+int allocInitializeSerialThread(timeCheckParams *tcp);
+void freeSerialThread(timeCheckParams *tcp);
+int makeSerialTimeQuery(timeCheckParams *tcp);
+
 /**
  * Struct to hold associated data for PPS-Client command line
  * save data requests with the -s flag.
  */
 struct saveFileData {
 	const char *label;			//!< Command line identifier
-	void *array;				//!< Array to hold data to be saved
+	void *array;					//!< Array to hold data to be saved
 	const char *filename;		//!< Filename to save data
 	int arrayLen;				//!< Length of the array in array units
 	int arrayType;				//!< Array type: 1 - int, 2 - double
 	int arrayZero;				//!< Array index of data zero.
 };
 
-void bufferStatusMsg(const char *params);
+int sysCommand(const char *);
+void initFileLocalData(void);
+void initSerialLocalData(void);
+void bufferStatusMsg(const char *);
 int writeStatusStrings(void);
 bool ppsIsRunning(void);
 int writeFileMsgToLog(const char *);
@@ -344,6 +370,7 @@ void recordOffsets(int timeCorrection);
 bool configHasValue(int, char *[], void *);
 int getDriverGPIOvals(void);
 void writeToLogNoTimestamp(char *);
+int getTimeErrorOverSerial(int *);
 /**
  * @endcond
  */

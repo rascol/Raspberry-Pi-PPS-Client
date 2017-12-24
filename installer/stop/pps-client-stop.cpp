@@ -24,22 +24,27 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <errno.h>
 
-const char *version = "pps-client-stop v1.0.0";
+const char *version = "pps-client-stop v1.0.1";
 
 /**
- * Looks for "pps_client" in the list printed
+ * Looks for "gps_pps_io" in the list printed
  * by the lsmod system command.
  *
- * @returns "true" if "pps_client" is in the
+ * @returns "true" if "gps_pps_io" is in the
  * lsmod list, else "false"
  */
 bool driverIsLoaded(void){
 	struct stat sbuf;
 	const char *filename = "/run/shm/pps-msg";
-
-	system("lsmod | grep pps_client > /run/shm/pps-msg");
-	int rv = stat(filename, &sbuf);
+	const char *cmd = "lsmod | grep gps_pps_io > /run/shm/pps-msg";
+	int rv;
+	rv = system(cmd);
+	if (rv == -1 || WIFEXITED(rv) == false){
+		printf("system command failed: %s\n", cmd);
+	}
+	rv = stat(filename, &sbuf);
 	remove(filename);
 
 	if (rv == -1 || sbuf.st_size == 0){
@@ -48,69 +53,111 @@ bool driverIsLoaded(void){
 	return true;
 }
 
-int main(void){
-	char cmd[500];
-	char *end;
-	char buf[50];
-	int daemonPID = 0;
-
-	uid_t uid = geteuid();
-	if (uid != 0){
-		printf("Requires superuser privileges. Please sudo this command.\n");
-		return 1;
+int sysCommand(const char *cmd){
+	int rv = system(cmd);
+	if (rv == -1 || WIFEXITED(rv) == false){
+		printf("System command failed: %s\n", cmd);
+		return -1;
 	}
+	return 0;
+}
 
-	const char *filename = "/run/shm/pps-msg";
-
-	system("pidof pps-client > /run/shm/pps-msg");
-
-	int fd = open(filename, O_RDONLY);
-	if (fd == -1){
-		printf("pps-client is not running.\n");
-		goto end;
-	}
-
-	memset(buf, 0, 50);
-	read(fd, buf, 50);
-
-	close(fd);
-	remove(filename);
-
-	sscanf(buf, "%d\n", &daemonPID);
-
-	if (daemonPID == 0){
-		printf("pps-client is not running.\n");
-		goto end;
-	}
-
-	strcpy(cmd, "kill ");
-	strcat(cmd, buf);
-	end = strpbrk(cmd, "\n");
-	if (end != NULL){
-		*end = '\0';
-	}
-
-	system(cmd);
-
-	fprintf(stdout, "Closing pps-client");
-	fflush(stdout);
-
-	for (int i = 0; i < 60; i++){			// Wait for driver to unload
+bool driverHasUnloaded(void){
+	for (int i = 0; i < 10; i++){			// Wait for driver to unload
 		sleep(1);
 		fprintf(stdout,".");
 		fflush(stdout);
 		if (! driverIsLoaded()){
 			fprintf(stdout,"\n");
-			return 0;
+			return true;
 		}
 	}
-end:
-	if (! driverIsLoaded()){
+	printf("Driver did not unload.\n");
+	return false;
+}
+
+int main(void){
+	char cmd[500];
+	char *end;
+	char buf[50];
+	int daemonPID = 0;
+	struct stat statbuf;
+	int rv;
+
+	uid_t uid = geteuid();
+	if (uid != 0){
+		printf("Requires superuser privileges. Please sudo this command.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	const char *filename = "/run/shm/pps-msg";
+
+	rv = sysCommand("pidof pps-client > /run/shm/pps-msg");
+	if (rv == -1){
+		printf("Failed to stop pps-client.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	int fd = open(filename, O_RDONLY);
+	if (fd == -1){
+		printf("Unable to open %s\n", filename);
+		printf("Failed to stop pps-client.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	rv = fstat(fd, &statbuf);
+	if (rv == -1){
+		close(fd);
+		printf("Unable to read %s params. Error: %s\n", filename, strerror(errno));
+		printf("Failed to stop pps-client.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (statbuf.st_size == 0){
+		printf("PPS-Client is not running.\n");
+		close(fd);
 		return 0;
 	}
 
-	system("rmmod pps-client");
-	system("rm -f /dev/pps-client");
+	memset(buf, 0, 50);
+	rv = read(fd, buf, 50);
+	close(fd);
+	if (rv == -1){
+		printf("unable to read: %s\n", filename);
+		exit(EXIT_FAILURE);
+	}
+
+	remove(filename);
+
+	sscanf(buf, "%d\n", &daemonPID);
+
+	if (daemonPID == 0){
+		printf("PPS-Client is not running.\n");
+		return 0;
+	}
+
+	strcpy(cmd, "kill ");
+	strcat(cmd, buf);
+	end = strpbrk(cmd, "\n");			// Zero terminate the kill command
+	if (end != NULL){
+		*end = '\0';
+	}
+
+	rv = sysCommand(cmd);				// Do the kill command
+	if (rv == -1){
+		printf("Failed to stop pps-client.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stdout, "Closing PPS-Client");
+	fflush(stdout);
+
+	if (driverHasUnloaded()){
+		return 0;
+	}
+										// Try this if driver did not unload:
+	sysCommand("rmmod gps_pps_io");
+	sysCommand("rm -f /dev/gps_pps_io");
 
 	return 0;
 }

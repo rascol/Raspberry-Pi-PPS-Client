@@ -2,7 +2,7 @@
  * @file pps-sntp.cpp
  * @brief The pps-sntp.cpp file contains functions and structures for accessing time updates via SNTP.
  *
- * Copyright (C) 2016  Raymond S. Connell
+ * Copyright (C) 2016-2018  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ const char* srv2 = "2.debian.pool.ntp.org";
 const char* srv3 = "3.debian.pool.ntp.org";
 
 /**
- * Allocates memory, reads a list of NTP servers from "ntpq -pn" and
+ * Allocates memory, reads the list of NTP servers above and
  * partitions the memory into an array of server addresses that are
  * returned by tcp->ntp_server[].
  *
@@ -88,7 +88,7 @@ int allocNTPServerList(timeCheckParams *tcp){
 	strcpy(bufptr, srv3);
 	f.ntp_server[3] = bufptr;
 
-	for (int i = 0; i < 4; i++){
+	for (int i = 0; i < MAX_SERVERS; i++){
 		f.serverTimeDiff[i] = 1000000;
 		f.threadIsBusy[i] = false;
 	}
@@ -127,19 +127,22 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	char num[2];
 	char buf[500];
 
-	const char *filename = "/run/shm/sntp_out";	// Construct a filename string:
-	sprintf(num, "%d", id);						//    "/run/shm/sntp_outn" with n the id val.
+	const char *filename = "/run/shm/sntp_out";		// Construct a filename string:
+	sprintf(num, "%d", id);							//    "/run/shm/sntp_outn" with n the id val.
 
-	char *cmd = buf;								// Construct a command string:
-	strcpy(cmd, "sntp ");						//    "sntp [server_name] > /run/shm/sntp_outn"
+	char *cmd = buf;									// Construct a command string:
+	strcpy(cmd, "sntp ");							//    "sntp [server_name] > /run/shm/sntp_outn"
 	strcat(cmd, server);
 	strcat(cmd, " > ");
 	strcat(cmd, filename);
 	strcat(cmd, num);
 
 	gettimeofday(&startTime, NULL);
-	system(cmd);									// Issue the command:
-	gettimeofday(&returnTime, NULL);				// system() will block until sntp returns or times out.
+	rv = sysCommand(cmd);								// Issue the command:
+	if (rv == -1){
+		return -1;
+	}
+	gettimeofday(&returnTime, NULL);					// system() will block until sntp returns or times out.
 
 	if (returnTime.tv_sec - startTime.tv_sec > 0){	// Took more than 1 second
 												// Reusing buf for constructing error message on exit.
@@ -151,10 +154,10 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	char *fname = buf;
 	strcpy(fname, filename);
 	strcat(fname, num);
-												// Open the file: "/run/shm/sntp_out[n]"
+													// Open the file: "/run/shm/sntp_out[n]"
 	int fd = open((const char *)fname, O_RDONLY);
 	if (fd == -1){
-		strcpy(buf, "ERROR: could not open \"");	// Reusing buf for constructing error message on exit.
+		strcpy(buf, "ERROR: could not open \"");		// Reusing buf for constructing error message on exit.
 		strcat(buf, fname);
 		strcat(buf, "\"\n");
 		copyToLog(logbuf, buf);
@@ -162,12 +165,12 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	}
 
 	fstat(fd, &stat_buf);
-	int sz = stat_buf.st_size;					// Get the size of file.
+	int sz = stat_buf.st_size;						// Get the size of file.
 
 	if (sz < SNTP_MSG_SZ){
-		rv = read(fd, strbuf, sz);				// Read the file.
+		rv = read(fd, strbuf, sz);					// Read the file.
 		if (rv == -1){
-			strcpy(buf, "ERROR: reading \"");	// Reusing buf for constructing error message on exit.
+			strcpy(buf, "ERROR: reading \"");		// Reusing buf for constructing error message on exit.
 			strcat(buf, filename);
 			strcat(buf, "\" was interrupted.\n");
 			copyToLog(logbuf, buf);
@@ -184,8 +187,8 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	}
 
 	int i;
-	for (i = 0; i < sz; i++){					// Locate the first
-		if (strbuf[i] == '\n'){					// line feed.
+	for (i = 0; i < sz; i++){						// Locate the first
+		if (strbuf[i] == '\n'){						// line feed.
 			i += 1;
 			break;
 		}
@@ -193,7 +196,7 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	char *pLine = strbuf + i;
 
 	if (pLine[4] != '-' || pLine[7] != '-'){
-												// Reusing buf for constructing error message on exit.
+													// Reusing buf for constructing error message on exit.
 		sprintf(buf, "SNTP server %d returned an error message:\n", id);
 		strcat(buf, strbuf);
 		strcat(buf, "\n");
@@ -201,23 +204,23 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 		return -1;
 	}
 
-	end = strstr(pLine, "+/-");					// Chop string here if this is returned
-	if (end != NULL){							// by a server.
+	end = strstr(pLine, "+/-");						// Chop string here if this is returned
+	if (end != NULL){								// by a server.
 		*end = '\0';
 	}
 
 	int tz;
-	float delta;									// The floor of this in integer seconds will be the
-												// whole second time correction returned by SNTP.
+	float delta;										// The floor of this in integer seconds will be the
+													// whole second time correction returned by SNTP.
 	memset(&tm, 0, sizeof(struct tm));
-												// Start decoding.
+													// Start decoding.
 	// For example: 2016-02-01 16:28:54.146050 (+0500) -0.01507
 	sscanf(pLine, "%4d-%2d-%2d %2d:%2d:%2d.%6d (%5d) %f",
 			&tm.tm_year, &tm.tm_mon, &tm.tm_mday,
 			&tm.tm_hour, &tm.tm_min, &tm.tm_sec,
 			&fracSec, &tz, &delta);
 
-	return (int)floor(delta);					// Time correction to be made in whole seconds
+	return (int)floor(delta);						// Time correction to be made in whole seconds
 }
 
 /**
@@ -225,7 +228,7 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
  * that exits after filling the timeCheckParams struct, tcp, with the
  * requested information and any error info.
  *
- * @param[in,out] tcp Struct pointer for passing data.
+ * @param[in,out] tcp struct pointer for passing data.
  */
 void doTimeCheck(timeCheckParams *tcp){
 
@@ -257,7 +260,7 @@ void doTimeCheck(timeCheckParams *tcp){
  *
  * @returns The number of SNTP servers reporting.
  */
-int getTimeConsensisAndCount(void){
+int getTimeConsensusAndCount(void){
 	int diff[MAX_SERVERS];
 	int count[MAX_SERVERS];
 
@@ -342,7 +345,7 @@ void makeSNTPTimeQuery(timeCheckParams *tcp){
 		if (g.queryCount == 0){
 			f.allServersQueried = false;
 
-			getTimeConsensisAndCount();
+			getTimeConsensusAndCount();
 			updateLog(tcp->logbuf, f.numServers);
 		}
 		if (g.queryCount > 0){
@@ -350,8 +353,8 @@ void makeSNTPTimeQuery(timeCheckParams *tcp){
 		}
 	}
 
-	if (g.seq_num > 0 							// Start a time check against the list of SNTP servers
-			&& g.seq_num % CHECK_TIME == 0){
+	if (g.seq_num >= 0
+			&& g.seq_num % CHECK_TIME == 0){		// Start a time check against the list of SNTP servers
 												// Refresh the server list once per day
 		if ((g.seq_num - f.lastServerUpdate) > SECS_PER_DAY
 				|| g.seq_num == CHECK_TIME){		// and at the first CHECK_TIME

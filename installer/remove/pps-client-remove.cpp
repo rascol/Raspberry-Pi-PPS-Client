@@ -23,7 +23,16 @@
 #include <string.h>
 #include <unistd.h>
 
-const char *version = "pps-client-remove v1.0.1";
+const char *version = "pps-client-remove v1.1.0";
+
+int sysCommand(const char *cmd){
+	int rv = system(cmd);
+	if (rv == -1 || WIFEXITED(rv) == false){
+		printf("system command failed: %s\n", cmd);
+		return -1;
+	}
+	return 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -35,48 +44,48 @@ int main(int argc, char *argv[])
 
 	if (argc > 1 && strcmp(argv[1], "-a") == 0){
 		printf("Removing /etc/pps-client.conf\n");
-		system("rm /etc/pps-client.conf");
+		sysCommand("rm -f /etc/pps-client.conf");
 	}
 
-	system("service pps-client stop");
-	system("chkconfig --del pps-client");
-	system("pps-client-stop");					// In case not started as a service
+	sysCommand("service pps-client stop");
+	sysCommand("chkconfig --del pps-client");
+	sysCommand("pps-client-stop");					// In case not started as a service
 
 	printf("Removing /usr/sbin/pps-client\n");
-	system("rm /usr/sbin/pps-client");
+	sysCommand("rm -f /usr/sbin/pps-client");
 
 	printf("Removing /usr/sbin/pps-client-stop\n");
-	system("rm /usr/sbin/pps-client-stop");
+	sysCommand("rm -f /usr/sbin/pps-client-stop");
 
 	printf("Removing /etc/init.d/pps-client\n");
-	system("rm /etc/init.d/pps-client");
+	sysCommand("rm -f /etc/init.d/pps-client");
 
 	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko\n");
-	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko");
+	sysCommand("rm -f /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko");
 
 	printf("Removing /usr/sbin/interrupt-timer\n");
-	system("rm /usr/sbin/interrupt-timer");
+	sysCommand("rm -f /usr/sbin/interrupt-timer");
 
 	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko\n");
-	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko");
+	sysCommand("rm -f /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko");
 
 	printf("Removing /usr/sbin/pulse-generator\n");
-	system("rm /usr/sbin/pulse-generator");
+	sysCommand("rm -f /usr/sbin/pulse-generator");
 
 	printf("Removing /lib/modules/`uname -r`/kernel/drivers/misc/pulse-generator.ko\n");
-	system("rm /lib/modules/`uname -r`/kernel/drivers/misc/pulse-generator.ko");
+	sysCommand("rm -f /lib/modules/`uname -r`/kernel/drivers/misc/pulse-generator.ko");
 
 	printf("Removing /var/log/pps-client.log\n");
-	system("rm /var/log/pps-client.log");
+	sysCommand("rm -f /var/log/pps-client.log");
 
 	printf("Removing /usr/share/doc/pps-client\n");
-	system("rm -rf /usr/share/doc/pps-client");
+	sysCommand("rm -rf /usr/share/doc/pps-client");
 
 	printf("Removing /usr/sbin/pps-client-remove\n");
 	char cmd[50];
-	strcpy(cmd, "rm /usr/sbin/");
+	strcpy(cmd, "rm -f /usr/sbin/");
 	strcat(cmd, argv[0]);
-	system(cmd);
+	sysCommand(cmd);
 
 	return 0;
 }

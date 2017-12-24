@@ -52,6 +52,15 @@ const char *last_p1_distrib_file = "/var/local/pulse1-distrib";
 const char *p2_distrib_file = "/var/local/pulse2-distrib-forming";
 const char *last_p2_distrib_file = "/var/local/pulse2-distrib";
 
+int sysCommand(const char *cmd){
+	int rv = system(cmd);
+	if (rv == -1 || WIFEXITED(rv) == false){
+		printf("System command failed: %s\n", cmd);
+		return -1;
+	}
+	return 0;
+}
+
 struct pulseGeneratorGlobalVars {
 	int seq_num;
 	char strbuf[200];
@@ -90,14 +99,23 @@ void couldNotOpenMsgTo(char *msgbuf, const char *filename){
  * @returns The file descriptor.
  */
 int open_logerr(const char* filename, int flags){
-	int fd = open(filename, flags);
-	if (fd == -1){
-		couldNotOpenMsgTo(g.msgbuf, filename);
-		printf(g.msgbuf);
-		return -1;
-	}
+	mode_t mode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH;
+	int fd;
 	if ((flags & O_CREAT) == O_CREAT){
-		fchmod(fd, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+		fd = open(filename, flags, mode);
+		if (fd == -1){
+			couldNotOpenMsgTo(g.msgbuf, filename);
+			printf("%s\n", g.msgbuf);
+			return -1;
+		}
+	}
+	else {
+		fd = open(filename, flags);
+		if (fd == -1){
+			couldNotOpenMsgTo(g.msgbuf, filename);
+			printf("%s\n", g.msgbuf);
+			return -1;
+		}
 	}
 	return fd;
 }
@@ -120,7 +138,7 @@ int open_logerr(const char* filename, int flags){
  */
 void writeDistribution(int distrib[], int len, int scaleZero, int count,
 		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
-
+	int rv;
 	remove(distrib_file);
 	int fd = open_logerr(distrib_file, O_CREAT | O_WRONLY | O_APPEND);
 	if (fd == -1){
@@ -128,7 +146,11 @@ void writeDistribution(int distrib[], int len, int scaleZero, int count,
 	}
 	for (int i = 0; i < len; i++){
 		sprintf(g.strbuf, "%d %d\n", i-scaleZero, distrib[i]);
-		write(fd, g.strbuf, strlen(g.strbuf));
+		rv = write(fd, g.strbuf, strlen(g.strbuf));
+		if (rv == -1){
+			printf("Write to %s failed.\n", distrib_file);
+			break;
+		}
 	}
 	close(fd);
 
@@ -215,8 +237,11 @@ char *copyMajorTo(char *majorPos){
 
 	const char *filename = "/run/shm/proc_devices";
 
-	system("cat /proc/devices > /run/shm/proc_devices"); 	// "/proc/devices" can't be handled like
-															// a normal file so we copy it to a file.
+	int rv = sysCommand("cat /proc/devices > /run/shm/proc_devices"); 	// "/proc/devices" can't be handled like
+	if (rv == -1){														// a normal file so we copy it to a file.
+		return NULL;
+	}
+
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1){
 		return NULL;
@@ -227,7 +252,7 @@ char *copyMajorTo(char *majorPos){
 
 	char *fbuf = new char[sz+1];
 
-	int rv = read(fd, fbuf, sz);
+	rv = read(fd, fbuf, sz);
 	if (rv == -1){
 		close(fd);
 		remove(filename);
@@ -279,24 +304,40 @@ int driver_load(char *gpio1, char *gpio2){
 		strcat(insmod, gpio2);
 	}
 
-	system("rm -f /dev/pulse-generator");			// Clean up any old device files.
+	int rv = sysCommand("rm -f /dev/pulse-generator");			// Clean up any old device files.
+	if (rv == -1){
+		return -1;
+	}
 
-	system(insmod);									// Issue the insmod command
+	rv = sysCommand(insmod);										// Issue the insmod command
+	if (rv == -1){
+		return -1;
+	}
+
 
 	char *mknod = g.strbuf;
 	strcpy(mknod, "mknod /dev/pulse-generator c ");
 	char *major = copyMajorTo(mknod + strlen(mknod));
 	if (major == NULL){								// No major found! insmod failed.
 		printf("driver_load() error: No major found!\n");
-		system("/sbin/rmmod pulse-generator");
+		sysCommand("/sbin/rmmod pulse-generator");
 		return -1;
 	}
 	strcat(mknod, " 0");
 
-	system(mknod);									// Issue the mknod command
+	rv = sysCommand(mknod);									// Issue the mknod command
+	if (rv == -1){
+		return -1;
+	}
 
-	system("chgrp root /dev/pulse-generator");
-	system("chmod 664 /dev/pulse-generator");
+	rv = sysCommand("chgrp root /dev/pulse-generator");
+	if (rv == -1){
+		return -1;
+	}
+	rv = sysCommand("chmod 664 /dev/pulse-generator");
+	if (rv == -1){
+		return -1;
+	}
 
 	return 0;
 }
@@ -305,8 +346,8 @@ int driver_load(char *gpio1, char *gpio2){
  * Unloads the pulse-generator kernel driver.
  */
 void driver_unload(void){
-	system("/sbin/rmmod pulse-generator");
-	system("rm -f /dev/pulse-generator");
+	sysCommand("/sbin/rmmod pulse-generator");
+	sysCommand("rm -f /dev/pulse-generator");
 }
 
 /**
@@ -439,20 +480,21 @@ int main(int argc, char *argv[]){
 start:
 	char timeStr[100];
 	const char *timefmt = "%F %H:%M:%S";
+	int rv;
+	const char *deviceName = "/dev/pulse-generator";
 
 	if (geteuid() != 0){
 		printf("Requires superuser privileges. Please sudo this command.\n");
 		return 1;
 	}
 
-	printf(version);
-	printf("\n");
+	printf("%s\n", version);
 
 	struct sched_param param;							// Process must be run as
 	param.sched_priority = 99;							// root to change priority.
 	sched_setscheduler(0, SCHED_FIFO, &param);			// Else, this has no effect.
 
-	int fd = open("/dev/pulse-generator", O_RDWR);		// Open the pulse-generator device driver.
+	int fd = open(deviceName, O_RDWR);		// Open the pulse-generator device driver.
 	if (fd == -1){
 		printf("pulse-generator: Driver is not loaded. Exiting.\n");
 		return 1;
@@ -476,7 +518,11 @@ start:
 
 		writeData[0] = GPIO_A;							// Identify the first GPIO outuput.
 		writeData[1] = g.pulseTime1 - WRITE_DELAY;		// Set the pulse time.
-		write(fd, writeData, 2 * sizeof(int));			// Request a write at g.pulseTime1.
+		rv = write(fd, writeData, 2 * sizeof(int));		// Request a write at g.pulseTime1.
+		if (rv == -1){
+			printf("Write to %s failed.\n", deviceName);
+			break;
+		}
 
 		if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred.
 			g.badRead = true;
@@ -498,7 +544,11 @@ start:
 
 			writeData[0] = GPIO_B;						// Identify the second GPIO output.
 			writeData[1] = g.pulseTime2 - WRITE_DELAY;	// Set the pulse time.
-			write(fd, writeData, 2 * sizeof(int));		// Request a write at pulseTime2.
+			rv = write(fd, writeData, 2 * sizeof(int));		// Request a write at pulseTime2.
+			if (rv == -1){
+				printf("Write to %s failed.\n", deviceName);
+				break;
+			}
 
 			if (read(fd, readData, 2 * sizeof(int)) < 0){	// Read the time the write actually occurred.
 				g.badRead = true;

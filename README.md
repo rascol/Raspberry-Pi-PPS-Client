@@ -7,9 +7,10 @@ The PPS-Client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 - [Summary](#summary)
 - [Hardware Requirements](#hardware-requirements)
 - [Software Requirements](#software-requirements)
-  - [The Raspian OS](#the-raspian-os)
+  - [Operating System](#operating-system)
   - [The NTP daemon](#the-ntp-daemon)
     - [No NTP](#no-ntp)
+    - [GPS Only](gps-only)
   - [The chkconfig system services manager](#the-chkconfig-system-services-manager)
 - [Installing](#installing)
   - [Get the Files](#get-the-files)
@@ -25,19 +26,21 @@ The PPS-Client daemon is a fast, high accuracy Pulse-Per-Second system clock syn
 
 # Summary
 ---
-The PPS-Client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average timekeeping accuracy of 2 microseconds on the Raspberry Pi 3 (verified on 10 test units).
+The PPS-Client daemon provides timekeeping synchronization precision of 1 microsecond and a typical average timekeeping accuracy of 2 microseconds on the Raspberry Pi 3 (verified on 10 test units). Precision and accuracy at this level is possible because the PPS-Client controller uses design techniques not previously employed to discipline an application processor clock to a PPS signal.
+
+The PPS-client controller is continuously self-calibrating and does not require precision temerature control. The following results were recorded while the test Raspberry Pi test units were in a partially heated room where the temperature varied over a range of about 60 to 75 deg F through 24 hours. 
 
 Figure 1 is a distribution of time adjustments made by the PPS-Client controller to the system clock. 
 
 <p align="center"><img src="figures/offset-distrib.png" alt="Jitter and Corrections Distrib" width="608"/></p>
 
-This data was captured from a Raspberry Pi 3 running Raspian with a 4.4.14-v7+ Linux kernel. The time corrections required to keep the rollover of the second synchronized to the rising edge of the PPS signal never exceeded 1 microsecond in this 24 hour period. This was true for all test units.
+This data was captured from a Raspberry Pi 3 running Raspian with a standard 4.4.14-v7+ Linux kernel. The time corrections required to keep the rollover of the second synchronized to the rising edge of the PPS signal never exceeded 1 microsecond in this 24 hour period. This was true for all test units.
 
 Figure 2 shows the system clock frequency set by the controller and the resulting [Allan deviation](https://en.wikipedia.org/wiki/Allan_variance) for the test unit with the largest error of the ten that were tested.
 
 <p align="center"><img src="figures/frequency-vars.png" alt="Frequency Vars over 24 hours" width="685"/></p>
 
-Although the clock frequency drifted slightly between each frequency correction, the maximum Allan deviation of 0.045 ppm over this 24 hour period shows it to be unlikely that the clock ever drifted more than 0.100 ppm from the control point. That corresponds to a time drift of less than 0.1 microseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsecond per sec.)
+Although the clock frequency drifted slightly between each one minute frequency correction, the maximum Allan deviation of 0.045 ppm over this 24 hour period shows it to be unlikely that the clock ever drifted more than 0.100 ppm from the control point. That corresponds to a time drift of less than 0.1 microseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsecond per sec.)
 
 Since the time slew adjustments necessary to keep the system time synchronized to the PPS never exceeded 1 microsecond each second and the time drift never exceeded 0.1 microsecond each second, the timekeeping control **precision** illustrated in Figure 3 was 1 microsecond over this 24 hour period for all test units. 
 
@@ -45,7 +48,7 @@ As shown in Figure 3, timekeeping **accuracy** is the time offset at the rollove
 
 <p align="center"><img src="figures/time.png" alt="Interpretation of accuracy and precision" width=""/></p>
 
-Figure 4 is the distribution of measured times relative to a true time of 800,000 microseconds into each second for a typical Raspberry Pi 3 from the units tested.
+Figure 4 is the distribution of measured times relative to a true time of 800,000 microseconds into each second for a typical Raspberry Pi 3 from 10 units tested over a 24 hour period.
 
 <p align="center"><img src="figures/InterruptTimerDistrib.png" alt="Time Parameters" width=""/></p>
 
@@ -68,9 +71,9 @@ For a detailed description of the PPS-Client controller and accuracy testing run
  
 # Software Requirements
 ---
-## The Raspian OS
+## Operating System
 
-Versions of Linux kernel 4.1 and later are supported. The Raspian OS is required only because the RPi file locations required by the installer (and test files) are hard coded. If there is enough interest in using other OS's, these install locations could be determined by the PPS-Client config file.
+Versions of Linux kernel 4.1 and later are supported. Currently PPS-Client v1.4 and later runs on **Raspian**. At the moment, PPS-Client is restricted to Raspian because the file locations required by the installer (and test files) are hard coded. If there is enough interest in using other OS's, these install locations could be determined by the PPS-Client config file.
 
 ## The NTP daemon
 
@@ -89,7 +92,7 @@ The PPS-Client default program for setting the whole second time of day is SNTP 
 
 ### No NTP
 
-Alternatively, you can provide a different program to handle setting time-of-day updates (**but NTP must be installed** - see above) by disabling SNTP in **/etc/pps-client.conf**:
+Alternatively, you may want use some other program to handle setting time-of-day updates. To tell PPS-Client that it should totally ignore how the clock seconds are set, after installation use a setting in **/etc/pps-client.conf**:
 ```
 ~ $ sudo nano /etc/pps-client.conf
 ```
@@ -97,7 +100,25 @@ Scroll down to the line,
 ```
 #sntp=disable
 ```
-and uncomment it. PPS-Client will no longer care about time-of-day or how it gets set. But PPS-Client will continue to synchronize the roll-over of the second to the PPS signal.
+and uncomment it. PPS-Client will no longer care about whole-second time of day or how it gets set. But PPS-Client will continue to synchronize the roll-over of the second to the PPS signal. 
+
+### GPS Only
+
+Another mode supported by PPS-Client is to have the GPS receiver that is providing the PPS signal to also provide the whole-second time of day updates. This allows operation with no internet connection. A Raspberry Pi configured this way could, for example, be used as a Stratum 1 time server for a LAN that is not connected to the Internet. 
+
+To configure this mode after installation,
+```
+~ $ sudo nano /etc/pps-client.conf
+```
+Scroll down to the line,
+```
+#serial=enable
+```
+and uncomment it. This will set PPS-Client to read GPS time messages from the serial port. This, of course, requires that the GPS receiver is connected to the serial port of the Raspberry Pi and that the serial port has been set for this purpose. Setting the serial port can be done on either **Raspian** or **Ubuntu Mate** by using the **raspi-config** command.  See details [here](https://learn.adafruit.com/adafruit-ultimate-gps-hat-for-raspberry-pi/pi-setup).
+
+
+
+**GPS Only** can be demonstrated with no additional hardware connections if the [Adafruit Ultimate GPS module](https://www.adafruit.com/products/2324) (visible in the picture at the top) is used since this device connects directly to the RPi serial port through the GPIO pins.
 
 ## The chkconfig system services manager 
  
@@ -135,6 +156,10 @@ In your home folder on your Raspberry Pi, you might want to first set up a build
 First get missing dependencies:
 ```
 ~/rpi $ sudo apt-get install bc
+```
+You might also need to install git:
+```
+~ $ sudo apt-get install git
 ```
 For retrieving the Linux source get the rpi-source script:
 ```
@@ -187,7 +212,7 @@ If there are no compile errors, the last message from the compiler will be,
 ```
 Kernel: arch/arm/boot/zImage is ready
 ```
-If all went well, you have the necessary kernel object files to build the PPS-Client driver. 
+If all went well, you have the necessary kernel object files to build the PPS-Client driver. The current version of gcc seems prone to randomly segfaulting. If that happens try `make clean` and re-run the make command. 
 
 ## Build PPS-Client
 
@@ -224,7 +249,7 @@ This removes everything **except** the configuration file which you might want t
 
 To reinstall, first uninstall as [described above](#uninstalling) then install. If you are recompiling existing PPS-Client code first `make clean`. 
 
-Occasionally the contents of the `/etc/pps-client.conf` file will change. Check the online revison notes for config file changes. You can make these changes manually if you do not elect to remove your old config file.
+Occasionally the contents of the **/etc/pps-client.conf** file will change. Check the online revison notes for config file changes. You can make these changes manually if you do not elect to remove your old config file.
 
 
 # Running PPS-Client
@@ -259,7 +284,7 @@ These are the parameters shown in the status printout:
  * avgCorrection - the time corrections (in microseconds) averaged over the previous minute.
  * clamp - the hard limit (in microsecs) applied to the raw time error to convert it to a time correction.
 
-Every sixth line, interrupt delay parameters are also shown. About every 17 minutes, an SNTP time query will be made and the results of that will be shown, but will have no effect unless a time update is required.
+About every sixth line, interrupt delay parameters are also shown. The interval will larger when PPS-Client discards a PPS interrupt delayed more than 3 microseconds.
 
 To stop the display type ctrl-c.
 
@@ -301,7 +326,7 @@ The Linux OS was never designed to be a real-time operating system. Nevertheless
 
 <p align="center"><img src="figures/SingleEventTimerDistrib.png" alt="Jitter Distribution" width=""/></p>
 
-Figure 5 is a typical accumulation of single-event timings for external interrupts at 800,000 microseconds after the PPS interrupt. The main peak is the result of reasonably constant system latency and clock oscillator flicker noise having a standard deviation of about 0.8 microsecond. The secondary peak at about 800,003 microseconds is one of many such features introduced by OS latency that can appear for hours or days or disappear altogether. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal also introduced by OS latency.
+Figure 5 is a typical 24-hour accumulation of single-event timings for external interrupts at 800,000 microseconds after the PPS interrupt. The main peak is the result of reasonably constant system latency and clock oscillator flicker noise having a standard deviation of about 0.8 microsecond. The secondary peak at about 800,003 microseconds is one of many such features introduced by OS latency that can appear for hours or days or disappear altogether. The jitter samples to the right of the main peak that can only be seen in the logarithmic plot were delayed time samples of the PPS signal also introduced by OS latency.
 
 Consequently, while flicker noise limits synchronization accuracy of events on different Raspberry Pi computers timed by the system click to a few microseconds (~1 μsec SD), the real-time performance of the Linux OS (as of v4.4.14-v7+) sets the accuracy of timing external events to about 20 microseconds (Pi 3) because of sporadic system interrupt latency.
 

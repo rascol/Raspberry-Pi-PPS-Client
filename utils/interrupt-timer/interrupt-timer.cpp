@@ -45,6 +45,15 @@
 #define START_SAVE 20
 #define START 10
 
+int sysCommand(const char *cmd){
+	int rv = system(cmd);
+	if (rv == -1 || WIFEXITED(rv) == false){
+		printf("system command failed: %s\n", cmd);
+		return -1;
+	}
+	return 0;
+}
+
 struct interruptTimerGlobalVars {
 	int outFormat;
 
@@ -82,13 +91,18 @@ const char *timefmt = "%F %H:%M:%S";
 char *copyMajorTo(char *majorPos){
 
 	struct stat stat_buf;
+	int rv;
 
 	const char *filename = "/run/shm/proc_devices";
 
-	system("cat /proc/devices > /run/shm/proc_devices"); 	// "/proc/devices" can't be handled like
-															// a normal file so we copy it to a file.
+	rv = sysCommand("cat /proc/devices > /run/shm/proc_devices"); 	// "/proc/devices" can't be handled like
+	if (rv == -1){													// a normal file so we copy it to a file.
+		return NULL;
+	}
+
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1){
+		printf("Unable to open %s\n", filename);
 		return NULL;
 	}
 
@@ -97,8 +111,9 @@ char *copyMajorTo(char *majorPos){
 
 	char *fbuf = new char[sz+1];
 
-	int rv = read(fd, fbuf, sz);
+	rv = read(fd, fbuf, sz);
 	if (rv == -1){
+		printf("Unable to read file: %s\n", filename);
 		close(fd);
 		remove(filename);
 		delete(fbuf);
@@ -143,24 +158,38 @@ int driver_load(char *gpio){
 	strcpy(insmod, "/sbin/insmod /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko gpio_num=");
 	strcat(insmod, gpio);
 
-	system("rm -f /dev/interrupt-timer");			// Clean up any old device files.
-
-	system(insmod);									// Issue the insmod command
+	int rv = sysCommand("rm -f /dev/interrupt-timer");	// Clean up any old device files.
+	if (rv == -1){
+		return -1;
+	}
+	rv = sysCommand(insmod);								// Issue the insmod command
+	if (rv == -1){
+		return -1;
+	}
 
 	char *mknod = g.strbuf;
 	strcpy(mknod, "mknod /dev/interrupt-timer c ");
 	char *major = copyMajorTo(mknod + strlen(mknod));
-	if (major == NULL){								// No major found! insmod failed.
+	if (major == NULL){									// No major found! insmod failed.
 		printf("driver_load() error: No major found!\n");
-		system("/sbin/rmmod interrupt-timer");
+		sysCommand("/sbin/rmmod interrupt-timer");
 		return -1;
 	}
 	strcat(mknod, " 0");
 
-	system(mknod);									// Issue the mknod command
+	rv = sysCommand(mknod);										// Issue the mknod command
+	if (rv == -1){
+		return -1;
+	}
 
-	system("chgrp root /dev/interrupt-timer");
-	system("chmod 664 /dev/interrupt-timer");
+	rv = sysCommand("chgrp root /dev/interrupt-timer");
+	if (rv == -1){
+		return -1;
+	}
+	rv = sysCommand("chmod 664 /dev/interrupt-timer");
+	if (rv == -1){
+		return -1;
+	}
 
 	return 0;
 }
@@ -169,8 +198,14 @@ int driver_load(char *gpio){
  * Unloads the interrupt-timer kernel driver.
  */
 void driver_unload(void){
-	system("/sbin/rmmod interrupt-timer");
-	system("rm -f /dev/interrupt-timer");
+	int rv = sysCommand("/sbin/rmmod interrupt-timer");
+	if (rv == -1){
+		exit(EXIT_FAILURE);
+	}
+	rv = sysCommand("rm -f /dev/interrupt-timer");
+	if (rv == -1){
+		exit(EXIT_FAILURE);
+	}
 }
 
 /**
@@ -186,9 +221,15 @@ void writeDistribution(int distrib[], int len, int scaleZero, int epochInterval,
 	if (fd == -1){
 		return;
 	}
+	int rv;
 	for (int i = 0; i < len; i++){
 		sprintf(g.strbuf, "%d %d\n", i-scaleZero, distrib[i]);
-		write(fd, g.strbuf, strlen(g.strbuf));
+		rv = write(fd, g.strbuf, strlen(g.strbuf));
+		if (rv == -1){
+			printf("writeDistribution() write to %s failed\n", distrib_file);
+			close(fd);
+			return;
+		}
 	}
 	close(fd);
 
@@ -257,12 +298,18 @@ void buildInterruptDistrib(int intrptDelay){
  */
 int getSysDelay(int *sysDelay){
 
-	int delay_fd = open("/run/shm/pps-sysDelay", O_RDONLY);
+	const char* filename = "/run/shm/pps-sysDelay";
+	int delay_fd = open(filename, O_RDONLY);
 	if (delay_fd == -1){
 		printf("Error: pps-client is not running.\n");
 		return -1;
 	}
-	read(delay_fd, g.strbuf, 50);
+	int rv = read(delay_fd, g.strbuf, 50);
+	if (rv == -1){
+		printf("getSysDelay() Unable to read %s\n", filename);
+		return -1;
+	}
+
 	g.strbuf[50] = '\0';
 	close(delay_fd);
 
@@ -285,7 +332,7 @@ int calcTolerance(double probability, int idx){
 		strcpy(g.strbuf, "File not found: ");
 		strcat(g.strbuf, last_timer_distrib_file);
 		strcat(g.strbuf, "\n");
-		printf(g.strbuf);
+		printf("%s", g.strbuf);
 		return -1;
 	}
 
@@ -293,8 +340,12 @@ int calcTolerance(double probability, int idx){
 	int len = INTRPT_DISTRIB_LEN;
 	double tmp;
 
-	read(fd, (void *)g.filebuf, sz);					// Read the sample distrib into g.filebuf
+	int rv = read(fd, (void *)g.filebuf, sz);					// Read the sample distrib into g.filebuf
 	close(fd);
+	if (rv == -1){
+		printf("calcTolerance() Unable to read %s\n", last_timer_distrib_file);
+		return -1;
+	}
 
 	char *lines[len];
 	double probDistrib[len];
@@ -589,8 +640,7 @@ start:
 		}
 	}
 
-	printf(version);
-	printf("\n");
+	printf("%s\n", version);
 
 	int intrpt_fd = open("/dev/interrupt-timer", O_RDONLY); // Open the interrupt-timer device driver.
 	if (intrpt_fd == -1){

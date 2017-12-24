@@ -2,7 +2,7 @@
  * @file pps-files.cpp
  * @brief The pps-files.cpp file contains functions and structures for saving files intended for PPS-Client status monitoring and analysis.
  *
- * Copyright (C) 2016  Raymond S. Connell
+ * Copyright (C) 2016-2018  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,8 +77,102 @@ const char *valid_config[] = {
 		"pps-gpio",
 		"output-gpio",
 		"intrpt-gpio",
-		"sntp"
+		"sntp",
+		"serial",
+		"serialPort"
 };
+
+void initFileLocalData(void){
+	memset(&f, 0, sizeof(struct ppsFilesVars));
+}
+
+int sysCommand(const char *cmd){
+	int rv = system(cmd);
+	if (rv == -1 || WIFEXITED(rv) == false){
+		sprintf(g.logbuf, "System command failed: %s\n", cmd);
+		writeToLog(g.logbuf);
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * Retrieves the string from the config file assigned
+ * to the valid_config string with value key.
+ *
+ * @param[in] key The config key corresponding to a string in
+ * the valid_config[] array above.
+ *
+ * @returns The string assigned to the key.
+ */
+char *getString(int key){
+	int i = round(log2(key));
+
+	if (g.config_select & key){
+		return g.configVals[i];
+	}
+	return NULL;
+}
+
+/**
+ * Tests configuration strings from /etc/pps-client.conf
+ * for the specified string. To avoid searching the config
+ * file more than once, the config key is a bit position in
+ * g.config_select that is set or not set if the corresponding
+ * config string is found in the config file when it is first
+ * read. In that case an array g.configVals[], constructed when
+ * the config file was read, will contain the string from the
+ * config file that followed the valid_config. That string
+ * will be g.configVals[log2(key)].
+ *
+ * @param[in] key The config key corresponding to a string in
+ * the valid_config[] array above.
+ *
+ * @param[in] string The string that must be matched by the string
+ * that follows the config string name from the valid_config[] array.
+ *
+ * @returns "true" if the string in the config file matches arg
+ * "string", else "false".
+ */
+bool hasString(int key, const char *string){
+	int i = round(log2(key));
+
+	if (g.config_select & key){
+		char *val = strstr(g.configVals[i], string);
+		if (val != NULL){
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Tests configuration strings from /etc/pps-client.conf
+ * for the "enable" keyword.
+ *
+ * @param[in] key The config key corresponding to a string in
+ * the valid_config[] array above.
+ *
+ * @returns "true" if the "enable" keyword is detected,
+ * else "false".
+ */
+bool isEnabled(int key){
+	return hasString(key, "enable");
+}
+
+/**
+ * Tests configuration strings from /etc/pps-client.conf
+ * for the "disable" keyword.
+ *
+ * @param[in] key The config key corresponding to a string in
+ * the valid_config[] array above.
+ *
+ * @returns "true" if the "disable" keyword is detected,
+ * else false.
+ */
+bool isDisabled(int key){
+	return hasString(key, "disable");
+}
 
 /**
  * Data associations for PPS-Client command line save
@@ -129,15 +223,18 @@ void writeToLogNoTimestamp(char *logbuf){
 		rename(log_file, old_log_file);
 	}
 
-	int fd = open(log_file, O_CREAT | O_WRONLY | O_APPEND);
+	mode_t mode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH;
+	int fd = open(log_file, O_CREAT | O_WRONLY | O_APPEND, mode);
 	if (fd == -1){
 		couldNotOpenMsgTo(logbuf, log_file);
-		printf(logbuf);
+		printf("%s", logbuf);
 		return;
 	}
 
-	write(fd, logbuf, strlen(logbuf));
-	fchmod(fd, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+	int rv = write(fd, logbuf, strlen(logbuf));
+	if (rv == -1){
+		;
+	}
 	close(fd);
 }
 
@@ -158,20 +255,26 @@ void writeToLog(char *logbuf){
 		rename(log_file, old_log_file);
 	}
 
-	int fd = open(log_file, O_CREAT | O_WRONLY | O_APPEND);
+	mode_t mode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH;
+	int fd = open(log_file, O_CREAT | O_WRONLY | O_APPEND, mode);
 	if (fd == -1){
 		couldNotOpenMsgTo(logbuf, log_file);
-		printf(logbuf);
+		printf("%s", logbuf);
 		return;
 	}
 
 	time_t t = time(NULL);
 	struct tm *tmp = localtime(&t);
 	strftime(g.strbuf, STRBUF_SZ, "%F %H:%M:%S ", tmp);
-	write(fd, g.strbuf, strlen(g.strbuf));
+	int rv = write(fd, g.strbuf, strlen(g.strbuf));
+	if (rv == -1){
+		;
+	}
 
-	write(fd, logbuf, strlen(logbuf));
-	fchmod(fd, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+	rv = write(fd, logbuf, strlen(logbuf));
+	if (rv == -1){
+		;
+	}
 	close(fd);
 }
 
@@ -187,7 +290,7 @@ void writeToLog(char *logbuf){
 void bufferStatusMsg(const char *msg){
 
 	if (g.isVerbose){
-		fprintf(stdout, msg);
+		fprintf(stdout, "%s", msg);
 	}
 
 	int msglen = strlen(g.savebuf);
@@ -219,8 +322,13 @@ int writeStatusStrings(void){
 	if (fd == -1){
 		return -1;
 	}
-	write(fd, g.savebuf, fSize);
+	int rv = write(fd, g.savebuf, fSize);
 	close(fd);
+	if (rv == -1){
+		sprintf(g.logbuf, "writeStatusStrings() Could not write to %s. Error: %s\n", displayParams_file, strerror(errno));
+		writeToLog(g.logbuf);
+		return -1;
+	}
 
 	g.savebuf[0] = '\0';
 	return 0;
@@ -256,14 +364,18 @@ int read_logerr(int fd, char *buf, int sz, const char *filename){
  * @returns The file descriptor.
  */
 int open_logerr(const char* filename, int flags){
-	int fd = open(filename, flags);
+	int mode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH;
+	int fd;
+	if ((flags & O_CREAT) == O_CREAT){
+		fd = open(filename, flags, mode);
+	}
+	else {
+		fd = open(filename, flags);
+	}
 	if (fd == -1){
 		couldNotOpenMsgTo(g.logbuf, filename);
 		writeToLog(g.logbuf);
 		return -1;
-	}
-	if ((flags & O_CREAT) == O_CREAT){
-		fchmod(fd, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
 	}
 	return fd;
 }
@@ -285,7 +397,7 @@ int writeFileMsgToLogbuf(const char *filename, char *logbuf){
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1){
 		couldNotOpenMsgTo(logbuf, filename);
-		printf(logbuf);
+		printf("%s", logbuf);
 		return -1;
 	}
 	fstat(fd, &stat_buf);
@@ -295,7 +407,7 @@ int writeFileMsgToLogbuf(const char *filename, char *logbuf){
 		rv = read(fd, logbuf, LOGBUF_SZ-1);
 		if (rv == -1){
 			errorReadingMsgTo(logbuf, filename);
-			printf(logbuf);
+			printf("%s", logbuf);
 			return rv;
 		}
 		logbuf[LOGBUF_SZ-1] = '\0';
@@ -304,7 +416,7 @@ int writeFileMsgToLogbuf(const char *filename, char *logbuf){
 		rv = read(fd, logbuf, sz);
 		if (rv == -1){
 			errorReadingMsgTo(logbuf, filename);
-			printf(logbuf);
+			printf("%s", logbuf);
 			return rv;
 		}
 		logbuf[sz] = '\0';
@@ -364,14 +476,24 @@ bool ppsIsRunning(void){
 	char buf[50];
 	const char *filename = "/run/shm/pps-msg";
 
-	system("pidof pps-client > /run/shm/pps-msg");
+	int rv = sysCommand("pidof pps-client > /run/shm/pps-msg");
+	if (rv == -1){
+		return false;
+	}
 
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1){
+		sprintf(g.logbuf, "ppsIsRunning() Failed. Could not open %s. Error: %s\n", filename, strerror(errno));
+		writeToLog(g.logbuf);
 		return false;
 	}
 	memset(buf, 0, 50);
-	read(fd, buf, 50);
+	rv = read(fd, buf, 50);
+	if (rv == -1){
+		sprintf(g.logbuf, "ppsIsRunning() Failed. Could not read %s. Error: %s\n", filename, strerror(errno));
+		writeToLog(g.logbuf);
+		return false;
+	}
 
 	int callerPID = 0, daemonPID = 0;					// If running both of these exist
 	sscanf(buf, "%d %d\n", &callerPID, &daemonPID);
@@ -394,8 +516,6 @@ int createPIDfile(void){
 
 	int pfd = open_logerr(pidFilename, O_RDWR | O_CREAT | O_EXCL);
 	if (pfd == -1){
-		sprintf(g.logbuf, "Error: Could not create a PID file.\n");
-		writeToLog(g.logbuf);
 		return -1;
 	}
 
@@ -405,7 +525,7 @@ int createPIDfile(void){
 	if (write(pfd, g.strbuf, strlen(g.strbuf)) == -1)	// Try to write the PID
 	{
 		close(pfd);
-		sprintf(g.logbuf, "Error writing a PID file for pps-client: %s\n", strerror(errno));
+		sprintf(g.logbuf, "createPIDfile() Could not write a PID file. Error: %s\n", strerror(errno));
 		writeToLog(g.logbuf);
 		return -1;									// Write failed.
 	}
@@ -565,7 +685,7 @@ int readConfigFile(void){
 				nCfgStrs += 1;
 			}
 		}
-		pToken = strtok(NULL, "\n");					// Get the next token.
+		pToken = strtok(NULL, "\n");						// Get the next token.
 	}
 
 	if (nCfgStrs == 0){
@@ -638,7 +758,7 @@ int readConfigFile(void){
  */
 void writeDistribution(int distrib[], int len, int scaleZero, int count,
 		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
-
+	int rv = 0;
 	remove(distrib_file);
 	int fd = open_logerr(distrib_file, O_CREAT | O_WRONLY | O_APPEND);
 	if (fd == -1){
@@ -646,7 +766,13 @@ void writeDistribution(int distrib[], int len, int scaleZero, int count,
 	}
 	for (int i = 0; i < len; i++){
 		sprintf(g.strbuf, "%d %d\n", i-scaleZero, distrib[i]);
-		write(fd, g.strbuf, strlen(g.strbuf));
+		rv = write(fd, g.strbuf, strlen(g.strbuf));
+		if (rv == -1){
+			sprintf(g.logbuf, "writeDistribution() Unable to write to %s. Error: %s\n", distrib_file, strerror(errno));
+			writeToLog(g.logbuf);
+			close(fd);
+			return;
+		}
 	}
 	close(fd);
 
@@ -683,6 +809,7 @@ void writeDistribution(int distrib[], int len, int scaleZero, int count,
  */
 void writeMultipleDistrib(int label[], int distrib[][INTRPT_DISTRIB_LEN], int len, int scaleZero, int count,
 		int *last_epoch, const char *distrib_file, const char *last_distrib_file){
+	int rv;
 
 	remove(distrib_file);
 	int fd = open_logerr(distrib_file, O_CREAT | O_WRONLY | O_APPEND);
@@ -698,14 +825,32 @@ void writeMultipleDistrib(int label[], int distrib[][INTRPT_DISTRIB_LEN], int le
 	}
 
 	sprintf(g.strbuf, "%s %d %d %d %d %d\n", "sysDelay:", label[0], label[1], label[2], label[3], label[4]);
-	write(fd, g.strbuf, strlen(g.strbuf));
+	rv = write(fd, g.strbuf, strlen(g.strbuf));
+	if (rv == -1){
+		sprintf(g.logbuf, "writeMultipleDistrib() Unable to write to %s. Error: %s\n", distrib_file, strerror(errno));
+		writeToLog(g.logbuf);
+		close(fd);
+		return;
+	}
 
 	sprintf(g.strbuf, "%s %d %d %d %d %d\n", "totals:", totals[0], totals[1], totals[2], totals[3], totals[4]);
-	write(fd, g.strbuf, strlen(g.strbuf));
+	rv = write(fd, g.strbuf, strlen(g.strbuf));
+	if (rv == -1){
+		sprintf(g.logbuf, "writeMultipleDistrib() Unable to write to %s. Error: %s\n", distrib_file, strerror(errno));
+		writeToLog(g.logbuf);
+		close(fd);
+		return;
+	}
 
 	for (int i = 0; i < len; i++){
 		sprintf(g.strbuf, "%d %d %d %d %d %d\n", i-scaleZero, distrib[0][i], distrib[1][i], distrib[2][i], distrib[3][i], distrib[4][i]);
-		write(fd, g.strbuf, strlen(g.strbuf));
+		rv = write(fd, g.strbuf, strlen(g.strbuf));
+		if (rv == -1){
+			sprintf(g.logbuf, "writeMultipleDistrib() Unable to write to %s. Error: %s\n", distrib_file, strerror(errno));
+			writeToLog(g.logbuf);
+			close(fd);
+			return;
+		}
 	}
 	close(fd);
 
@@ -794,7 +939,11 @@ void writeOffsets(const char *filename){
 			j -= SECS_PER_10_MIN;
 		}
 		sprintf(g.strbuf, "%d %d %lf\n", g.seq_numRec[j], g.offsetRec[j], g.freqOffsetRec2[j]);
-		write(fd, g.strbuf, strlen(g.strbuf));
+		int rv = write(fd, g.strbuf, strlen(g.strbuf));
+		if (rv == -1){
+			sprintf(g.logbuf, "writeOffsets() Unable to write to %s. Error: %s\n", filename, strerror(errno));
+			writeToLog(g.logbuf);
+		}
 	}
 	close(fd);
 }
@@ -817,52 +966,17 @@ void writeFrequencyVars(const char *filename){
 			j -= NUM_5_MIN_INTERVALS;
 		}
 		sprintf(g.strbuf, "%ld %lf %lf\n", g.timestampRec[j], g.freqOffsetRec[j], g.freqAllanDev[j]);
-		write(fd, g.strbuf, strlen(g.strbuf));
+		int rv = write(fd, g.strbuf, strlen(g.strbuf));
+		if (rv == -1){
+			sprintf(g.logbuf, "writeFrequencyVars() Write to %s failed with error: %s\n", filename, strerror(errno));
+			writeToLog(g.logbuf);
+			close(fd);
+			return;
+		}
 	}
 	close(fd);
 }
 
-/**
- * Tests configuration strings from /etc/pps-client.conf
- * for the "enable" keyword.
- *
- * @param[in] config The configuration identifier value.
- *
- * @returns "true" if the "enable" keyword is detected,
- * else "false".
- */
-bool isEnabled(int config){
-	int i = round(log2(config));
-
-	if (g.config_select & config){
-		char *val = strstr(g.configVals[i], "enable");
-		if (val != NULL){
-			return true;
-		}
-	}
-	return false;
-}
-
-/**
- * Tests configuration strings from /etc/pps-client.conf
- * for the "disable" keyword.
- *
- * @param[in] config_val Configuration identifier value.
- *
- * @returns "true" if the "disable" keyword is detected,
- * else false.
- */
-bool isDisabled(int config_val){
-	int i = round(log2(config_val));
-
-	if (g.config_select & config_val){
-		char *val = strstr(g.configVals[i], "disable");
-		if (val != NULL){
-			return true;
-		}
-	}
-	return false;
-}
 
 /**
  * Saves a distribution consisting of an array of doubles.
@@ -892,7 +1006,13 @@ int saveDoubleArray(double distrib[], const char *filename, int len, int arrayZe
 		strcat(filebuf, g.strbuf);
 	}
 
-	write(fd, filebuf, fileLen + 1);
+	int rv = write(fd, filebuf, fileLen + 1);
+	if (rv == -1){
+		sprintf(g.logbuf, "saveDoubleArray() Write to %s failed with error: %s\n", filename, strerror(errno));
+		writeToLog(g.logbuf);
+		return -1;
+	}
+
 	fsync(fd);
 
 	delete[] filebuf;
@@ -906,19 +1026,23 @@ int saveDoubleArray(double distrib[], const char *filename, int len, int arrayZe
  * command line with "pps-client -s [label] <filename>".
  * Then matches the requestStr to the corresponding arrayData
  * which is then passed to a routine that saves the array
- * idendified by the data label.
+ * identified by the data label.
+ *
+ * @returns 0 on success else -1 on fail.
  */
-void processWriteRequest(void){
+int processWriteRequest(void){
 	struct stat buf;
 
-	int rv = stat(arrayData_file, &buf);
+	int rv = stat(arrayData_file, &buf);			// stat() used only to check that there is an arrayData_file
 	if (rv == -1){
-		return;
+		return 0;
 	}
 
 	int fd = open(arrayData_file, O_RDONLY);
 	if (fd == -1){
-		return;
+		sprintf(g.logbuf, "processWriteRequest() Unable to open %s. Error: %s\n", arrayData_file, strerror(errno));
+		writeToLog(g.logbuf);
+		return -1;
 	}
 
 	char requestStr[25];
@@ -952,6 +1076,7 @@ void processWriteRequest(void){
 
 		}
 	}
+	return 0;
 }
 
 /**
@@ -995,14 +1120,30 @@ int processFiles(void){
 		writeSysdelayDistribFile();
 	}
 
-	if (isEnabled(NTP)){
+	if (isEnabled(SNTP)){
 		g.doNTPsettime = true;
 	}
-	else if (isDisabled(NTP)){
+	else if (isDisabled(SNTP)){
 		g.doNTPsettime = false;
 	}
 
-	processWriteRequest();
+	if (isEnabled(SERIAL)){
+		g.doNTPsettime = false;
+		g.doSerialsettime = true;
+	}
+	else if (isDisabled(SERIAL)){
+		g.doSerialsettime = false;
+	}
+
+	char *sp = getString(SERIAL_PORT);
+	if (sp != NULL){
+		strcpy(g.serialPort, sp);
+	}
+
+	rv = processWriteRequest();
+	if (rv == -1){
+		return rv;
+	}
 
 	return 0;
 }
@@ -1021,7 +1162,11 @@ void writeSysDelay(void){
 	if (pfd == -1){
 		return;
 	}
-	write(pfd, g.strbuf, strlen(g.strbuf) + 1);		// Write PPS sysDelay to sysDelay_file
+	int rv = write(pfd, g.strbuf, strlen(g.strbuf) + 1);		// Write PPS sysDelay to sysDelay_file
+	if (rv == -1){
+		sprintf(g.logbuf, "writeSysDelay() Write to memory file failed with error: %s\n", strerror(errno));
+		writeToLog(g.logbuf);
+	}
 	close(pfd);
 }
 
@@ -1041,7 +1186,11 @@ void writeTimestamp(double timestamp){
 	if (pfd == -1){
 		return;
 	}
-	write(pfd, g.strbuf, strlen(g.strbuf) + 1);		// Write PPS timestamp to assert_file
+	int rv = write(pfd, g.strbuf, strlen(g.strbuf) + 1);		// Write PPS timestamp to assert_file
+	if (rv == -1){
+		sprintf(g.logbuf, "writeTimestamp() write to assert_file failed with error: %s\n", strerror(errno));
+		writeToLog(g.logbuf);
+	}
 	close(pfd);
 }
 
@@ -1202,11 +1351,7 @@ int restartNTP(void){
 	sprintf(g.logbuf, "Restarting NTP\n");
 	writeToLog(g.logbuf);
 
-	int rv = system("service ntp restart > /run/shm/ntp-restart-msg");
-	if (rv != 0){
-		sprintf(g.logbuf, "\'service ntp restart\' failed with the following message:\n");
-		writeToLog(g.logbuf);
-	}
+	int rv = sysCommand("service ntp restart > /run/shm/ntp-restart-msg");
 	writeFileMsgToLog("/run/shm/ntp-restart-msg");
 	return rv;
 }
@@ -1246,7 +1391,7 @@ int replaceNTPConfig(const char *fbuf){
 		}
 		else {
 			couldNotOpenMsgTo(g.logbuf, ntp_config_bac);
-			printf(g.logbuf);
+			printf("%s", g.logbuf);
 		}
 	}
 	else {
@@ -1321,14 +1466,15 @@ int disableNTP(void){
 	if (g.doNTPsettime){
 		fd = open_logerr(ntp_config_file, O_RDONLY);
 		if (fd == -1){
-			sprintf(g.logbuf, "Did not find NTP config file. Is NTP installed?\n");
+			sprintf(g.logbuf, "disableNTP() Did not find NTP config file. Is NTP installed?\n");
 			writeToLog(g.logbuf);
 			return -1;
 		}
 	}
 	else {
 		fd = open(ntp_config_file, O_RDONLY);
-		if (fd == -1){
+		if (fd == -1){										// No NTP file so can't use SNTP
+			sysCommand("timedatectl set-ntp false");			// Try timedatectl
 			return -1;
 		}
 	}
@@ -1389,7 +1535,8 @@ int enableNTP(void){
 	else {
 		fd = open(ntp_config_file, O_RDONLY);
 	}
-	if (fd == -1){
+	if (fd == -1){										// No NTP file so can't use NTP
+		sysCommand("timedatectl set-ntp true");			// Try timedatectl
 		return -1;
 	}
 
@@ -1439,9 +1586,12 @@ char *copyMajorTo(char *majorPos){
 
 	const char *filename = "/run/shm/proc_devices";
 
-	system("cat /proc/devices > /run/shm/proc_devices"); 	// "/proc/devices" can't be handled like
-															// a normal file so it is copied to a memory
-	int fd = open_logerr(filename, O_RDONLY);				// file where its is contents can be read.
+	int rv = sysCommand("cat /proc/devices > /run/shm/proc_devices"); 	// "/proc/devices" can't be handled like
+	if (rv == -1){														// a normal file so it is copied to a memory
+		return NULL;														// file where its is contents can be read.
+	}
+
+	int fd = open_logerr(filename, O_RDONLY);
 	if (fd == -1){
 		return NULL;
 	}
@@ -1451,7 +1601,7 @@ char *copyMajorTo(char *majorPos){
 
 	char *fbuf = new char[sz+1];
 
-	int rv = read_logerr(fd, fbuf, sz, filename);
+	rv = read_logerr(fd, fbuf, sz, filename);
 	if (rv == -1){
 		close(fd);
 		remove(filename);
@@ -1486,10 +1636,20 @@ char *copyMajorTo(char *majorPos){
 }
 
 char *getLinuxVersion(void){
+	int rv;
 	char fbuf[20];
-	system("uname -r > /run/shm/linuxVersion");
+	rv = sysCommand("uname -r > /run/shm/linuxVersion");
+	if (rv == -1){
+		return NULL;
+	}
+
 	int fd = open("/run/shm/linuxVersion", O_RDONLY);
-	read(fd, fbuf, 20);
+	rv = read(fd, fbuf, 20);
+	if (rv == -1){
+		sprintf(g.logbuf, "getLinuxVersion() Unable to read Linux version from /run/shm/linuxVersion\n");
+		writeToLog(g.logbuf);
+		return NULL;
+	}
 	sscanf(fbuf, "%s\n", g.linuxVersion);
 	return g.linuxVersion;
 }
@@ -1516,10 +1676,10 @@ int driver_load(int ppsGPIO, int outputGPIO, int intrptGPIO){
 	if (fd < 0){
 		if (errno == ENOENT){
 			sprintf(g.logbuf, "Linux version changed. Requires\n");
-			printf(g.logbuf);
+			printf("%s", g.logbuf);
 			writeToLog(g.logbuf);
 			sprintf(g.logbuf, "reinstall of version-matching pps-client.\n");
-			printf(g.logbuf);
+			printf("%s", g.logbuf);
 			writeToLog(g.logbuf);
 		}
 		return -1;
@@ -1531,8 +1691,12 @@ int driver_load(int ppsGPIO, int outputGPIO, int intrptGPIO){
 	strcat(insmod, driverFile);
 	sprintf(insmod + strlen(insmod), " PPS_GPIO=%d OUTPUT_GPIO=%d INTRPT_GPIO=%d", ppsGPIO, outputGPIO, intrptGPIO);
 
-	system("rm -f /dev/gps-pps-io");				// Clean up any old device files.
-	system(insmod);									// Issue the insmod command
+	sysCommand("rm -f /dev/gps-pps-io");					// Clean up any old device files.
+
+	int rv = sysCommand(insmod);							// Issue the insmod command
+	if (rv == -1){
+		return -1;
+	}
 
 	char *mknod = g.strbuf;
 	strcpy(mknod, "mknod /dev/gps-pps-io c ");
@@ -1540,15 +1704,25 @@ int driver_load(int ppsGPIO, int outputGPIO, int intrptGPIO){
 	if (major == NULL){								// No major found! insmod failed.
 		sprintf(g.logbuf, "driver_load() error: No major found!\n");
 		writeToLog(g.logbuf);
-		system("/sbin/rmmod gps-pps-io");
+		sysCommand("/sbin/rmmod gps-pps-io");
 		return -1;
 	}
 	strcat(mknod, " 0");
 
-	system(mknod);									// Issue the mknod command
+	rv = sysCommand(mknod);								// Issue the mknod command
+	if (rv == -1){
+		return -1;
+	}
 
-	system("chgrp root /dev/gps-pps-io");
-	system("chmod 664 /dev/gps-pps-io");
+	rv = sysCommand("chgrp root /dev/gps-pps-io");
+	if (rv == -1){
+		return -1;
+	}
+
+	rv = sysCommand("chmod 664 /dev/gps-pps-io");
+	if (rv == -1){
+		return -1;
+	}
 
 	return 0;
 }
@@ -1558,8 +1732,8 @@ int driver_load(int ppsGPIO, int outputGPIO, int intrptGPIO){
  */
 void driver_unload(){
 	sleep(5);							// Make sure the system has actually closed the driver before we unload it.
-	system("/sbin/rmmod gps_pps_io");
-	system("rm -f /dev/gps-pps-io");
+	sysCommand("/sbin/rmmod gps_pps_io");
+	sysCommand("rm -f /dev/gps-pps-io");
 }
 
 /**
@@ -1612,7 +1786,7 @@ void showStatusEachSecond(void){
 		int fd = open(displayParams_file, O_RDONLY);
 		if (fd == -1){
 			printf("showStatusEachSecond(): Could not open ");
-			printf(displayParams_file);
+			printf("%s", displayParams_file);
 			printf("\n");
 		}
 		else {
@@ -1625,8 +1799,12 @@ void showStatusEachSecond(void){
 				break;
 			}
 
-			read(fd, paramsBuf, sz);
+			int rv = read(fd, paramsBuf, sz);
 			close(fd);
+			if (rv == -1){
+				printf("showStatusEachSecond() Read paramsBuf failed with error: %s\n", strerror(errno));
+				break;
+			}
 
 			if (sz > 0){
 
@@ -1634,13 +1812,13 @@ void showStatusEachSecond(void){
 
 				int clen = strcspn(paramsBuf, "0123456789");
 				if (clen > 0){									// Is an info message line.
-					printf(paramsBuf);
+					printf("%s", paramsBuf);
 				}
 				else {											// Is a standard status line.
 					seqNum = getSeqNum(paramsBuf);
 
 					if (seqNum != lastSeqNum){
-						printf(paramsBuf);
+						printf("%s", paramsBuf);
 					}
 					lastSeqNum = seqNum;
 				}
@@ -1698,7 +1876,7 @@ int daemonSaveArray(const char *requestStr, const char *filename){
 
 	int fd = open_logerr(arrayData_file, O_CREAT | O_WRONLY | O_TRUNC);
 	if (fd == -1){
-		printf("Error: Open arrayData_file failed.\n");
+		printf("daemonSaveArray() Open arrayData_file failed\n");
 		return -1;
 	}
 
@@ -1709,9 +1887,13 @@ int daemonSaveArray(const char *requestStr, const char *filename){
 		strcat(buf, filename);
 	}
 
-	write(fd, buf, strlen(buf) + 1);
-
+	int rv = write(fd, buf, strlen(buf) + 1);
 	close(fd);
+	if (rv == -1){
+		sprintf(g.logbuf, "daemonSaveArray() Write to tmpfs memory file failed\n");
+		writeToLog(g.logbuf);
+		return -1;
+	}
 	return 0;
 }
 

@@ -26,8 +26,55 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-const char *version = "pps-client-installer v1.0.2";
+const char *version = "pps-client-installer v1.4.0";
 const char *cfgVersion = "1.2.0";
+
+char *configbuf = NULL;
+unsigned char *fbuf = NULL;
+
+const char *defaultLines[] = {
+	"pps-gpio=4",
+	"output-gpio=17",
+	"intrpt-gpio=22",
+	"serialPort=/dev/serial0"
+};
+
+bool isDefaultLine(char *line){
+	if (line[0] == '\n' 					// Empty line
+			|| line[0] == '#'){			// Commented-out line
+		return true;
+	}
+
+	char *start = NULL;
+
+	int count = sizeof(defaultLines) / sizeof(char *);
+
+	for (int i = 0; i < count; i++){
+		start = strstr(line, defaultLines[i]);
+		if (start != NULL && start == line){
+			return true;
+		}
+	}
+	return false;
+}
+
+bool allOptsCommentedOut(char *configbuf){
+
+	char *line = configbuf;
+
+	while (line[0] != '\0'){
+		if (isDefaultLine(line)){
+			line = strstr(line, "\n\0");
+			if (line[0] == '\n'){
+				line += 1;
+			}
+		}
+		else if (line[0] != '\0'){
+			return false;
+		}
+	}
+	return true;
+}
 
 /**
  * Returns the Linux kernel identifier
@@ -35,9 +82,17 @@ const char *cfgVersion = "1.2.0";
  * "uname -r" at the command line.
  */
 char *getUname(char *str, int sz){
-	system("uname -r > /run/shm/uname");
+	int rv = system("uname -r > /run/shm/uname");
+	if (rv == -1 || WIFEXITED(rv) == false){
+		printf("getUname() System command failed\n");
+		exit(EXIT_FAILURE);
+	}
 	int fd = open("/run/shm/uname", O_RDONLY);
-	read(fd, str, sz);
+	rv = read(fd, str, sz);
+	if (rv == -1){
+		printf("getUname() Read /run/shm/uname failed\n");
+		exit(EXIT_FAILURE);
+	}
 	close(fd);
 	remove("/run/shm/uname");
 
@@ -45,6 +100,22 @@ char *getUname(char *str, int sz){
 	str[sz] = '\0';
 
 	return str;
+}
+
+int sysCommand(const char *cmd){
+	int rv = system(cmd);
+	if (rv == -1 || WIFEXITED(rv) == false){
+		printf("system command failed: %s\n", cmd);
+
+		if (configbuf != NULL){
+			delete[] configbuf;
+		}
+		if (fbuf != NULL){
+			delete[] fbuf;
+		}
+		exit(EXIT_FAILURE);
+	}
+	return 0;
 }
 
 int main(int argc, char *argv[]){
@@ -58,13 +129,10 @@ int main(int argc, char *argv[]){
 	pkg_start[6] = 0xff;
 	pkg_start[7] = 0x00;
 
-	char buf[50];
-	char sbuf[20];
-
 	uid_t uid = geteuid();
 	if (uid != 0){
 		printf("Requires superuser privileges. Please sudo this command.\n");
-		return 1;
+		exit(EXIT_FAILURE);
 	}
 
 	unsigned char *ps = pkg_start;
@@ -78,26 +146,26 @@ int main(int argc, char *argv[]){
 
 	if (strcmp(version, os_version) != 0){
 		printf("Cannot install. pps-client version %s mismatches kernel version %s\n", version, os_version);
-		return 1;
+		exit(EXIT_FAILURE);
 	}
 
 	int fd = open(argv[0], O_RDONLY);					// Prepare to read this program as a binary file
 	if (fd == -1){
-		printf("File not found: %s\n", argv[0]);
-		return 1;
+		printf("Program binary %s was not found\n", argv[0]);
+		exit(EXIT_FAILURE);
 	}
 
 	fstat(fd, &stat_buf);
-	int sz = stat_buf.st_size;							// Program size including tar file attachment
+	int sz = stat_buf.st_size;						// Program size including tar file attachment
 
-	unsigned char *fbuf = new unsigned char[sz];		// A buffer to hold the binary file
+	fbuf = new unsigned char[sz];					// A buffer to hold the binary file
 
 	ssize_t rd = read(fd, fbuf, sz);					// Read the program into the buffer
 	close(fd);
 	if (rd == -1){
 		printf("Error reading %s\n", argv[0]);
 		delete fbuf;
-		return 1;
+		exit(EXIT_FAILURE);
 	}
 
 	unsigned char *ptar = fbuf;
@@ -112,18 +180,18 @@ int main(int argc, char *argv[]){
 	}
 
 	if (i == rd){
-		printf("pkg_start not found.\n");
+		printf("pkg_start code was not found.\n");
 		delete fbuf;
-		return 1;
+		exit(EXIT_FAILURE);
 	}
-
+	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
 	sz -= i + 8;										// Set to the size of the tar file
 														// Create the tar archive
-	int fd2 = open("pkg.tar.gz", O_CREAT | O_WRONLY);
+	int fd2 = open("pkg.tar.gz", O_CREAT | O_WRONLY, mode);
 	if (fd2 == -1){
 		printf("Unable to create the tar file\n");
 		delete fbuf;
-		return 1;
+		exit(EXIT_FAILURE);
 	}
 
 	ssize_t wrt = write(fd2, ptar, sz);					// Write to the tar file from ptar
@@ -131,129 +199,139 @@ int main(int argc, char *argv[]){
 	if (wrt == -1){
 		close(fd2);
 		printf("Error writing tar file.\n");
-		return 1;
+		exit(EXIT_FAILURE);
 	}
 	if (wrt != sz){
 		close(fd2);
 		printf("Incomplete write to tar file. sz: %d wrt: %d\n", sz, wrt);
-		return 1;
+		exit(EXIT_FAILURE);
 	}
-
-	fchmod(fd2, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
 	close(fd2);
 
-	int rv = system("tar xzvf pkg.tar.gz");
-	if (rv == -1){
-		return 0;
-	}
+	sysCommand("tar xzvf pkg.tar.gz");
 
 	printf("Moving pps-client to /usr/sbin/pps-client\n");
-	system("mv ./pkg/pps-client /usr/sbin/pps-client");
+
+	sysCommand("mv ./pkg/pps-client /usr/sbin/pps-client");
 
 	printf("Moving pps-client.sh to /etc/init.d/pps-client\n");
-	system("mv ./pkg/pps-client.sh /etc/init.d/pps-client");
-	system("chmod +x /etc/init.d/pps-client");
-	system("chown root /etc/init.d/pps-client");
-	system("chgrp root /etc/init.d/pps-client");
+
+	sysCommand("mv ./pkg/pps-client.sh /etc/init.d/pps-client");
+	sysCommand("chmod +x /etc/init.d/pps-client");
+	sysCommand("chown root /etc/init.d/pps-client");
+	sysCommand("chgrp root /etc/init.d/pps-client");
 
 	char *cmd = (char *)fbuf;
 
-	printf("Moving gps-pps-io.ko to /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko\n");
+	printf("Moving gps-pps-io.ko to /lib/modules/%s/kernel/drivers/misc/gps-pps-io.ko\n", os_version);
+
 	strcpy(cmd, "mv ./pkg/gps-pps-io.ko /lib/modules/");
 	strcat(cmd, version);
 	strcat(cmd, "/kernel/drivers/misc/gps-pps-io.ko");
-	system(cmd);
+	sysCommand(cmd);
 
 	int fdc = open("/etc/pps-client.conf", O_RDONLY);
 	if (fdc == -1){													// No config file.
 		printf("Moving pps-client.conf to /etc/pps-client.conf\n");
-		system("mv ./pkg/pps-client.conf /etc/pps-client.conf");
+		sysCommand("mv ./pkg/pps-client.conf /etc/pps-client.conf");
 	}
 	else {															// Config file exists.
-		read(fdc, buf, 50);
-		sscanf(buf, "# pps-client.conf v%s\n", sbuf);
-		if (strcmp(sbuf, cfgVersion) != 0){							// But the version is different.
+		int configbufLen = 10000;
+		char *configbuf = new char[configbufLen];
+		memset(configbuf, 0, configbufLen);
+
+		int rv = read(fdc, configbuf, configbufLen-1);
+		if (rv == -1){
+			printf("Read config file failed. Exiting.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		if (allOptsCommentedOut(configbuf)){
 			printf("Moving pps-client.conf to /etc/pps-client.conf\n");
-			system("mv ./pkg/pps-client.conf /etc/pps-client.conf");
+			sysCommand("mv ./pkg/pps-client.conf /etc/pps-client.conf");
 		}
-		else {														// Exists and is same config version.
-			printf("Existing file: /etc/pps-client.conf was not replaced.\n");
+		else {
+			printf("Modified file, /etc/pps-client.conf, was not replaced.\n");
 		}
+
+		delete[] configbuf;
+		configbuf = NULL;
+
 		close(fdc);
 	}
 
 	printf("Moving pps-client-remove to /usr/sbin/pps-client-remove\n");
-	system("mv ./pkg/pps-client-remove /usr/sbin/pps-client-remove");
+	sysCommand("mv ./pkg/pps-client-remove /usr/sbin/pps-client-remove");
 
 	printf("Moving pps-client-stop to /usr/sbin/pps-client-stop\n");
-	system("mv ./pkg/pps-client-stop /usr/sbin/pps-client-stop");
-	system("chmod +x /usr/sbin/pps-client-stop");
+	sysCommand("mv ./pkg/pps-client-stop /usr/sbin/pps-client-stop");
+	sysCommand("chmod +x /usr/sbin/pps-client-stop");
 
 	printf("Moving interrupt-timer to /usr/sbin/interrupt-timer\n");
-	system("mv ./pkg/interrupt-timer /usr/sbin/interrupt-timer");
-	system("chmod +x /usr/sbin/interrupt-timer");
+	sysCommand("mv ./pkg/interrupt-timer /usr/sbin/interrupt-timer");
+	sysCommand("chmod +x /usr/sbin/interrupt-timer");
 
 	printf("Moving interrupt-timer.ko to /lib/modules/`uname -r`/kernel/drivers/misc/interrupt-timer.ko\n");
 	strcpy(cmd, "mv ./pkg/interrupt-timer.ko /lib/modules/");
 	strcat(cmd, version);
 	strcat(cmd, "/kernel/drivers/misc/interrupt-timer.ko");
-	system(cmd);
+	sysCommand(cmd);
 
 	printf("Moving pulse-generator to /usr/sbin/pulse-generator\n");
-	system("mv ./pkg/pulse-generator /usr/sbin/pulse-generator");
-	system("chmod +x /usr/sbin/pulse-generator");
+	sysCommand("mv ./pkg/pulse-generator /usr/sbin/pulse-generator");
+	sysCommand("chmod +x /usr/sbin/pulse-generator");
 
 	printf("Moving pulse-generator.ko to /lib/modules/`uname -r`/kernel/drivers/misc/pulse-generator.ko\n");
 	strcpy(cmd, "mv ./pkg/pulse-generator.ko /lib/modules/");
 	strcat(cmd, version);
 	strcat(cmd, "/kernel/drivers/misc/pulse-generator.ko");
-	system(cmd);
+	sysCommand(cmd);
 
 	printf("Moving NormalDistribParams to /usr/sbin/NormalDistribParams\n");
-	system("mv ./pkg/NormalDistribParams /usr/sbin/NormalDistribParams");
-	system("chmod +x /usr/sbin/NormalDistribParams");
+	sysCommand("mv ./pkg/NormalDistribParams /usr/sbin/NormalDistribParams");
+	sysCommand("chmod +x /usr/sbin/NormalDistribParams");
 
 	printf("Moving README.md to /usr/share/doc/pps-client/README.md\n");
-	system("mkdir /usr/share/doc/pps-client");
-	system("mv ./pkg/README.md /usr/share/doc/pps-client/README.md");
+	sysCommand("mkdir /usr/share/doc/pps-client");
+	sysCommand("mv ./pkg/README.md /usr/share/doc/pps-client/README.md");
 
-	system("mkdir /usr/share/doc/pps-client/figures");
-	system("mv ./pkg/frequency-vars.png /usr/share/doc/pps-client/figures/frequency-vars.png");
-	system("mv ./pkg/offset-distrib.png /usr/share/doc/pps-client/figures/offset-distrib.png");
-	system("mv ./pkg/StatusPrintoutOnStart.png /usr/share/doc/pps-client/figures/StatusPrintoutOnStart.png");
-	system("mv ./pkg/StatusPrintoutAt10Min.png /usr/share/doc/pps-client/figures/StatusPrintoutAt10Min.png");
-	system("mv ./pkg/RPi_with_GPS.jpg /usr/share/doc/pps-client/figures/RPi_with_GPS.jpg");
-	system("mv ./pkg/InterruptTimerDistrib.png /usr/share/doc/pps-client/figures/InterruptTimerDistrib.png");
-	system("mv ./pkg/SingleEventTimerDistrib.png /usr/share/doc/pps-client/figures/SingleEventTimerDistrib.png");
-	system("mv ./pkg/time.png /usr/share/doc/pps-client/figures/time.png");
+	sysCommand("mkdir /usr/share/doc/pps-client/figures");
+	sysCommand("mv ./pkg/frequency-vars.png /usr/share/doc/pps-client/figures/frequency-vars.png");
+	sysCommand("mv ./pkg/offset-distrib.png /usr/share/doc/pps-client/figures/offset-distrib.png");
+	sysCommand("mv ./pkg/StatusPrintoutOnStart.png /usr/share/doc/pps-client/figures/StatusPrintoutOnStart.png");
+	sysCommand("mv ./pkg/StatusPrintoutAt10Min.png /usr/share/doc/pps-client/figures/StatusPrintoutAt10Min.png");
+	sysCommand("mv ./pkg/RPi_with_GPS.jpg /usr/share/doc/pps-client/figures/RPi_with_GPS.jpg");
+	sysCommand("mv ./pkg/InterruptTimerDistrib.png /usr/share/doc/pps-client/figures/InterruptTimerDistrib.png");
+	sysCommand("mv ./pkg/SingleEventTimerDistrib.png /usr/share/doc/pps-client/figures/SingleEventTimerDistrib.png");
+	sysCommand("mv ./pkg/time.png /usr/share/doc/pps-client/figures/time.png");
 
 	printf("Moving Doxyfile to /usr/share/doc/pps-client/Doxyfile\n");
-	system("mv ./pkg/Doxyfile /usr/share/doc/pps-client/Doxyfile");
+	sysCommand("mv ./pkg/Doxyfile /usr/share/doc/pps-client/Doxyfile");
 
 	printf("Moving pps-client.md to /usr/share/doc/pps-client/client/pps-client.md\n");
-	system("mkdir /usr/share/doc/pps-client/client");
-	system("mv ./pkg/client/pps-client.md /usr/share/doc/pps-client/client/pps-client.md");
+	sysCommand("mkdir /usr/share/doc/pps-client/client");
+	sysCommand("mv ./pkg/client/pps-client.md /usr/share/doc/pps-client/client/pps-client.md");
 
-	system("mkdir /usr/share/doc/pps-client/client/figures");
-	system("mv ./pkg/client/figures/accuracy_verify.jpg /usr/share/doc/pps-client/client/figures/accuracy_verify.jpg");
-	system("mv ./pkg/client/figures/interrupt-delay-comparison.png /usr/share/doc/pps-client/client/figures/interrupt-delay-comparison.png");
-	system("mv ./pkg/client/figures/InterruptTimerDistrib.png /usr/share/doc/pps-client/client/figures/InterruptTimerDistrib.png");
-	system("mv ./pkg/client/figures/jitter-spike.png /usr/share/doc/pps-client/client/figures/jitter-spike.png");
-	system("mv ./pkg/client/figures/pps-jitter-distrib.png /usr/share/doc/pps-client/client/figures/pps-jitter-distrib.png");
-	system("mv ./pkg/client/figures/pps-offsets-stress.png /usr/share/doc/pps-client/client/figures/pps-offsets-stress.png");
-	system("mv ./pkg/client/figures/pps-offsets-to-300.png /usr/share/doc/pps-client/client/figures/pps-offsets-to-300.png");
-	system("mv ./pkg/client/figures/pps-offsets-to-720.png /usr/share/doc/pps-client/client/figures/pps-offsets-to-720.png");
-	system("mv ./pkg/client/figures/StatusPrintoutAt10Min.png /usr/share/doc/pps-client/client/figures/StatusPrintoutAt10Min.png");
-	system("mv ./pkg/client/figures/StatusPrintoutOnStart.png /usr/share/doc/pps-client/client/figures/StatusPrintoutOnStart.png");
-	system("mv ./pkg/client/figures/wiring.png /usr/share/doc/pps-client/client/figures/wiring.png");
-	system("mv ./pkg/client/figures/interrupt-delay-comparison-RPi3.png /usr/share/doc/pps-client/client/figures/interrupt-delay-comparison-RPi3.png");
-	system("mv ./pkg/client/figures/pps-jitter-distrib-RPi3.png /usr/share/doc/pps-client/client/figures/pps-jitter-distrib-RPi3.png");
+	sysCommand("mkdir /usr/share/doc/pps-client/client/figures");
+	sysCommand("mv ./pkg/client/figures/accuracy_verify.jpg /usr/share/doc/pps-client/client/figures/accuracy_verify.jpg");
+	sysCommand("mv ./pkg/client/figures/interrupt-delay-comparison.png /usr/share/doc/pps-client/client/figures/interrupt-delay-comparison.png");
+	sysCommand("mv ./pkg/client/figures/InterruptTimerDistrib.png /usr/share/doc/pps-client/client/figures/InterruptTimerDistrib.png");
+	sysCommand("mv ./pkg/client/figures/jitter-spike.png /usr/share/doc/pps-client/client/figures/jitter-spike.png");
+	sysCommand("mv ./pkg/client/figures/pps-jitter-distrib.png /usr/share/doc/pps-client/client/figures/pps-jitter-distrib.png");
+	sysCommand("mv ./pkg/client/figures/pps-offsets-stress.png /usr/share/doc/pps-client/client/figures/pps-offsets-stress.png");
+	sysCommand("mv ./pkg/client/figures/pps-offsets-to-300.png /usr/share/doc/pps-client/client/figures/pps-offsets-to-300.png");
+	sysCommand("mv ./pkg/client/figures/pps-offsets-to-720.png /usr/share/doc/pps-client/client/figures/pps-offsets-to-720.png");
+	sysCommand("mv ./pkg/client/figures/StatusPrintoutAt10Min.png /usr/share/doc/pps-client/client/figures/StatusPrintoutAt10Min.png");
+	sysCommand("mv ./pkg/client/figures/StatusPrintoutOnStart.png /usr/share/doc/pps-client/client/figures/StatusPrintoutOnStart.png");
+	sysCommand("mv ./pkg/client/figures/wiring.png /usr/share/doc/pps-client/client/figures/wiring.png");
+	sysCommand("mv ./pkg/client/figures/interrupt-delay-comparison-RPi3.png /usr/share/doc/pps-client/client/figures/interrupt-delay-comparison-RPi3.png");
+	sysCommand("mv ./pkg/client/figures/pps-jitter-distrib-RPi3.png /usr/share/doc/pps-client/client/figures/pps-jitter-distrib-RPi3.png");
 
-	system("rm -rf ./pkg");
-	system("rm pkg.tar.gz");
+	sysCommand("rm -rf ./pkg");
+	sysCommand("rm pkg.tar.gz");
 
-	delete fbuf;
+	delete[] fbuf;
 
 	printf("Done.\n");
 	return 0;
