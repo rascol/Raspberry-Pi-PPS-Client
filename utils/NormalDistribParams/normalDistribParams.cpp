@@ -2,7 +2,8 @@
  * normalDistribParams.cpp
  *
  * Created on: Oct 20, 2016
- * Copyright (C) 2016  Raymond S. Connell
+ * Modified: Jan 1, 2018
+ * Copyright (C) 2018 Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +26,8 @@
 unsigned int idnum = 1839762001;		// 1839762001
 double pi = 3.14159265359;
 
+const char *version = "1.1";
+
 /**
  * Generates pseudo-random number in range
  * [low,high).
@@ -42,28 +45,33 @@ double randomVar(double low, double high)
 }
 
 /**
- * Calculates the mean and stdandard deviation from two
- * consequtive values of a sample distribution binned
- * at unit intervals using monte carlo simulation and
+ * Calculates the mean and standard deviation from three
+ * consecutive values of a sample distribution binned
+ * at unit intervals using Monte Carlo simulation and
  * the error function approximation to the cumulative
  * normal distribution. Random values of of mean and
- * stddev are tried until (n1,y1) and (n2,y2) fit the
- * normal distribution passing through the points.
+ * stddev are tried until (n1,y1), (n2,y2) and (n3,y3)
+ * fit the normal distribution passing through the points
+ * as closely as possible within the number of trials.
+ *
+ * Each bin extends over range [n - 0.5, n + 0.5).
  *
  * @param[in] y1 Number of samples in the first bin.
  * @param[in] n1 Bin index of the first bin.
  * @param[in] y2 Number of samples in the second bin.
  * @param[in] n2 Bin index of the second bin.
+ * @param[in] y3 Number of samples in the third bin.
+ * @param[in] n3 Bin index of the third bin.
  * @param[out] mean Calculated mean.
  * @param[out] stddev Calculated standard deviation.
- * @param[in] Y_total Total number of distributin samples.
+ * @param[in] Y_total Total number of distribution samples.
  * @returns The simulation error as the average error
- * between the two sample points and the best fit normal
+ * between the three sample points and the best fit normal
  * distribution.
  */
-double getNormalParams(double y1, double n1, double y2, double n2, double *mean, double *stddev, double Y_total){
-	double m, sd, x_error, y_error;
-	double s11, s12, s21, s22;
+double getNormalParams1(double y1, double n1, double y2, double n2, double y3, double n3, double *mean, double *stddev, double Y_total){
+	double m, sd, error1, error2, error3;
+	double s11, s12, s21, s22, s31, s32;
 	double denom, d;
 
 	double root2 = sqrt(2.0);
@@ -71,30 +79,35 @@ double getNormalParams(double y1, double n1, double y2, double n2, double *mean,
 	double best_mean = 0.0, best_sd = 0.0;
 
 	double min_d = 1e6;
-	double rng = 1.0;
+	double rng = 1.5;
 
-	double r1 = 2.0 * y1 / Y_total;
+	double r1 = 2.0 * y1 / Y_total;					// Relative bin weights pre-scaled by 2 to match erf()
 	double r2 = 2.0 * y2 / Y_total;
+	double r3 = 2.0 * y3 / Y_total;
 
 	for (int i = 0; i < 1000000; i++){
 
-		m = best_mean + randomVar(-rng, rng);
-		sd = best_sd + randomVar(-rng, rng);
+		m = best_mean + randomVar(-rng, rng);		// Trial mean in range 2 * rng
+		sd = best_sd + randomVar(-rng, rng);			// Trial SD in range 2 * rng
 
 		denom = 1.0 / (root2 * sd);
 
-		s11 = (n1 - 0.5 - m) * denom;
+		s11 = (n1 - 0.5 - m) * denom;				// Upper and lower limits of first bin
 		s12 = (n1 + 0.5 - m) * denom;
 
-		x_error = (erf(s12) - erf(s11)) - r1;
+		error1 = (erf(s12) - erf(s11)) - r1;			// 2 * difference between ideal and measured for bin1
 
-		s21 = (n2 - 0.5 - m) * denom;
+		s21 = (n2 - 0.5 - m) * denom;				// Upper and lower limits of second bin
 		s22 = (n2 + 0.5 - m) * denom;
 
-		y_error = (erf(s22) - erf(s21)) - r2;
+		error2 = (erf(s22) - erf(s21)) - r2;			// 2 * difference between ideal and measured for bin2
 
-		d = (x_error * x_error + y_error * y_error) / 2.0;
-		d = sqrt(d);
+		s31 = (n3 - 0.5 - m) * denom;				// Upper and lower limits of third bin
+		s32 = (n3 + 0.5 - m) * denom;
+
+		error3 = (erf(s32) - erf(s31)) - r3;			// 2 * difference between ideal and measured for bin3
+
+		d = sqrt((error1 * error1 + error2 * error2 + error3 * error3) / 3.0);
 
 		if (d < min_d){
 			min_d = d;
@@ -108,8 +121,8 @@ double getNormalParams(double y1, double n1, double y2, double n2, double *mean,
 	*mean = best_mean;
 	*stddev = best_sd;
 
-	return min_d;
-}
+	return min_d / 2.0;								// Fractional area difference between the ideal Gaussian area
+}													// and the measured area over a range of n1 - 0.5 to n3 + 0.5.
 
 int main(int argc, char *argv[]){
 
@@ -117,10 +130,11 @@ int main(int argc, char *argv[]){
 		printf("Requires three successive sample pairs, y1 x1 y2 x2 y3 x3, with\n");
 		printf("unit separation that wrap the peak of the distribution near zero.\n");
 		printf("Also accepts a seventh arg that specifies the sample size. Otherwise\n");
-		printf("y values are normalized to the default sample size of 86,400.\n\n");
-		printf("Prints the mean and error relative to the ideal normal distribution\n");
-		printf("that fits the three points, then standard deviation and error relative\n");
-		printf("to the ideal distrbution, then the simulation error.\n\n");
+		printf("the y values are normalized to the default sample size of 86,400.\n\n");
+		printf("Prints the mean relative to the sample point with x = 0 of an ideal\n");
+		printf("normal distribution that best fits the three points, then standard\n");
+		printf("deviation of the best fit ideal distribution, then the relative sample\n");
+		printf("fit to that ideal distribution.\n\n");
 		return 0;
 	}
 
@@ -132,29 +146,19 @@ int main(int argc, char *argv[]){
 	sscanf(argv[5], "%lf", &Y3);
 	sscanf(argv[6], "%lf", &n3);
 
-	double mean, sd, mean1, mean2, sd1, sd2;
+	double mean, sd;
 
 	double Y_total = 86400.0;
 	if (argc == 8){
 		sscanf(argv[7], "%lf", &Y_total);
 	}
 
-	double min_d1 = getNormalParams(Y1, n1, Y2, n2, &mean1, &sd1, Y_total);
+	double relative_error = getNormalParams1(Y1, n1, Y2, n2, Y3, n3, &mean, &sd, Y_total);
 
-	double min_d2 = getNormalParams(Y2, n2, Y3, n3, &mean2, &sd2, Y_total);
-
-	double sim_error = 0.5 * sqrt(min_d1 * min_d1 + min_d2 * min_d2);
-
-	mean = 0.5 * (mean1 + mean2);
-	double mean_error = 0.5 * fabs(mean2 - mean1);
-
-	sd = 0.5 * (sd1 + sd2);
-	double sd_error = 0.5 * fabs(sd1 - sd2);
-
-	printf("Relative to an ideal normal distribution:\n");
-	printf("mean:  %lf error: %lf\n", mean, mean_error);
-	printf("stddev: %lf error: %lf\n", sd, sd_error);
-	printf("Simulation error: %lf\n", sim_error);
+	printf("Relative to the best fit normal distribution:\n");
+	printf("mean:  %lf\n", mean);
+	printf("stddev: %lf\n", sd);
+	printf("Relative fit of samples: %lf\n", 1.0 - relative_error);
 
 	return 0;
 }

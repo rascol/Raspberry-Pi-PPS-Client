@@ -156,11 +156,11 @@ int main(int argc, char *argv[]){
 	}
 
 	fstat(fd, &stat_buf);
-	int sz = stat_buf.st_size;						// Program size including tar file attachment
+	int sz = stat_buf.st_size;							// Program size including tar file attachment
 
-	fbuf = new unsigned char[sz];					// A buffer to hold the binary file
+	fbuf = new unsigned char[sz];						// A buffer to hold the binary file
 
-	ssize_t rd = read(fd, fbuf, sz);					// Read the program into the buffer
+	ssize_t rd = read(fd, fbuf, sz);						// Read the PPS-Client program binary into the buffer
 	close(fd);
 	if (rd == -1){
 		printf("Error reading %s\n", argv[0]);
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]){
 		exit(EXIT_FAILURE);
 	}
 	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
-	sz -= i + 8;										// Set to the size of the tar file
+	sz -= i + 8;											// Set to the size of the tar file
 														// Create the tar archive
 	int fd2 = open("pkg.tar.gz", O_CREAT | O_WRONLY, mode);
 	if (fd2 == -1){
@@ -252,7 +252,8 @@ int main(int argc, char *argv[]){
 			sysCommand("mv ./pkg/pps-client.conf /etc/pps-client.conf");
 		}
 		else {
-			printf("Modified file, /etc/pps-client.conf, was not replaced.\n");
+			printf("Modified file, /etc/pps-client.conf, was not replaced. Instead, config was written to /etc/pps-client.conf.default.\n");
+			sysCommand("mv ./pkg/pps-client.conf /etc/pps-client.conf.default");
 		}
 
 		delete[] configbuf;

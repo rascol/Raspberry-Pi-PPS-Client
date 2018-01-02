@@ -1,8 +1,8 @@
-# PPS-Client for Raspberry Pi
+# PPS-Client v1.4
 
 <p align="center"><img src="figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" width="400"/></p>
 
-The PPS-Client daemon is a fast, high accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi that synchronizes the Raspberry Pi system time clock to a GPS time clock. 
+The PPS-Client daemon is a fast, microsecond accuracy Pulse-Per-Second system clock synchronizer for Raspberry Pi that synchronizes the Raspberry Pi system time clock to a GPS time clock. 
 
 - [Summary](#summary)
 - [Hardware Requirements](#hardware-requirements)
@@ -42,7 +42,7 @@ Figure 2 shows the system clock frequency set by the controller and the resultin
 
 Although the clock frequency drifted slightly between each one minute frequency correction, the maximum Allan deviation of 0.045 ppm over this 24 hour period shows it to be unlikely that the clock ever drifted more than 0.100 ppm from the control point. That corresponds to a time drift of less than 0.1 microseconds per second (A clock offset of 1 ppm corresponds to a time drift of 1 microsecond per sec.)
 
-Since the time slew adjustments necessary to keep the system time synchronized to the PPS never exceeded 1 microsecond each second and the time drift never exceeded 0.1 microsecond each second, the timekeeping control **precision** illustrated in Figure 3 was 1 microsecond over this 24 hour period for all test units. 
+Since the time slew adjustments necessary to keep the system time synchronized to the PPS never exceeded 1 microsecond each second and the clock oscillator time drift never exceeded 0.1 microsecond each second, the timekeeping control **precision** illustrated in Figure 3 was 1 microsecond over this 24 hour period for all test units. 
 
 As shown in Figure 3, timekeeping **accuracy** is the time offset at the rollover of the second which is also the offset between the true time and the measured time at any point in time.
 
@@ -104,7 +104,7 @@ and uncomment it. PPS-Client will no longer care about whole-second time of day 
 
 ### GPS Only
 
-Another mode supported by PPS-Client is to have the GPS receiver that is providing the PPS signal to also provide the whole-second time of day updates. This allows operation with no internet connection. A Raspberry Pi configured this way could, for example, be used as a Stratum 1 time server for a LAN that is not connected to the Internet. 
+PPS-Client can also be configured to have the GPS receiver that is providing the PPS signal provide the whole-second time of day updates as well. This enables operation with no internet connection. A Raspberry Pi configured this way could, for example, be used as a Stratum 1 time server for a LAN that is not connected to the Internet. 
 
 To configure this mode after installation,
 ```
@@ -114,11 +114,11 @@ Scroll down to the line,
 ```
 #serial=enable
 ```
-and uncomment it. This will set PPS-Client to read GPS time messages from the serial port. This, of course, requires that the GPS receiver is connected to the serial port of the Raspberry Pi and that the serial port has been set for this purpose. Setting the serial port can be done on either **Raspian** or **Ubuntu Mate** by using the **raspi-config** command.  See details [here](https://learn.adafruit.com/adafruit-ultimate-gps-hat-for-raspberry-pi/pi-setup).
+and uncomment it. This will set PPS-Client to read GPS time messages from the serial port. This, of course, requires that the GPS receiver is connected to the serial port of the Raspberry Pi and that the serial port has been set for this purpose. Setting the serial port can be done on **Raspian** by using the **raspi-config** command.  Details are [here](https://learn.adafruit.com/adafruit-ultimate-gps-hat-for-raspberry-pi/pi-setup).
 
 
 
-**GPS Only** can be demonstrated with no additional hardware connections if the [Adafruit Ultimate GPS module](https://www.adafruit.com/products/2324) (visible in the picture at the top) is used since this device connects directly to the RPi serial port through the GPIO pins.
+**GPS Only** can be demonstrated with no additional hardware connections if the [Adafruit Ultimate GPS module](https://www.adafruit.com/products/2324) (visible in the picture at the top) is used because this device connects directly to the serial port of the RPi through its GPIO pins.
 
 ## The chkconfig system services manager 
  
@@ -126,7 +126,7 @@ and uncomment it. This will set PPS-Client to read GPS time messages from the se
 ~ $ sudo apt-get install chkconfig
 ```
 
-This is necessary if you want to install PPS-Client as a system service.
+This is necessary if you want to install PPS-Client as a system service that will automatically start on system boot.
 
 # Installing
 ---
@@ -222,7 +222,8 @@ If you have not already downloaded the PPS-Client project, do it now:
 ~/rpi $ git clone --depth=1 https://github.com/rascol/Raspberry-Pi-PPS-Client
 ~/rpi $ cd Raspberry-Pi-PPS-Client
 ```
-Now make the PPS-Client installer. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type or copy the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version).
+Now make the PPS-Client installer. The `KERNELDIR` argument must point to the folder containing the compiled Linux kernel. Type or copy the commands below exactly as shown (using **back quotes** which cause the back quotes and text between to be replaced with the correct kernel version). If you are recompiling, first `make clean`. 
+
 ```
 ~/rpi/Raspberry-Pi-PPS-Client $ make KERNELDIR=~/rpi/linux KERNELVERS=`uname -r`
 ```
@@ -240,16 +241,16 @@ Uninstall PPS-Client on the RPi with:
 ~ $ sudo pps-client-stop
 ~ $ sudo pps-client-remove
 ```
-This removes everything **except** the configuration file which you might want to keep if it has been modified and you intend to reinstall PPS-Client. To remove everything do:
+This removes everything **except** the configuration file which you might want to keep if it has been modified and you intend to reinstall PPS-Client. A reinstall will not replace a PPS-Client configuration file, **/etc/pps-client.conf**, that has been modified.
+
+To remove everything do:
 ```
 ~ $ sudo pps-client-remove -a
 ```
 # Reinstalling
 ---
 
-To reinstall, first uninstall as [described above](#uninstalling) then install. If you are recompiling existing PPS-Client code first `make clean`. 
-
-Occasionally the contents of the **/etc/pps-client.conf** file will change. Check the online revison notes for config file changes. You can make these changes manually if you do not elect to remove your old config file.
+To reinstall, or to install a new version of PPS-Client over an old version, first uninstall as [described above](#uninstalling) then install. If you kept a modified **/etc/pps-client.conf** file, the new install will **not** replace it. Instead the new config file will be copied to **/etc/pps-client.conf.default** to give you the choice of replacing it later.
 
 
 # Running PPS-Client
@@ -281,7 +282,7 @@ These are the parameters shown in the status printout:
  * Third column - the sequence count, i.e., the total number of PPS interrupts received since PPS-Client was started.
  * jitter - the time deviation in microseconds recorded at the reception of the PPS interrupt.
  * freqOffset - the frequency offset of the system clock in parts per million of the system clock frequency.
- * avgCorrection - the time corrections (in microseconds) averaged over the previous minute.
+ * avgCorrection - the second-by-second average over the previous minute of the time correction (in parts per million) that is applied once per minute to the system clock.
  * clamp - the hard limit (in microsecs) applied to the raw time error to convert it to a time correction.
 
 About every sixth line, interrupt delay parameters are also shown. The interval will larger when PPS-Client discards a PPS interrupt delayed more than 3 microseconds.

@@ -1,8 +1,8 @@
 /**
  * @file pps-client.h
- * @brief The pps-client.h file contains includes, defines and structures for PPS-Client.
+ * @brief The pps-client.h file contains includes, defines and structures for pps-client.
  *
- * Copyright (C) 2016-2018  Raymond S. Connell
+ * Copyright (C) 2016  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,13 +70,10 @@
 #define MAX_VALLEY_RATIO 0.99			//!< Maximum ratio to detect a valley before the second peak in detectDelayPeak().
 #define RAW_ERROR_DECAY 0.98851			//!< Decay rate for rawError samples (1 hour half life)
 
-#define INTERRUPT_LOST 15				//!< Number of consecutive lost interrupts at which a warning starts
+#define INTERRUPT_LOST 15				//!< Number of consequtive lost interrupts at which a warning starts
 
-#define MAX_SERVERS 4					//!< Maximum number of SNTP time servers to use
-#define CHECK_TIME 1024					//!< Interval between Internet time checks (about 17 minutes)
-#define BLOCK_FOR_10 10					//!< Blocks detection of external system clock changes for 10 seconds
-#define BLOCK_FOR_3 3					//!< Blocks detection of external system clock changes for 3 seconds
-#define CHECK_TIME_SERIAL 600			//!< Interval between serial port time checks (about 10 minutes)
+#define MAX_SERVERS 10					//!< Maximum number of SNTP time servers to use
+#define CHECK_TIME 1024					//!< Interval between internet time checks (about 17 minutes)
 
 #define MAX_SPIKES 30					//!< Maximum microseconds to suppress a burst of positive jitter
 
@@ -89,7 +86,7 @@
 #define STRBUF_SZ 500
 #define LOGBUF_SZ 500
 #define MSGBUF_SZ 500
-#define SNTP_MSG_SZ 200
+#define SNTP_MSG_SZ 110
 #define CONFIG_FILE_SZ 10000
 
 #define NUM_PARAMS 5
@@ -108,7 +105,7 @@
 
 #define MAX_CONFIGS 32
 
-#define ERROR_DISTRIB 1				// Configuration Keys
+#define ERROR_DISTRIB 1
 #define ALERT_PPS_LOST 2
 #define JITTER_DISTRIB 4
 #define CALIBRATE 8
@@ -118,34 +115,28 @@
 #define PPS_GPIO 128
 #define OUTPUT_GPIO 256
 #define INTRPT_GPIO 512
-#define SNTP 1024
-#define SERIAL 2048
-#define SERIAL_PORT 4096
 
 /*
  * Struct for passing arguments to and from threads
- * querying time servers.
+ * querying SNTP servers.
  */
 struct timeCheckParams {
 	pthread_t *tid;				//!< Thread id
-	pthread_attr_t attr;			//!< Thread attribute object
-	int serverIndex;				//!< Identifying index from the list of active SNTP servers
-	int *serverTimeDiff;			//!< Time difference between local time and server time
-	char **ntp_server;			//!< The active SNTP server list when SNTP is used
-	char *serialPort;			//!< The serial port filename when serial time is used
+	pthread_attr_t attr;		//!< Thread attribute object
+	int serverIndex;			//!< Identifying index from the list of active SNTP servers
+	int *serverTimeDiff;		//!< Time difference between local time and server time
+	char **ntp_server;			//!< The active SNTP server list
 	char *buf;					//!< Space for the active SNTP server list
-	bool doReadSerial;
 	char *strbuf;				//!< Space for messages and query strings
 	char *logbuf;				//!< Space for returned log messages
-	bool *threadIsBusy;			//!< True while thread is waiting for or processing a time query
-	int rv;						//!< Return value
-};								//!< Struct for passing arguments to and from threads querying time servers.
+	bool *threadIsBusy;			//!< True while thread is waiting for or processing a server query
+};								//!< Struct for passing arguments to and from threads querying SNTP servers.
 
 /*
  * Struct for program-wide global variables.
  */
 struct G {
-	int ppsGPIO;										//!< The PPS GPIO interrupt number read from pps-client.conf and passed to the driver.
+	int ppsGPIO;									//!< The PPS GPIO interrupt number read from pps-client.conf and passed to the driver.
 	int outputGPIO;									//!< The calibrate GPIO output number read from pps-client.conf and passed to the driver.
 	int intrptGPIO;									//!< The calibrate GPIO interrupt number read from pps-client.conf and passed to the driver.
 
@@ -155,26 +146,19 @@ struct G {
 
 	unsigned int seq_num;							//!< Advancing count of the number of PPS interrupt timings that have been received.
 
-	bool isControlling;								//!< Set "true" by getAcquireState() when the control loop can begin to control the system clock frequency.
-	unsigned int activeCount;						//!< Advancing count of controller cycles once G.isControlling is "true".
+	bool isAcquiring;								//!< Set "true" by getAcquireState() when the control loop can begin to control the system clock frequency.
+	unsigned int activeCount;						//!< Advancing count of controller cycles once G.isAcquiring is "true".
 
-	bool interruptReceived;							//!< Set "true" when makeTimeCorrection() processes an interrupt time from the PPS-Client device driver.
+	bool interruptReceived;							//!< Set "true" when makeTimeCorrection() processes an interrupt time from the pps-client device driver.
 	bool interruptLost;								//!< Set "true" when a PPS interrupt time fails to be received.
-	int interruptLossCount;							//!< Records the number of consecutive lost PPS interrupt times.
+	int interruptLossCount;							//!< Records the number of consequtive lost PPS interrupt times.
 
-	struct timeval t;								//!< Time of system response to the PPS interrupt. Received from the PPS-Client device driver.
-	int interruptTime;								//!< Fractional second part of G.t received from PPS-Client device driver.
+	struct timeval t;								//!< Time of system response to the PPS interrupt. Receieved from the pps-client device driver.
+	int interruptTime;								//!< Fractional second part of G.t received from pps-client device driver.
 
-	int tm[6];										//!< Returns the interrupt calibration reception and response times from the PPS-Client device driver.
-
-	int t_now;										//!< Whole seconds of current time reported by gettimeofday().
-	int t_count;										//!< Whole seconds counted at the time of t_now.
-	double t_mono_now;
-	double t_mono_last;
-	double zeroAccum;
-
-	int intrptDelay;									//!< Value of the interrupt delay calibration measurement received from the PPS-Client device driver.
-	int intrptError;									//!< Set equal to "intrptDelay - sysDelay" in getInterruptDelay().
+	int tm[6];										//!< Returns the interrupt calibration reception and response times from the pps-client device driver.
+	int intrptDelay;								//!< Value of the interrupt delay calibration measurement received from the pps-client device driver.
+	int intrptError;								//!< Set equal to "intrptDelay - sysDelay" in getInterruptDelay().
 	unsigned int intrptCount;						//!< Advancing count of intrptErrorDistrib[] entries made by detectDelayPeak().
 	double delayMedian;								//!< Median of G.intrptDelay values calculated in getInterruptDelay().
 	int	sysDelay;									//!< System time delay between reception and response to an external interrupt.
@@ -191,7 +175,7 @@ struct G {
 													//!< than \b MAX_SPIKES because that indicates that a shift in the control point is required.
 
 	double rawErrorDistrib[ERROR_DISTRIB_LEN];		//!< The G.rawError distribution used to detect a delay shift in detectDelayPeak().
-	int delayMinIdx;									//!< If a delay shift occurs, the minimum value preceding the delay peak in rawErrorDistrib[].
+	int delayMinIdx;								//!< If a delay shift occurs, the minimum value preceding the delay peak in rawErrorDistrib[].
 	unsigned int ppsCount;							//!< Advancing count of G.rawErrorDistrib[] entries made by detectDelayPeak().
 
 	int nIntrptDelaySpikes;
@@ -202,19 +186,19 @@ struct G {
 
 	double slewAccum;								//!< Accumulates G.rawError in getTimeSlew() and is used to determine G.avgSlew.
 	int slewAccum_cnt;								//!< Count of the number of times G.rawError has been summed into G.slewAccum.
-	double avgSlew;									//!< Average slew value determined by getTimeSlew() from the average of G.slewAccum each time G.slewAccum_cnt reaches \b SLEW_LEN.
-	bool slewIsLow;									//!< Set to "true" in getAcquireState() when G.avgSlew is less than \b SLEW_MAX. This is a precondition for getAcquireState() to set G.isControlling to "true".
+	double avgSlew;									//!< Average slew value detemined by getTimeSlew() from the average of G.slewAccum each time G.slewAccum_cnt reaches \b SLEW_LEN.
+	bool slewIsLow;									//!< Set to "true" in getAcquireState() when G.avgSlew is less than \b SLEW_MAX. This is a precondition for getAcquireState() to set G.isAcquiring to "true".
 
 	int zeroError;									//!< The controller error resulting from removing jitter noise from G.rawError in removeNoise().
 	int hardLimit;									//!< An adaptive limit value determined by setHardLimit() and applied to G.rawError by clampJitter() as the final noise reduction step to generate G.zeroError.
-	int invProportionalGain;							//!< Controller proportional gain configured inversely to use as an int divisor.
+	int invProportionalGain;						//!< Controller proportional gain configured inversely to use as an int divisor.
 	int timeCorrection;								//!< Time correction value constructed in makeTimeCorrection() by dividing G.zeroError by G.invProportionalGain.
-	struct timex t3;									//!< Passes G.timeCorrection to the system function \b adjtimex() in makeTimeCorrection().
+	struct timex t3;								//!< Passes G.timeCorrection to the system function \b adjtimex() in makeTimeCorrection().
 
 	double avgCorrection;							//!< A one-minute rolling average of G.timeCorrection values generated by getAverageCorrection().
 	int correctionFifo[OFFSETFIFO_LEN];				//!< Contains the G.timeCorrection values from over the previous 60 seconds.
-	int correctionFifoCount;							//!< Signals that G.correctionFifo contains a full count of G.timeCorrection values.
-	int correctionAccum;								//!< Accumulates G.timeCorrection values from G.correctionFifo in getAverageCorrection() in order to generate G.avgCorrection.
+	int correctionFifoCount;						//!< Signals that G.correctionFifo contains a full count of G.timeCorrection values.
+	int correctionAccum;							//!< Accumulates G.timeCorrection values from G.correctionFifo in getAverageCorrection() in order to generate G.avgCorrection.
 
 	double integral[NUM_INTEGRALS];					//!< Array of integrals constructed by makeAverageIntegral().
 	double avgIntegral;								//!< One-minute average of the integrals in G.integral[].
@@ -222,11 +206,11 @@ struct G {
 
 	int correctionFifo_idx;							//!< Advances G.correctionFifo on each controller cycle in integralIsReady() which returns "true" every 60 controller cycles.
 
-	double integralGain;								//!< Controller integral gain.
+	double integralGain;							//!< Controller integral gain.
 	double integralTimeCorrection;					//!< Integral or average integral of G.timeCorrection returned by getIntegral();
 	double freqOffset;								//!< System clock frequency correction calculated as G.integralTimeCorrection * G.integralGain.
 
-	int consensusTimeError;							//!< Consensus value of whole-second time corrections for DST or leap seconds from Internet SNTP servers.
+	int consensisTimeError;							//!< Consensis value of whole-second time corrections for DST or leap seconds from internet SNTP servers.
 
 	char linuxVersion[20];							//!< Space for recording the Linux version.
 	/**
@@ -236,19 +220,12 @@ struct G {
 	char msgbuf[MSGBUF_SZ];
 	char savebuf[MSGBUF_SZ];
 	char strbuf[STRBUF_SZ];
-	char *configVals[MAX_CONFIGS];
 
 	bool exit_requested;
 	bool exitOnLostPPS;
 	bool exit_loop;
 
 	bool doCalibration;
-	bool doNTPsettime;
-
-	bool doSerialsettime;
-	int blockDetectClockChange;
-
-	int serialTimeError;
 
 	int recIndex;
 	int recIndex2;
@@ -270,7 +247,7 @@ struct G {
 
 	unsigned int lastActiveCount;
 
-	double intrptErrorDistrib[ERROR_DISTRIB_LEN];		//!< The intrptError distribution calculated in detectDelayPeak().
+	double intrptErrorDistrib[ERROR_DISTRIB_LEN];	//!< The intrptError distribution calculated in detectDelayPeak().
 
 	int intrptDistrib[NUM_PARAMS][INTRPT_DISTRIB_LEN];
 	int delayLabel[NUM_PARAMS];
@@ -286,15 +263,12 @@ struct G {
 
 	int errorDistrib[ERROR_DISTRIB_LEN];
 	int errorCount;
-	int queryCount;
 
 	double freqAllanDev[NUM_5_MIN_INTERVALS];
 	double freqOffsetRec[NUM_5_MIN_INTERVALS];
 	double freqOffsetRec2[SECS_PER_10_MIN];
 	__time_t timestampRec[NUM_5_MIN_INTERVALS];
 	int offsetRec[SECS_PER_10_MIN];
-	char serialPort[50];
-	char configBuf[CONFIG_FILE_SZ];
 	/**
 	 * @endcond
 	 */
@@ -311,27 +285,20 @@ void freeSNTPThreads(timeCheckParams *);
 void makeSNTPTimeQuery(timeCheckParams *);
 int waitForNTPServers(void);
 
-int allocInitializeSerialThread(timeCheckParams *tcp);
-void freeSerialThread(timeCheckParams *tcp);
-int makeSerialTimeQuery(timeCheckParams *tcp);
-
 /**
- * Struct to hold associated data for PPS-Client command line
+ * Struct to hold associated data for pps-client command line
  * save data requests with the -s flag.
  */
 struct saveFileData {
 	const char *label;			//!< Command line identifier
-	void *array;					//!< Array to hold data to be saved
+	void *array;				//!< Array to hold data to be saved
 	const char *filename;		//!< Filename to save data
 	int arrayLen;				//!< Length of the array in array units
 	int arrayType;				//!< Array type: 1 - int, 2 - double
 	int arrayZero;				//!< Array index of data zero.
 };
 
-int sysCommand(const char *);
-void initFileLocalData(void);
-void initSerialLocalData(void);
-void bufferStatusMsg(const char *);
+void bufferStatusMsg(const char *params);
 int writeStatusStrings(void);
 bool ppsIsRunning(void);
 int writeFileMsgToLog(const char *);
@@ -339,7 +306,7 @@ int writeFileMsgToLogbuf(const char *, char *);
 void writeToLog(char *);
 pid_t getChildPID(void);
 int createPIDfile(void);
-int readConfigFile(void);
+int readConfigFile(char *[], char *, int);
 void writeOffsets(void);
 void writeTimestamp(double);
 void writeSysDelay(void);
@@ -349,9 +316,9 @@ int enableNTP(void);
 int open_logerr(const char*, int);
 int read_logerr(int fd, char *, int, const char *);
 void writeInterruptDistribFile(void);
-int processFiles(void);
-bool isEnabled(int);
-bool isDisabled(int);
+void processFiles(char *[], char *, int);
+bool isEnabled(int, char *[]);
+bool isDisabled(int, char *[]);
 void writeSysdelayDistribFile(void);
 void showStatusEachSecond(void);
 struct timespec setSyncDelay(int, int);
@@ -368,9 +335,6 @@ void buildSysDelayDistrib(int);
 void recordFrequencyVars(void);
 void recordOffsets(int timeCorrection);
 bool configHasValue(int, char *[], void *);
-int getDriverGPIOvals(void);
-void writeToLogNoTimestamp(char *);
-int getTimeErrorOverSerial(int *);
 /**
  * @endcond
  */

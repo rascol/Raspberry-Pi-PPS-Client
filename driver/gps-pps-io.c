@@ -84,10 +84,10 @@
 /* The text below will appear in output from 'cat /proc/interrupt' */
 #define INTERRUPT_NAME "gps-pps-io"
 
-const char *version = "gps-pps-io v1.1.0";
+const char *version = "gps-pps-io v1.0.0";
 
 static int major = 0;							/* dynamic by default */
-module_param(major, int, 0);						/* but can be specified at load time */
+module_param(major, int, 0);					/* but can be specified at load time */
 
 static int PPS_GPIO = 0;
 module_param(PPS_GPIO, int, 0);					/* Specify PPS_GPIO at load time */
@@ -104,7 +104,7 @@ volatile int gpio_out = 0;
 
 MODULE_AUTHOR ("Raymond Connell");
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_VERSION("1.1.0");
+MODULE_VERSION("0.2.0");
 
 int *pps_buffer = NULL;
 DECLARE_WAIT_QUEUE_HEAD(pps_queue);
@@ -135,7 +135,7 @@ int pps_open (struct inode *inode, struct file *filp)
     	/**
     	 * If driver_available was initially 0 then got
     	 * here and driver_available was set to -1. But
-    	 * the next statement sets driver_available back
+    	 * the next statment sets driver_available back
     	 * to 0. So every subsequent open call comes here.
     	 */
 
@@ -194,7 +194,7 @@ int pps_release (struct inode *inode, struct file *filp)
  * Returns the number of bytes read or zero if the timeout occurs before
  * an interrupt is triggered. Can also return a negative value if for any
  * reason the system is unable to respond to the read request. One possible
- * error is -ERESTARTSYS (-256) on an un-handled signal.
+ * error is -ERESTARTSYS (-256) on an unhandled signal.
  *
  * Is called from user space as a normal file read operation on the device
  * driver file.
@@ -266,7 +266,7 @@ ssize_t pps_i_read (struct file *filp, char __user *buf, size_t count, loff_t *f
 }
 
 /**
- * Provides four functions:
+ * Provides three functions:
  *   1. Writing an integer with a value of 1 to __user *buf
  *   records the time of the write to pps_buffer[2]-[3],
  *   disables pps_irq1 then sets OUTPUT_GPIO (high). This allows
@@ -277,17 +277,11 @@ ssize_t pps_i_read (struct file *filp, char __user *buf, size_t count, loff_t *f
  *   enables pps_irq1 and resets OUTPUT_GPIO (low). count is
  *   provided with a value of sizeof(int).
  *
- *   3. Writing a pair of integers where the first is 2 to
- *   __user *buf causes the second integer to be used as
- *   an offset in microseconds to the system time and this offset
- *   is applied immediately. Param count is provided with a value
- *   of 2 * sizeof(int).
- *
- *   4. Writing a pair of integers where the first is 3 to
- *   __user *buf causes the second integer to be used as
- *   an offset in seconds to the system time and this offset
- *   is applied immediately. Param count is provided with a value
- *   of 2 * sizeof(int).
+ *   3. Writing a pair of integers where the first is greater
+ *   than 1 to __user *buf causes the second integer to be used
+ *   as an offset in seconds to the system time and this offset
+ *   is applied immediately. count is provided with a value of
+ *   2 * sizeof(int).
  */
 ssize_t pps_i_write (struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
 {
@@ -333,20 +327,7 @@ ssize_t pps_i_write (struct file *filp, const char __user *buf, size_t count, lo
 		readIntr2 = false;
 		enable_irq(pps_irq1);
 	}
-	else if (val[0] == 2){
-		int frac = val[1] * 1000;
-		if (frac < 0){
-			tv2.tv_sec = -1;
-			tv2.tv_nsec = 1000000000 + frac;
-		}
-		else {
-			tv2.tv_sec = 0;
-			tv2.tv_nsec = frac;
-		}
-
-		timekeeping_inject_offset(&tv2);
-	}
-	else if (val[0] == 3){
+	else {								// val[0] > 1
 		tv2.tv_nsec = 0;
 		tv2.tv_sec = val[1];
 
