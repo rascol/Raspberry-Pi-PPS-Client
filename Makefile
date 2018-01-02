@@ -1,4 +1,4 @@
-VERSION = 1.2.0
+VERSION = 1.4.0
 
 all:
 	mkdir pkg
@@ -88,10 +88,11 @@ all:
 	cp ./client/pps-client.sh ./pkg/pps-client.sh
 	tar czf pkg.tar.gz ./pkg
 	./installer/pps-client-make-install $(KERNELVERS)
-	rm pkg.tar.gz
 	
+	rm pkg.tar.gz
 	rm -rf ./tmp
-
+	@echo "Compliled successufully"
+	
 clean:
 	rm -rf ./pkg
 	rm -rf ./tmp
