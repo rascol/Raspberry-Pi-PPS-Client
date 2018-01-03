@@ -1,4 +1,5 @@
 <map id="setDelayTrackers" name="setDelayTrackers">
-<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#ae0bab7cf61e38b79d3bade19c957735a" title="initialize" alt="" coords="201,5,271,32"/>
-<area shape="rect" id="node3" href="$d5/d60/pps-client_8cpp.html#a2a7a8a06f0119359f624d891dbcfa08f" title="integralIsReady" alt="" coords="179,56,293,83"/>
+<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#a2a7a8a06f0119359f624d891dbcfa08f" title="integralIsReady" alt="" coords="187,5,301,31"/>
+<area shape="rect" id="node3" href="$d5/d60/pps-client_8cpp.html#a86496ba51a12c38a52f57267412a096a" title="readPPS_SetTime" alt="" coords="178,55,309,80"/>
+<area shape="rect" id="node4" href="$d5/d60/pps-client_8cpp.html#a4b3bdab744bd7ed860326323fad180f2" title="waitForPPS" alt="" coords="357,80,449,105"/>
 </map>

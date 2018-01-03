@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['error_5fdistrib',['ERROR_DISTRIB',['../d4/d6a/pps-client_8h.html#a3541554e9b7b46c4a5a8794a5c2ef6d2',1,'pps-client.h']]],
-  ['error_5fdistrib_5flen',['ERROR_DISTRIB_LEN',['../d4/d6a/pps-client_8h.html#a32c0d0f48b856555b0976181c7b1dc37',1,'pps-client.h']]],
-  ['exit_5flost_5fpps',['EXIT_LOST_PPS',['../d4/d6a/pps-client_8h.html#a60cf28ace31d11a0e6716b7ccdd23781',1,'pps-client.h']]]
+  ['calibrate',['CALIBRATE',['../d4/d6a/pps-client_8h.html#adacf4c0ec79d1e8779e6bad70ddf1ee9',1,'pps-client.h']]],
+  ['check_5ftime',['CHECK_TIME',['../d4/d6a/pps-client_8h.html#ab7908aa07cc0dbc8bb780036c96fac20',1,'pps-client.h']]],
+  ['check_5ftime_5fserial',['CHECK_TIME_SERIAL',['../d4/d6a/pps-client_8h.html#a63e3c128dcca06220351eaa65b8edadd',1,'pps-client.h']]],
+  ['config_5ffile_5fsz',['CONFIG_FILE_SZ',['../d4/d6a/pps-client_8h.html#ae55fb5c7b7d38a74a43325d536eec5ba',1,'pps-client.h']]]
 ];

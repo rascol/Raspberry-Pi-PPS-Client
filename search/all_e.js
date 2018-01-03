@@ -8,11 +8,14 @@ var searchData=
   ['pps_2dclient_2eh',['pps-client.h',['../d4/d6a/pps-client_8h.html',1,'']]],
   ['pps_2dclient_2emd',['pps-client.md',['../de/d3d/pps-client_8md.html',1,'']]],
   ['pps_2dfiles_2ecpp',['pps-files.cpp',['../d0/d3e/pps-files_8cpp.html',1,'']]],
+  ['pps_2dserial_2ecpp',['pps-serial.cpp',['../df/d28/pps-serial_8cpp.html',1,'']]],
   ['pps_2dsntp_2ecpp',['pps-sntp.cpp',['../dc/d4f/pps-sntp_8cpp.html',1,'']]],
-  ['ppscount',['ppsCount',['../dc/d1d/struct_g.html#a2d595e9941d1558aa3261f34ab7cdf0d',1,'G']]],
+  ['pps_5fgpio',['PPS_GPIO',['../d4/d6a/pps-client_8h.html#a59354e0814b03e123ae201544a82aa04',1,'pps-client.h']]],
+  ['ppscount',['ppsCount',['../dc/d1d/struct_g.html#af3e2810913c8f7bed23a98fd978e23c8',1,'G']]],
+  ['ppsgpio',['ppsGPIO',['../dc/d1d/struct_g.html#af075f3fc88ee1e2e9e8fe52e82f81903',1,'G']]],
   ['ppsisrunning',['ppsIsRunning',['../d0/d3e/pps-files_8cpp.html#ac59e9111236426cdcbea6d1774ca7fea',1,'pps-files.cpp']]],
   ['printacceptedargs',['printAcceptedArgs',['../d0/d3e/pps-files_8cpp.html#a8837a1d11d52d5de8fb802ac99f84a3d',1,'pps-files.cpp']]],
-  ['processfiles',['processFiles',['../d0/d3e/pps-files_8cpp.html#a3ce43a5b60daa4f8158895454f2b7bd3',1,'pps-files.cpp']]],
-  ['processwriterequest',['processWriteRequest',['../d0/d3e/pps-files_8cpp.html#aca306fa07c76457fb21e59fe66939707',1,'pps-files.cpp']]],
+  ['processfiles',['processFiles',['../d0/d3e/pps-files_8cpp.html#af30241291158e33d40328d6b3d32d808',1,'pps-files.cpp']]],
+  ['processwriterequest',['processWriteRequest',['../d0/d3e/pps-files_8cpp.html#a14e312f99e221dfc6863ec3277522ea5',1,'pps-files.cpp']]],
   ['pthread_5fstack_5frequired',['PTHREAD_STACK_REQUIRED',['../d4/d6a/pps-client_8h.html#aa89b1724cc83a2bea0b142bc72655491',1,'pps-client.h']]]
 ];

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['waitforntpservers',['waitForNTPServers',['../dc/d4f/pps-sntp_8cpp.html#a00920970793070954118aaecfa6024e0',1,'pps-sntp.cpp']]],
+  ['waitforgpsmessages',['waitForGPSmessages',['../df/d28/pps-serial_8cpp.html#ad914c0cc98dcf40ed1f95659587b32bd',1,'pps-serial.cpp']]],
   ['waitforpps',['waitForPPS',['../d5/d60/pps-client_8cpp.html#a4b3bdab744bd7ed860326323fad180f2',1,'pps-client.cpp']]],
   ['writedistribution',['writeDistribution',['../d0/d3e/pps-files_8cpp.html#aa688c89aacc832cc1e7ef6ff1be6541e',1,'pps-files.cpp']]],
   ['writeerrordistribfile',['writeErrorDistribFile',['../d0/d3e/pps-files_8cpp.html#a82b5d210a2a50fc93755e34d3016247e',1,'pps-files.cpp']]],
@@ -15,5 +15,6 @@ var searchData=
   ['writesysdelay',['writeSysDelay',['../d0/d3e/pps-files_8cpp.html#af916d258db5da33fc999021de2722283',1,'pps-files.cpp']]],
   ['writesysdelaydistribfile',['writeSysdelayDistribFile',['../d0/d3e/pps-files_8cpp.html#aacdfbe498da2a6d42d753a7a75cf4ae5',1,'pps-files.cpp']]],
   ['writetimestamp',['writeTimestamp',['../d0/d3e/pps-files_8cpp.html#aad53ec22f551c789425b2870f59fbae9',1,'pps-files.cpp']]],
-  ['writetolog',['writeToLog',['../d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214',1,'pps-files.cpp']]]
+  ['writetolog',['writeToLog',['../d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214',1,'pps-files.cpp']]],
+  ['writetolognotimestamp',['writeToLogNoTimestamp',['../d0/d3e/pps-files_8cpp.html#a01969eeb557969d5dbd30f22e2cdecc3',1,'pps-files.cpp']]]
 ];

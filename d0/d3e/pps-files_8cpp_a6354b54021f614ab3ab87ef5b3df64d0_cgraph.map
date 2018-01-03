@@ -1,7 +1,8 @@
 <map id="enableNTP" name="enableNTP">
-<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#a94ad6f36dae10e5652ea241b11d2e5c7" title="open_logerr" alt="" coords="323,56,413,83"/>
-<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#a459e7950f1def63780ba7fda8e3c12d2" title="read_logerr" alt="" coords="165,31,251,57"/>
-<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a7d3637bb8a063c7565648288f2c95432" title="removeConfigKeys" alt="" coords="141,81,275,108"/>
-<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a180a91d8d62c36158e3b769ac35aa01e" title="replaceNTPConfig" alt="" coords="143,132,273,159"/>
-<area shape="rect" id="node6" href="$d0/d3e/pps-files_8cpp.html#a4ec814a023712bff67399cc287385ed3" title="restartNTP" alt="" coords="165,183,251,209"/>
+<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#a94ad6f36dae10e5652ea241b11d2e5c7" title="open_logerr" alt="" coords="329,12,421,37"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#a19da05b45d1e94170f5fe86decb70bfb" title="sysCommand" alt="" coords="323,210,426,236"/>
+<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a459e7950f1def63780ba7fda8e3c12d2" title="read_logerr" alt="" coords="164,86,253,112"/>
+<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a7d3637bb8a063c7565648288f2c95432" title="removeConfigKeys" alt="" coords="141,136,275,161"/>
+<area shape="rect" id="node6" href="$d0/d3e/pps-files_8cpp.html#a180a91d8d62c36158e3b769ac35aa01e" title="replaceNTPConfig" alt="" coords="143,37,273,62"/>
+<area shape="rect" id="node7" href="$d0/d3e/pps-files_8cpp.html#a4ec814a023712bff67399cc287385ed3" title="restartNTP" alt="" coords="165,185,251,210"/>
 </map>

@@ -1,15 +1,20 @@
 var searchData=
 [
-  ['seq_5fnum',['seq_num',['../dc/d1d/struct_g.html#a7abd2739426f2d02acc9f887040642b7',1,'G']]],
-  ['serverindex',['serverIndex',['../d1/d78/structtime_check_params.html#a1739fcb6a1004d63834fdffd707d93ad',1,'timeCheckParams']]],
-  ['servertimediff',['serverTimeDiff',['../d1/d78/structtime_check_params.html#a47b8dff35c1d9384849959b643535d74',1,'timeCheckParams']]],
-  ['slewaccum',['slewAccum',['../dc/d1d/struct_g.html#aa156b4742d54f783bc0551c9d71dfb2c',1,'G']]],
-  ['slewaccum_5fcnt',['slewAccum_cnt',['../dc/d1d/struct_g.html#a8d6593f381d5001561561f22286c3780',1,'G']]],
-  ['slewislow',['slewIsLow',['../dc/d1d/struct_g.html#aa543029e261ac1e684663ce2426a11d4',1,'G']]],
+  ['seq_5fnum',['seq_num',['../dc/d1d/struct_g.html#a6023bf80d5055646e3b81f45f00df497',1,'G']]],
+  ['serialport',['serialPort',['../d1/d78/structtime_check_params.html#a36a587760321d6f875ad59d071adcff7',1,'timeCheckParams']]],
+  ['serverindex',['serverIndex',['../d1/d78/structtime_check_params.html#a7a30604381ffec46a917eb0c72186c52',1,'timeCheckParams']]],
+  ['servertimediff',['serverTimeDiff',['../d1/d78/structtime_check_params.html#a20adf6a0d5291267ec806be9c0333217',1,'timeCheckParams']]],
+  ['slewaccum',['slewAccum',['../dc/d1d/struct_g.html#aa23549a3d003d2b01b84c9807a8ac106',1,'G']]],
+  ['slewaccum_5fcnt',['slewAccum_cnt',['../dc/d1d/struct_g.html#ae486ca0406233a1480264fe1a778d1fe',1,'G']]],
+  ['slewislow',['slewIsLow',['../dc/d1d/struct_g.html#a85d5fad739a01711fc61f4327c93775b',1,'G']]],
   ['space',['space',['../d0/d3e/pps-files_8cpp.html#a57fa5c881fa419d847935b0903225e0a',1,'pps-files.cpp']]],
-  ['strbuf',['strbuf',['../d1/d78/structtime_check_params.html#a8b7971ff6e1534e724b028ed91978130',1,'timeCheckParams']]],
-  ['sysdelay',['sysDelay',['../dc/d1d/struct_g.html#a10977d4736db79fc764722287a83f579',1,'G']]],
+  ['srv0',['srv0',['../dc/d4f/pps-sntp_8cpp.html#a335f006ca0a3cf5b1bbe74a5887e747a',1,'pps-sntp.cpp']]],
+  ['srv1',['srv1',['../dc/d4f/pps-sntp_8cpp.html#a1c5a4ed346da3981d1b7c088b6d753ba',1,'pps-sntp.cpp']]],
+  ['srv2',['srv2',['../dc/d4f/pps-sntp_8cpp.html#a68d5bc833e4c13b80f152d8d5f7f8ea1',1,'pps-sntp.cpp']]],
+  ['srv3',['srv3',['../dc/d4f/pps-sntp_8cpp.html#a04064c9117595ddd6cd48ccdae1bb4b0',1,'pps-sntp.cpp']]],
+  ['strbuf',['strbuf',['../d1/d78/structtime_check_params.html#ad164515f600289594d27a2c5128c3125',1,'timeCheckParams']]],
+  ['sysdelay',['sysDelay',['../dc/d1d/struct_g.html#a9465af7d57a7fe2b1751d1f2134f3ab3',1,'G']]],
   ['sysdelay_5fdistrib_5ffile',['sysDelay_distrib_file',['../d0/d3e/pps-files_8cpp.html#a58468038a168cee805664a9d5cba91f2',1,'pps-files.cpp']]],
   ['sysdelay_5ffile',['sysDelay_file',['../d0/d3e/pps-files_8cpp.html#a82c0132f22eb7a19a912c784fcd2fcc8',1,'pps-files.cpp']]],
-  ['sysdelayshift',['sysDelayShift',['../dc/d1d/struct_g.html#aa3bea6a317b63144a48fa7d591f0a35c',1,'G']]]
+  ['sysdelayshift',['sysDelayShift',['../dc/d1d/struct_g.html#acf93134f854c45c6e29e305777d74f97',1,'G']]]
 ];

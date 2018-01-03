@@ -1,4 +1,5 @@
 <map id="adjtimex" name="adjtimex">
-<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#ae0bab7cf61e38b79d3bade19c957735a" title="initialize" alt="" coords="163,5,232,32"/>
-<area shape="rect" id="node3" href="$d5/d60/pps-client_8cpp.html#a27417d63efafbd4125276332f55a4347" title="makeTimeCorrection" alt="" coords="126,56,269,83"/>
+<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#a1106ba0d807ae268b8713acba3808e07" title="makeTimeCorrection" alt="" coords="124,5,269,31"/>
+<area shape="rect" id="node3" href="$d5/d60/pps-client_8cpp.html#a86496ba51a12c38a52f57267412a096a" title="readPPS_SetTime" alt="" coords="317,56,448,81"/>
+<area shape="rect" id="node4" href="$d5/d60/pps-client_8cpp.html#a4b3bdab744bd7ed860326323fad180f2" title="waitForPPS" alt="" coords="496,81,588,107"/>
 </map>

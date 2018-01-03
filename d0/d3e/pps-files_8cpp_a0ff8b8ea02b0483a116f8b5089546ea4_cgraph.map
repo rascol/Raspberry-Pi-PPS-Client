@@ -1,5 +1,6 @@
 <map id="copyMajorTo" name="copyMajorTo">
-<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#a94ad6f36dae10e5652ea241b11d2e5c7" title="open_logerr" alt="" coords="153,5,242,32"/>
-<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="291,56,378,83"/>
-<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a459e7950f1def63780ba7fda8e3c12d2" title="read_logerr" alt="" coords="154,107,241,133"/>
+<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#a19da05b45d1e94170f5fe86decb70bfb" title="sysCommand" alt="" coords="150,5,253,31"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="301,81,387,107"/>
+<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a94ad6f36dae10e5652ea241b11d2e5c7" title="open_logerr" alt="" coords="155,107,248,132"/>
+<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a459e7950f1def63780ba7fda8e3c12d2" title="read_logerr" alt="" coords="157,156,246,181"/>
 </map>

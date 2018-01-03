@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['freqoffset',['freqOffset',['../dc/d1d/struct_g.html#aad06e2bf495eba586f2ed7df740b1c8e',1,'G']]]
+  ['freqoffset',['freqOffset',['../dc/d1d/struct_g.html#ae59f64b56a6a05c940727e937ce449a0',1,'G']]]
 ];

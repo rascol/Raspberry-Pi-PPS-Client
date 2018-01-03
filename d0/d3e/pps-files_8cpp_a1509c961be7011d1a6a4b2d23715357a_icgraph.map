@@ -1,6 +1,7 @@
 <map id="couldNotOpenMsgTo" name="couldNotOpenMsgTo">
-<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="233,56,319,83"/>
-<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#a94ad6f36dae10e5652ea241b11d2e5c7" title="open_logerr" alt="" coords="401,5,490,32"/>
-<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a180a91d8d62c36158e3b769ac35aa01e" title="replaceNTPConfig" alt="" coords="539,56,669,83"/>
-<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a5e4671d51ee126315cb694ef235d359a" title="writeFileMsgToLogbuf" alt="" coords="201,157,351,184"/>
+<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#a01969eeb557969d5dbd30f22e2cdecc3" title="writeToLogNoTimestamp" alt="" coords="199,5,367,31"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="240,107,326,132"/>
+<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a94ad6f36dae10e5652ea241b11d2e5c7" title="open_logerr" alt="" coords="415,56,508,81"/>
+<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a180a91d8d62c36158e3b769ac35aa01e" title="replaceNTPConfig" alt="" coords="556,107,686,132"/>
+<area shape="rect" id="node6" href="$d0/d3e/pps-files_8cpp.html#a5e4671d51ee126315cb694ef235d359a" title="writeFileMsgToLogbuf" alt="" coords="208,208,359,233"/>
 </map>

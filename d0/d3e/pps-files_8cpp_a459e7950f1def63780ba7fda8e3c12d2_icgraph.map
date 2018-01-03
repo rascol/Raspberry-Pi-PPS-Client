@@ -1,8 +1,6 @@
 <map id="read_logerr" name="read_logerr">
-<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#ab03cf9b5563affdcf46a4ca95d4ff4ed" title="getChildPID" alt="" coords="163,5,256,32"/>
-<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#a7192857cf334ce14c00dd49dca3c541a" title="readConfigFile" alt="" coords="156,56,263,83"/>
-<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a63902ed5404b3607594a3ad7d080da10" title="disableNTP" alt="" coords="164,107,255,133"/>
-<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a6354b54021f614ab3ab87ef5b3df64d0" title="enableNTP" alt="" coords="166,157,253,184"/>
-<area shape="rect" id="node6" href="$d0/d3e/pps-files_8cpp.html#a0ff8b8ea02b0483a116f8b5089546ea4" title="copyMajorTo" alt="" coords="161,208,258,235"/>
-<area shape="rect" id="node7" href="$dc/d4f/pps-sntp_8cpp.html#a1121c37b30e0ab417a95d6be065a0666" title="allocNTPServerList" alt="" coords="142,259,277,285"/>
+<area shape="rect" id="node2" href="$d0/d3e/pps-files_8cpp.html#ab03cf9b5563affdcf46a4ca95d4ff4ed" title="getChildPID" alt="" coords="145,5,238,31"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#a63902ed5404b3607594a3ad7d080da10" title="disableNTP" alt="" coords="146,55,236,80"/>
+<area shape="rect" id="node4" href="$d0/d3e/pps-files_8cpp.html#a6354b54021f614ab3ab87ef5b3df64d0" title="enableNTP" alt="" coords="147,104,235,129"/>
+<area shape="rect" id="node5" href="$d0/d3e/pps-files_8cpp.html#a0ff8b8ea02b0483a116f8b5089546ea4" title="copyMajorTo" alt="" coords="143,153,240,179"/>
 </map>

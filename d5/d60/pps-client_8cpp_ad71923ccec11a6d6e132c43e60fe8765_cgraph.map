@@ -1,8 +1,8 @@
 <map id="removeNoise" name="removeNoise">
-<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#ad889ebd8ff46d7aece2aa6c4c7252ed2" title="buildRawErrorDistrib" alt="" coords="153,5,295,32"/>
-<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#abec458c05c4b47e56643bfa1bd52fbb5" title="buildJitterDistrib" alt="" coords="166,56,282,83"/>
-<area shape="rect" id="node4" href="$d5/d60/pps-client_8cpp.html#a0b30b41495a6426b5bb557ced936901b" title="detectDelaySpike" alt="" coords="161,107,287,133"/>
-<area shape="rect" id="node5" href="$d5/d60/pps-client_8cpp.html#a9173ef2f7e0585cc0edbc7e5a733bc3b" title="getTimeSlew" alt="" coords="175,157,273,184"/>
-<area shape="rect" id="node6" href="$d5/d60/pps-client_8cpp.html#ab553045428f9337e754db13f1d0ea647" title="setHardLimit" alt="" coords="176,208,272,235"/>
-<area shape="rect" id="node7" href="$d5/d60/pps-client_8cpp.html#a5443ab59528135706e70991cf1f880d2" title="clampJitter" alt="" coords="181,259,267,285"/>
+<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#ad889ebd8ff46d7aece2aa6c4c7252ed2" title="buildRawErrorDistrib" alt="" coords="153,5,297,31"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#abec458c05c4b47e56643bfa1bd52fbb5" title="buildJitterDistrib" alt="" coords="167,55,283,80"/>
+<area shape="rect" id="node4" href="$d5/d60/pps-client_8cpp.html#a0b30b41495a6426b5bb557ced936901b" title="detectDelaySpike" alt="" coords="162,104,288,129"/>
+<area shape="rect" id="node5" href="$d5/d60/pps-client_8cpp.html#a9173ef2f7e0585cc0edbc7e5a733bc3b" title="getTimeSlew" alt="" coords="176,153,274,179"/>
+<area shape="rect" id="node6" href="$d5/d60/pps-client_8cpp.html#ab553045428f9337e754db13f1d0ea647" title="setHardLimit" alt="" coords="177,203,273,228"/>
+<area shape="rect" id="node7" href="$d5/d60/pps-client_8cpp.html#a5443ab59528135706e70991cf1f880d2" title="clampJitter" alt="" coords="182,252,268,277"/>
 </map>

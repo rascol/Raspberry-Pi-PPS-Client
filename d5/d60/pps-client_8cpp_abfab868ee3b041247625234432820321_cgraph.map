@@ -1,5 +1,5 @@
 <map id="removeIntrptNoise" name="removeIntrptNoise">
-<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#ad889ebd8ff46d7aece2aa6c4c7252ed2" title="buildRawErrorDistrib" alt="" coords="190,5,333,32"/>
-<area shape="rect" id="node3" href="$d5/d60/pps-client_8cpp.html#a6128ff37a7e46aee507240712c6c8f74" title="detectIntrptDelaySpike" alt="" coords="184,56,339,83"/>
-<area shape="rect" id="node4" href="$d5/d60/pps-client_8cpp.html#a5443ab59528135706e70991cf1f880d2" title="clampJitter" alt="" coords="218,107,305,133"/>
+<area shape="rect" id="node2" href="$d5/d60/pps-client_8cpp.html#ad889ebd8ff46d7aece2aa6c4c7252ed2" title="buildRawErrorDistrib" alt="" coords="190,5,333,31"/>
+<area shape="rect" id="node3" href="$d5/d60/pps-client_8cpp.html#a6128ff37a7e46aee507240712c6c8f74" title="detectIntrptDelaySpike" alt="" coords="184,55,339,80"/>
+<area shape="rect" id="node4" href="$d5/d60/pps-client_8cpp.html#a5443ab59528135706e70991cf1f880d2" title="clampJitter" alt="" coords="218,104,304,129"/>
 </map>
