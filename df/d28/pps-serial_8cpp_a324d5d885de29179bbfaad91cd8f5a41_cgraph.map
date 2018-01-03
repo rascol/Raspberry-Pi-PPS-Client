@@ -1,0 +1,5 @@
+<map id="getTimeOffsetOverSerial" name="getTimeOffsetOverSerial">
+<area shape="rect" id="node2" href="$df/d28/pps-serial_8cpp.html#ad914c0cc98dcf40ed1f95659587b32bd" title="waitForGPSmessages" alt="" coords="235,5,389,31"/>
+<area shape="rect" id="node3" href="$d0/d3e/pps-files_8cpp.html#ae20c07f56a5b2b05b636f6a0a31ce214" title="writeToLog" alt="" coords="452,31,537,56"/>
+<area shape="rect" id="node4" href="$df/d28/pps-serial_8cpp.html#a65b307997cb2a5f37beac28147690f1c" title="getUTCfromGPSmessages" alt="" coords="221,107,404,132"/>
+</map>
