@@ -1,4 +1,4 @@
-# Raspberry Pi PPS Client Documentation (rev. b) {#mainpage}
+# Raspberry Pi PPS Client Documentation (rev. c) {#mainpage}
 
 - [Uses](#uses)
 - [How To Do High Accuracy Timekeeping](#how-to-do-high-accuracy-timekeeping)
@@ -9,6 +9,7 @@
 - [The PPS-Client Controller](#the-pps-client-controller)
   - [Feedback Controller](#feedback-controller)
   - [Feedforward Compensator](#feedforward-compensator)
+  - [Driver](#driver)
   - [Controller Behavior on Startup](#controller-behavior-on-startup)
   - [Performance Under Stress](#performance-under-stress)
   - [Error Handling](#error-handling)
@@ -125,9 +126,9 @@ Since the SDs of Gaussian distributions add in root-sum-square fashion,
 
 <center><I>σ<sub> t</sub></I><sup> 2</sup> = <I>σ</I><sub> 1</sub><sup> 2</sup> + <I>σ</I><sub> 2</sub><sup> 2</sup></center>
 
-the combined flicker noise and PPS source jitter in the RPi 2 was calculated to be **<I>σ</I><sub> 2</sub> = 0.65** microsecond SD. 
+the combined flicker noise and PPS source jitter in the RPi 2 was calculated to be <I>σ</I><sub>2</sub> = **0.65** microsecond SD. 
 
-On repeating the calculation for the RPi 3 unit with PPS signal jitter <I>σ<sub> t</sub></I> = 0.82 microsecond and calibration interrupt jitter <I>σ</I><sub> 1</sub> = 0.45 microsecond (50,212 samples) with relative fits to Gaussian distributions of 0.98, the calculated combined flicker noise and PPS source jitter was about **<I>σ</I><sub> 2</sub> = 0.69** microsecond SD.
+On repeating the calculation for the RPi 3 unit with PPS signal jitter <I>σ<sub> t</sub></I> = 0.82 microsecond and calibration interrupt jitter <I>σ</I><sub> 1</sub> = 0.45 microsecond (50,212 samples) with relative fits to Gaussian distributions of 0.98, the calculated combined flicker noise and PPS source jitter was about <I>σ</I><sub>2</sub> = **0.69** microsecond SD.
 
 In summary the combined clock oscillator flicker noise and PPS source jitter in our test of an RPi 2 processor and RPi 3 processor was on the order of 0.7 microsecond SD with good agreement between both processors. 
 
@@ -149,7 +150,7 @@ The PPS-Client controller can be thought of as consisting of two conceptual comp
 
 ## Feedback Controller {#feedback-controller}
 
-The PPS-Client controller algorithm processes timestamps of interrupts from a hardware GPIO pin triggered by the rising edges of a PPS signal. These PPS timestamps are recorded by a kernel device driver, `pps-client.ko`, that was specifically designed to record the timestamps as closely as possible to when the processor responded to the PPS interrupts. This is important because the time at which the system responded to the interrupt minus the time at which it actually toggled the input pin is the interrupt delay that must be compensated by the control point constant, `G.sysDelay`, and this delay must correspond as accurately as possible to that time difference in order to reduce the uncertainty of the delay value.
+The PPS-Client controller algorithm processes timestamps of interrupts from a hardware GPIO pin triggered by the rising edges of a PPS signal. These PPS timestamps are recorded by a kernel device driver, `pps-gps-io.ko`, that was specifically designed to record the timestamps as closely as possible to when the processor responded to the PPS interrupts. This is important because the time at which the system responded to the interrupt minus the time at which it actually toggled the input pin is the interrupt delay that must be compensated by the control point constant, `G.sysDelay`, and this delay must correspond as accurately as possible to that time difference in order to reduce the uncertainty of the delay value.
 
 The `makeTimeCorrection()` routine is the central controller routine and it waits in the timer loop of the function, `waitForPPS()` and inside the `readPPS_SetTime()` routine, until a PPS timestamp becomes available from the PPS-Client device driver. At that instant the timestamp is passed into `makeTimeCorrection()` where the fractional part of the second becomes available as the variable `G.interruptTime` which is converted to the controller error variable as,
 
@@ -173,7 +174,12 @@ The specific purpose of the feedback controller described above is to adjust the
 
 It does that by setting the local clock so that the difference between `G.sysDelay` and the median of `G.interruptTime` is zero. For this to succeed in adjusting the local time to the PPS, `G.sysDelay` must be the median of the time delay at which the system responded to the rising edge of the PPS interrupt. But the median value of `G.sysDelay` can't be determined by the feedback controller. As indicated by the equation, all the controller can do is satisfy the equation of time.
 
-In order to independently determine the `G.sysDelay` value, a calibration interrupt is made every second immediately following the PPS interrupt. These time measurements are requested from the `pps-client.ko` device driver in the `getInterruptDelay()` routine. That routine calculates `G.intrptDelay` from the time measurements and calls `removeIntrptNoise()` with that value. The `removeIntrptNoise()` routine generates `G.delayMedian`, an estimate of the median of the `G.intrptDelay` value, in a parallel way and using the same routines that `removeNoise()` uses to generate the median of `G.interruptTime`. The `G.delayMedian` value is then assigned to `G.sysDelay`.
+In order to independently determine the `G.sysDelay` value, a calibration interrupt is made every second immediately following the PPS interrupt. These time measurements are requested from the `gps-pps-io.ko` device driver in the `getInterruptDelay()` routine. That routine calculates `G.intrptDelay` from the time measurements and calls `removeIntrptNoise()` with that value. The `removeIntrptNoise()` routine generates `G.delayMedian`, an estimate of the median of the `G.intrptDelay` value, in a parallel way and using the same routines that `removeNoise()` uses to generate the median of `G.interruptTime`. The `G.delayMedian` value is then assigned to `G.sysDelay`.
+
+## Driver {#driver}
+
+It should be evident by now that the PPS-Client deamon was written almost entirely in user space. That made the daemon much easier to design and test. Moreover it makes the code very easy to maintain and to customize for different processors, different flavors of Linux and maybe eventually different operating systems. Indeed, it would have be preferable to do all of the code in user space. However, the controller needs to capture timestamps of the PPS interrupt and the calibration interrupt with the shortest possible time delays between the events and recording the time stamps of them. Currently, this can only be realized by capturing the timestamps in kernel space. 
+ 
 
 ## Controller Behavior on Startup {#controller-behavior-on-startup}
 

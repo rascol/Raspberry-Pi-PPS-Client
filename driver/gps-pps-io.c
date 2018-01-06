@@ -1,7 +1,44 @@
-/*
- * gps-pps-io.c
- *
- * Copyright (C) 2016  Raymond S. Connell
+/**
+ @file gps-pps-io.c
+ @brief This file generates the kernel driver for the PPS-Client daemon.
+
+ This driver provides the following functionality (PPS_GPIO, INTRPT_GPIO and OUTPUT_GPIO
+ are set on driver load by the PPS-Client daemon):
+
+ 1. When an interrupt is received on PPS_GPIO this driver records
+ the reception time. That time can then be read from the driver
+ in the PPS-Client daemon with a read() on the device driver file
+ (\b pps_i_read()).
+
+ 2. Records the reception time of a second
+ interrupt on INTRPT_GPIO that is initiated from within the driver.
+ That requires an external wired connection between OUTPUT_GPIO
+ and INTRPT_GPIO.
+
+   a. With that connection in place, writing "1" to the driver file
+ will disable the interrupt on PPS_GPIO, will cause OUTPUT_GPIO to
+ request an interrupt on INTRPT_GPIO and will record the time that
+ the write arrived at OUTPUT_GPIO (\b pps_i_write()).
+
+   b. The write time to OUTPUT_GPIO and the reception time of the
+ interrupt on INTRPT_GPIO can then be read from the driver with
+ a read() on the device driver file (\b pps_i_read()).
+
+  c. Writing "0" to the driver file will then re-enable the interrupt
+ on PPS_GPIO (\b pps_i_write()).
+
+ 3. Sets an offset in microseconds
+ to the system time by writing a pair of integers to the driver file
+ with the first being an identifier value of 2 and the second being
+ the offset time in microseconds (\b pps_i_write()).
+
+ 4. Sets an offset in whole seconds to the
+ system time by writing a pair of integers to the driver file with
+ the first being an identifier value of 3 and the second being the
+ offset time in integer seconds (\b pps_i_write()).
+ */
+
+ /* Copyright (C) 2016-2018  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,35 +60,9 @@
  *
  * Notes:
  *
- * Compile on Raspberry Pi 2 to create gps-pps-io.ko. On
+ * Compile on Raspberry Pi 2 or 3 to create gps-pps-io.ko. On
  * installation gps-pps-io.ko must be copied to
  *  /lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko
- *
- * 1. When an interrupt is received on PPS_GPIO this driver records
- * the reception time. That time can then be read from the driver
- * with the read() function.
- *
- * 2. This driver can also record the reception time of a second
- * interrupt on INTRPT_GPIO that is initiated from within the driver.
- * That requires an external wired connection between OUTPUT_GPIO
- * and INTRPT_GPIO.
- *
- * With that connection in place, writing a 1 to the driver
- * will disable the interrupt on PPS_GPIO, will cause OUTPUT_GPIO to
- * request an interrupt on INTRPT_GPIO and will record the time the
- * write arrived at OUTPUT_GPIO.
- *
- * The write time to OUTPUT_GPIO and the reception time of the
- * interrupt on INTRPT_GPIO can then be read from the driver with
- * the read() function.
- *
- * Writing a 0 to the driver will then re-enable the interrupt
- * on PPS_GPIO.
- *
- * 3. This driver can also be used to inject an offset in whole
- * seconds to the system time by writing a pair of integers to
- * the driver with the first being an identifier value greater
- * than 1 and the second being the integer offset time.
  */
 
 #include <linux/module.h>
@@ -61,8 +72,8 @@
 #include <linux/sched.h>
 #include <linux/kernel.h>	/* printk() */
 #include <linux/fs.h>		/* everything... */
-#include <linux/errno.h>	/* error codes */
-#include <linux/delay.h>	/* udelay */
+#include <linux/errno.h>		/* error codes */
+#include <linux/delay.h>		/* udelay */
 #include <linux/kdev_t.h>
 #include <linux/slab.h>
 #include <linux/mm.h>
@@ -87,43 +98,110 @@
 const char *version = "gps-pps-io v1.1.0";
 
 static int major = 0;							/* dynamic by default */
+/**
+ * On driver load, receives the driver major number
+ * from the system.
+ *
+ * @param[in] major The driver major number.
+ */
 module_param(major, int, 0);						/* but can be specified at load time */
 
 static int PPS_GPIO = 0;
+/**
+ * On driver load, specifies the device pin number that will
+ *  accept the PPS interrupt.
+ *
+ * @param[in] PPS_GPIO The device pin number to use.
+ */
 module_param(PPS_GPIO, int, 0);					/* Specify PPS_GPIO at load time */
 
 static int OUTPUT_GPIO = 0;
+/**
+ * On driver load, specifies the device pin number that
+ * will provide the calibration output pulse that connects
+ * to the calibration interrupt pin.
+ *
+ * @param[in] OUTPUT_GPIO The device pin number to use.
+ */
 module_param(OUTPUT_GPIO, int, 0);				/* Specify OUTPUT_GPIO at load time */
 
 static int INTRPT_GPIO = 0;
+/**
+ * On driver load, specifies the device pin number that
+ * will accept the calibration interrupt.
+ *
+ * @param[in] INTRPT_GPIO The device pin number to use.
+ */
 module_param(INTRPT_GPIO, int, 0);				/* Specify INTRPT_GPIO at load time */
 
+/**
+ * The IRQ for the PPS interrupt generated by the PPS_GPIO
+ * device pin.
+ */
 volatile int pps_irq1 = -1;
+
+/**
+ * The IRQ for the calibration interrupt generated by the
+ * INTRPT_GPIO device pin.
+ */
 volatile int pps_irq2 = -1;
+
+/**
+ * The OUTPUT_GPIO number that specifies the output pin that
+ * will write to the INTRPT_GPIO calibration interrupt input
+ * when commanded by the driver.
+ */
 volatile int gpio_out = 0;
 
 MODULE_AUTHOR ("Raymond Connell");
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_VERSION("1.1.0");
 
+/**
+ * Array of ints in kernel memory that is used to
+ * pass data to and from the device driver caller
+ * with the driver read() and write() functions.
+ */
 int *pps_buffer = NULL;
+
+/**
+ * Internal driver macro.
+ */
 DECLARE_WAIT_QUEUE_HEAD(pps_queue);
 
+/**
+ * Flag that is set to 1 when the driver has received a
+ * PPS interrupt.
+ */
 int read1_OK = 0;
+
+/**
+ * Flag that is set to 1 when the driver has received a
+ * calibration interrupt.
+ */
 int read2_OK = 0;
+
+/**
+ * Flag to allow triggering the PPS interrupt when
+ * true or the calibration interrupt when false.
+ */
 bool readIntr2 = false;
 
+/**
+ * The delay in jiffies corresponding to a time delay of
+ * 200 milliseconds.
+ */
 unsigned long j_delay;
 
 static atomic_t driver_available = ATOMIC_INIT(1);
 
 /**
- * Permits open() only by the first caller until
- * that caller closes the driver.
+ * Opens the driver but permits it to be opened only by the
+ * first caller until that caller closes the driver.
  */
 int pps_open (struct inode *inode, struct file *filp)
 {
-	/**
+	/*
 	 * The following statement fails if driver_available
 	 * is 1 and driver_available then gets set to zero.
 	 *
@@ -132,7 +210,7 @@ int pps_open (struct inode *inode, struct file *filp)
 	 */
     if (! atomic_dec_and_test(&driver_available)) {
 
-    	/**
+    	/*
     	 * If driver_available was initially 0 then got
     	 * here and driver_available was set to -1. But
     	 * the next statement sets driver_available back
@@ -143,7 +221,7 @@ int pps_open (struct inode *inode, struct file *filp)
         return -EBUSY; 						/* already open */
     }
 
-    /**
+    /*
      * If driver_available was initially 1 then got
      * here and driver_available was set to 0
      * by atomic_dec_and_test().
@@ -157,7 +235,7 @@ int pps_open (struct inode *inode, struct file *filp)
  */
 int pps_release (struct inode *inode, struct file *filp)
 {
-	/**
+	/*
 	 * Sets driver_available to 1 so the next caller
 	 * can open the driver again after this close.
 	 */
@@ -198,8 +276,18 @@ int pps_release (struct inode *inode, struct file *filp)
  *
  * Is called from user space as a normal file read operation on the device
  * driver file.
+ *
+ * @param[in] filp The file pointer generated when the driver file was opened.
+ *
+ * @param[out] buf Provides the reception times of events to the caller.
+ *
+ * @param[in] count The size in bytes of the data to be returned in buf.
+ *
+ * @param f_pos Not used.
+ *
+ * @returns The number bytes returned or a negative value on error.
  */
-ssize_t pps_i_read (struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
+ssize_t pps_i_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
 	ssize_t rv = 0;
 	int wr = 0;
@@ -288,10 +376,20 @@ ssize_t pps_i_read (struct file *filp, char __user *buf, size_t count, loff_t *f
  *   an offset in seconds to the system time and this offset
  *   is applied immediately. Param count is provided with a value
  *   of 2 * sizeof(int).
+ *
+ * @param[in] filp The file pointer generated when the driver file was opened.
+ *
+ * @param[in] buf The user input.
+ *
+ * @param[in] count Size in bytes of the data provided in buf.
+ *
+ * @param f_pos Not used.
+ *
+ * @returns Zero on success or a negative value on error.
  */
-ssize_t pps_i_write (struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
+ssize_t pps_i_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
 {
-   /**
+   /*
 	*  For future reference:
 	*
 	*  void gpio_set_value(unsigned gpio, int value)
@@ -356,6 +454,9 @@ ssize_t pps_i_write (struct file *filp, const char __user *buf, size_t count, lo
 	return 0;
 }
 
+/**
+ * Identifies the functions to be used for file operations by the driver.
+ */
 struct file_operations pps_i_fops = {
 	.owner	 = THIS_MODULE,
 	.read	 = pps_i_read,
@@ -365,9 +466,11 @@ struct file_operations pps_i_fops = {
 };
 
 /**
- * On recognition of the interrupt on PPS_GPIO copies
- * the time of day to pps_buffer[0]-[1], sets the
+ * On recognition of the PPS interrupt on PPS_GPIO
+ * copies the time of day to pps_buffer[0]-[1], sets the
  * read1_OK flag and wakes up the reading process.
+ *
+ * @returns Zero on success else a negative value on failure.
  */
 irqreturn_t pps_interrupt1(int irq, void *dev_id)
 {
@@ -385,9 +488,11 @@ irqreturn_t pps_interrupt1(int irq, void *dev_id)
 }
 
 /**
- * On recognition of the interrupt on INTRPT_GPIO copies
- * the time of day to pps_buffer[4]-[5], sets the
+ * On recognition of the calibration interrupt on INTRPT_GPIO
+ * copies the time of day to pps_buffer[4]-[5], sets the
  * read2_OK flag and wakes up the reading process.
+ *
+ * @returns Zero on success else a negative value on failure.
  */
 irqreturn_t pps_interrupt2(int irq, void *dev_id)
 {
@@ -405,8 +510,11 @@ irqreturn_t pps_interrupt2(int irq, void *dev_id)
 }
 
 /**
- * Requests a GPIO,  maps the GPIO number to the interrupt and gets
- * the interrupt number.
+ * Maps a device GPIO pin as an interrupt.
+ *
+ * @param[in] gpio_num The GPIO number to map.
+ *
+ * @returns Zero on success else -1 on failure.
  */
 int configureInterruptOn(int gpio_num) {
 
@@ -459,6 +567,13 @@ int configureInterruptOn(int gpio_num) {
    return 0;
 }
 
+/**
+ * Maps a device GPIO pin as an output.
+ *
+ * @param[in] gpio_num The GPIO number to map.
+ *
+ * @returns Zero on success else -1 on failure.
+ */
 int configureWriteOn(int gpio_num){
 
 	if (gpio_request(gpio_num, INTERRUPT_NAME)) {
@@ -475,6 +590,9 @@ int configureWriteOn(int gpio_num){
 	return 0;
 }
 
+/**
+ * Provides clean up on device driver exit.
+ */
 void pps_cleanup(void)
 {
 	if (pps_irq1 >= 0) {
@@ -497,6 +615,10 @@ void pps_cleanup(void)
 
 	printk(KERN_INFO "gps-pps-io: removed\n");
 }
+
+/**
+ * @cond FILES
+ */
 
 struct file* file_open(const char* path, int flags, int rights) {
     struct file* filp = NULL;
@@ -539,7 +661,13 @@ int kstrncmp(const char *str1, const char *str2, int n){
 	}
 	return (0);
 }
+/**
+ * @endcond
+ */
 
+/**
+ * The device driver initialization function.
+ */
 int pps_init(void)
 {
 	int result;

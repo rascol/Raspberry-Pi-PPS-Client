@@ -91,7 +91,7 @@ all:
 	
 	rm pkg.tar.gz
 	rm -rf ./tmp
-	@echo "Compliled successufully"
+	@echo "Compliled successfully"
 	
 clean:
 	rm -rf ./pkg

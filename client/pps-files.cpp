@@ -1,7 +1,8 @@
 /**
  * @file pps-files.cpp
- * @brief The pps-files.cpp file contains functions and structures for saving files intended for PPS-Client status monitoring and analysis.
- *
+ * @brief This file contains functions and structures for saving and loading files intended for PPS-Client status monitoring and analysis.
+ */
+/*
  * Copyright (C) 2016-2018  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1574,7 +1575,7 @@ int enableNTP(void){
  * value is used to load the hardware driver that
  * PPS-Client requires to load PPS interrupt times.
  *
- * @param[in/out] majorPos A string possibly containing
+ * @param[in,out] majorPos A string possibly containing
  * the major number.
  *
  * @returns The major number as a char string if

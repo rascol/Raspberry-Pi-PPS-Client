@@ -1,7 +1,9 @@
 /**
  * @file pps-sntp.cpp
- * @brief The pps-sntp.cpp file contains functions and structures for accessing time updates via SNTP.
- *
+ * @brief This file contains functions and structures for accessing time updates via SNTP.
+ */
+
+/*
  * Copyright (C) 2016-2018  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
@@ -353,8 +355,9 @@ void makeSNTPTimeQuery(timeCheckParams *tcp){
 		}
 	}
 
-	if (g.seq_num >= 0
-			&& g.seq_num % CHECK_TIME == 0){		// Start a time check against the list of SNTP servers
+	if (g.seq_num >= 600							// was g.seq_num >= 0
+			&& g.seq_num % 60 == 0){		// Start a time check against the list of SNTP servers
+		g.blockDetectClockChange = BLOCK_FOR_10;
 												// Refresh the server list once per day
 		if ((g.seq_num - f.lastServerUpdate) > SECS_PER_DAY
 				|| g.seq_num == CHECK_TIME){		// and at the first CHECK_TIME

@@ -1,7 +1,9 @@
 /**
  * @file pps-client.h
- * @brief The pps-client.h file contains includes, defines and structures for PPS-Client.
- *
+ * @brief This file contains includes, defines and structures for PPS-Client.
+ */
+
+/*
  * Copyright (C) 2016-2018  Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify

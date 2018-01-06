@@ -1,6 +1,6 @@
 /**
  * @file pps-client.cpp
- * @brief The pps-client.cpp file contains the principal PPS-Client controller functions and structures.
+ * @brief This file contains the principal PPS-Client controller functions and structures.
  *
  * The PPS-Client daemon synchronizes the system clock to a Pulse-Per-Second (PPS)
  * source to a resolution of one microsecond with an absolute accuracy
@@ -11,7 +11,7 @@
  *
  * A wired GPIO connection is required from a PPS source. Synchronization
  * is provided by the rising edge of that PPS source which is connected to
- * GPIO 4.
+ * GPIO 4 on Raspberry Pi.
  *
  * The executable for this daemon is "/usr/sbin/pps-client"
  *
@@ -19,11 +19,10 @@
  *
  * The configuration file is "/etc/pps-client.conf"
  *
- * The kernel driver is
- * "/lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko"
- *
- * Created on: Nov 17, 2015
- *
+ * The kernel driver is "/lib/modules/`uname -r`/kernel/drivers/misc/gps-pps-io.ko"
+ */
+
+/*
  * Copyright (C) 2016-2018 Raymond S. Connell
  *
  * This program is free software; you can redistribute it and/or modify
@@ -482,7 +481,7 @@ int setClockFractionalSecond(int correction, int pps_fd){
  *
  * @param[in] rawError The distribution values.
  * @param[out] errorDistrib The distribution being constructed.
- * @param[in/out] count The count of distribution samples.
+ * @param[in,out] count The count of distribution samples.
  */
 void buildRawErrorDistrib(int rawError, double errorDistrib[], unsigned int *count){
 	int len = ERROR_DISTRIB_LEN - 1;
@@ -1217,7 +1216,7 @@ void waitForPPS(bool verbose, int pps_fd){
 			}
 
 			if (g.doNTPsettime){
-				g.blockDetectClockChange = BLOCK_FOR_10;		// Prevent interaction with detectExteralSystemClockChange()
+//				g.blockDetectClockChange = BLOCK_FOR_10;		// Prevent interaction with detectExteralSystemClockChange()
 				makeSNTPTimeQuery(&tcp);
 			}
 
