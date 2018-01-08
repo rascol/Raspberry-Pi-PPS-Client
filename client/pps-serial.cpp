@@ -299,18 +299,19 @@ void doSerialTimeCheck(timeCheckParams *tcp){
 			goto end;
 		}
 		if (timeDif != 0 && f.lastSerialTimeDif == 0){	// No previous read.
-			sprintf(tcp->strbuf, "doSerialTimeCheck() timeDif detected on first read: %d\n", timeDif);
+			sprintf(tcp->strbuf, "doSerialTimeCheck() Time difference detected on first read: %d\n", timeDif);
 			writeToLog(tcp->strbuf);
 
 			tcp->serverTimeDiff[0] = 0;
-			f.lastSerialTimeDif = timeDif;				// So flag timeDif for verification and continue read serial.
+			f.lastSerialTimeDif = timeDif;				// So flag timeDif for verification
+			tcp->doReadSerial = true;					// and continue read serial.
 
 			tcp->rv = 0;
 			goto end;
 		}
 		if (timeDif != 0 && f.lastSerialTimeDif != 0){	// Got a timeDif on second read
 			if (timeDif == f.lastSerialTimeDif ){		// timeDif is valid.
-				sprintf(tcp->strbuf, "doSerialTimeCheck() Verified timeDif on second read: %d\n", timeDif);
+				sprintf(tcp->strbuf, "doSerialTimeCheck() Verified time difference on second read: %d\n", timeDif);
 				writeToLog(tcp->strbuf);
 
 				tcp->doReadSerial = false;				// So stop read serial
@@ -322,7 +323,7 @@ void doSerialTimeCheck(timeCheckParams *tcp){
 				goto end;
 			}
 			else {										// timeDifs don't match
-				sprintf(tcp->strbuf, "doSerialTimeCheck() Second timeDif read: %d does not match the first: %d. Not valid.\n", timeDif, f.lastSerialTimeDif);
+				sprintf(tcp->strbuf, "doSerialTimeCheck() Second time difference: %d does not match the first: %d. Not valid.\n", timeDif, f.lastSerialTimeDif);
 				writeToLog(tcp->strbuf);
 
 				tcp->doReadSerial = false;

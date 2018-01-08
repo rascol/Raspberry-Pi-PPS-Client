@@ -47,7 +47,7 @@
  */
 extern int adjtimex (struct timex *timex);
 
-const char *version = "1.4.0";							//!< Program version 1.4.0 created on 17 Dec 2017.
+const char *version = "1.5.0";							//!< Program version 1.5.0 created on 17 Dec 2017.
 
 struct G g;												//!< Declares the global variables defined in pps-client.h.
 
@@ -654,25 +654,30 @@ void increaseMonotonicCount(void){
 
 	if (g.blockDetectClockChange > 0){
 		g.blockDetectClockChange -= 1;
+
+		if (g.blockDetectClockChange == 0){
+			g.t_count = g.t_now;
+		}
 	}
 }
 
 
 /**
- * Checks that arg val has been near zero for about the
+ * Checks that arg val has been below limit for about the
  * previous 20 or so values.
  *
- * @param[in] val The arg to be checked for nearness to
- * zero.
+ * @param[in] limit The limit value.
+ *
+ * @param[in] val The arg to be checked relative to limit.
  *
  * @returns true if the magnitude of the average arg value
- * is less than 0.05 else false.
+ * is less than limit else false.
  */
-bool isNearZero(double val){
-	double accFrac = 0.9;
-	g.zeroAccum = accFrac * g.zeroAccum + (1.0 - accFrac) * val;
+bool isBelow(double limit, double val){
 
-	if (g.hardLimit == HARD_LIMIT_1 && fabs(g.zeroAccum) < 0.05){		// NEAR_ZERO
+	g.filterAccum = FILTER_FACTOR * g.filterAccum + (1.0 - FILTER_FACTOR) * val;
+
+	if (fabs(g.filterAccum) < limit){
 		return true;
 	}
 	return false;
@@ -688,11 +693,11 @@ bool isNearZero(double val){
 bool detectExteralSystemClockChange(void){
 	bool clockChanged = false;
 
-	if (isNearZero(g.avgCorrection)) {
+	if (g.seq_num > FILTER_ACCUM_START && isBelow(JITTER_LIMIT, (double)g.jitter)) {
 
 		if (g.t_now != g.t_count){
 
-			sprintf(g.logbuf, "detectExteralSystemClockChange() Got error g.t_now: %d g.t_count: %d\n", g.t_now, g.t_count);
+			sprintf(g.logbuf, "detectExteralSystemClockChange() Got error g.t_now: %d g.t_count: %d g.filterAccum: %lf\n", g.t_now, g.t_count, g.filterAccum);
 			writeToLog(g.logbuf);
 
 			clockChanged = true;     			// The clock was set externally.
@@ -728,6 +733,8 @@ int makeTimeCorrection(struct timeval pps_t, int pps_fd){
 		if (rv == -1){
 			return rv;
 		}
+
+		g.blockDetectClockChange = BLOCK_FOR_3;
 	}
 
 	if (g.doSerialsettime && g.serialTimeError != 0){
@@ -1197,10 +1204,15 @@ void waitForPPS(bool verbose, int pps_fd){
 
 		nanosleep(&ts2, NULL);			// Sleep until ready to look for PPS interrupt
 
+		if (g.doNTPsettime){				// Don't move from this location ahead of readPPS_SetTime()
+			makeSNTPTimeQuery(&tcp);		// because SNTP servers are allocated on g.seq_num == 0.
+		}
+
 		restart = readPPS_SetTime(verbose, pps_fd);
 		if (restart == -1){
 			break;
 		}
+
 		if (restart == 1) {
 			readConfigFile();
 		}
@@ -1213,11 +1225,6 @@ void waitForPPS(bool verbose, int pps_fd){
 
 			if (bufferStateParams() == -1){
 				break;
-			}
-
-			if (g.doNTPsettime){
-//				g.blockDetectClockChange = BLOCK_FOR_10;		// Prevent interaction with detectExteralSystemClockChange()
-				makeSNTPTimeQuery(&tcp);
 			}
 
 			if (g.doSerialsettime){
@@ -1297,6 +1304,19 @@ int main(int argc, char *argv[])
 		return rv;
 	}
 
+	rv = sysCommand("timedatectl set-ntp 0");			// Disable NTP, to prevent it from disciolining the clock.
+	if (g.doNTPsettime && rv != 0){
+		return rv;
+	}
+
+	printf("Waiting two minutes for NTP to shut down");
+	for (int i = 0; i < 120; i++){
+		sleep(1);
+		fprintf(stdout, ".");
+		fflush(stdout);
+	}
+	printf("\n");
+
 	pid_t pid = fork();									// Fork a duplicate child of this process.
 
 	if (pid > 0){										// This is the parent process.
@@ -1320,10 +1340,10 @@ int main(int argc, char *argv[])
 		goto end0;
 	}
 
-	rv = disableNTP();									// Always disable NTP, to prevent it from disciolining the clock.
-	if (g.doNTPsettime && rv != 0){						// But disableNTP() warns if it fails.
-		goto end0;
-	}
+//	rv = sysCommand("timedatectl set-ntp 0");			// Disable NTP, to prevent it from disciolining the clock.
+//	if (g.doNTPsettime && rv != 0){
+//		goto end0;
+//	}
 
 	param.sched_priority = 99;							// to get real-time priority.
 	sched_setscheduler(0, SCHED_FIFO, &param);			// SCHED_FIFO: Don't yield to scheduler until sleep.
@@ -1369,7 +1389,7 @@ end2:
 	sysCommand("rm /var/run/pps-client.pid");			// Remove PID file with system() which blocks until
 														// rm completes keeping shutdown correctly sequenced.
 	end1:
-	enableNTP();											// Always try to re-enable NTP on shutdown.
+	sysCommand("timedatectl set-ntp 1");					// Always try to re-enable NTP on shutdown.
 
 	driver_unload();										// Driver will not be unloaded until a timeout occurs to
 														// prevent driver from being unloaded before being closed

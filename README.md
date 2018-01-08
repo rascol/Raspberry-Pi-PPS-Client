@@ -1,4 +1,4 @@
-# PPS-Client v1.4
+# PPS-Client v1.5.0
 
 <p align="center"><img src="figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" width="400"/></p>
 
@@ -8,9 +8,8 @@ The PPS-Client daemon is a fast, microsecond accuracy Pulse-Per-Second system cl
 - [Hardware Requirements](#hardware-requirements)
 - [Software Requirements](#software-requirements)
   - [Operating System](#operating-system)
-  - [The NTP daemon](#the-ntp-daemon)
-    - [No NTP](#no-ntp)
-    - [GPS Only](gps-only)
+  - [No Internet Time](#no-internet-time)
+  - [GPS Only](gps-only)
   - [The chkconfig system services manager](#the-chkconfig-system-services-manager)
 - [Installing](#installing)
   - [Get the Files](#get-the-files)
@@ -73,26 +72,11 @@ For a detailed description of the PPS-Client controller and accuracy testing run
 ---
 ## Operating System
 
-Versions of Linux kernel 4.1 and later are supported. Currently PPS-Client v1.4 and later runs on **Raspian**. At the moment, PPS-Client is restricted to Raspian because the file locations required by the installer (and test files) are hard coded. If there is enough interest in using other OS's, these install locations could be determined by the PPS-Client config file.
+Versions of Linux kernel 4.1 and later are supported. Currently PPS-Client v1.5 and later runs on **Raspian** and **Ubuntu Mate** on the Raspberry Pi. At the moment, PPS-Client is restricted to Debian based Linux operating systems because the file locations required by the installer (and test files) are hard coded. If there is enough interest in using other OS's, these install locations could be determined by the PPS-Client config file.
 
-## The NTP daemon
+## No Internet Time
 
-At one time NTP was provided out of the box on Raspian. It no longer is because the NTP clock discipline code is now built into the kernel **and is active**. Even if you want to use an external program to set the time of day, NTP must be installed so that PPS-Client can access the NTP config file to disable it. If NTP is not already installed do
-```
-~ $ sudo apt-get install ntp
-~ $ sudo reboot
-```
-The reboot is necessary to insure that NTP is actively checking its config file.
-
-The PPS-Client default program for setting the whole second time of day is SNTP included in the NTP package. PPS-Client has been updated to use the SNTP version included in the latest NTP distribution (1:4.2.8p10+dfsg-3+deb9u1). By default SNTP maintains the date and time through DST and leap second changes and PPS-Client disciplines the system clock fractional second to the PPS. However, SNTP requires a file **/var/db/ntp-kod** that it no longer installs (see option -K in `man sntp`). If you are upgrading from an earlier version of NTP, see if the file already exists. If not, do something like this
-
-```
-~ $ sudo mkdir /var/db; sudo touch /var/db/ntp-kod; sudo chmod 666 /var/db/ntp-kod
-```
-
-### No NTP
-
-Alternatively, you may want use some other program to handle setting time-of-day updates. To tell PPS-Client that it should totally ignore how the clock seconds are set, after installation use a setting in **/etc/pps-client.conf**:
+Currently the default for setting whole second time-of-day updates is to query NIST time servers over the Internet. You may want use some other program to handle setting time-of-day updates. To tell PPS-Client that it should totally ignore how the clock seconds are set, after installation use a setting in **/etc/pps-client.conf**:
 ```
 ~ $ sudo nano /etc/pps-client.conf
 ```
@@ -102,7 +86,7 @@ Scroll down to the line,
 ```
 and uncomment it. PPS-Client will no longer care about whole-second time of day or how it gets set. But PPS-Client will continue to synchronize the roll-over of the second to the PPS signal. 
 
-### GPS Only
+## GPS Only
 
 PPS-Client can also be configured to have the GPS receiver that is providing the PPS signal provide the whole-second time of day updates as well. This enables operation with no internet connection. A Raspberry Pi configured this way could, for example, be used as a Stratum 1 time server for a LAN that is not connected to the Internet. 
 

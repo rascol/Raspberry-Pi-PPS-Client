@@ -1,4 +1,4 @@
-VERSION = 1.4.0
+VERSION = 1.5.0
 
 all:
 	mkdir pkg
@@ -57,6 +57,11 @@ all:
 	cp ./tmp/NormalDistribParams ./pkg/NormalDistribParams
 	find ./tmp -type f -delete
 	
+	cp -r ./utils/udp-time-client/. ./tmp
+	cd ./tmp && $(MAKE) all
+	cp ./tmp/udp-time-client ./pkg/udp-time-client
+	find ./tmp -type f -delete
+
 	cp ./README.md ./pkg/README.md
 	cp ./figures/RPi_with_GPS.jpg ./pkg/RPi_with_GPS.jpg
 	cp ./figures/frequency-vars.png ./pkg/frequency-vars.png
@@ -102,6 +107,7 @@ clean:
 	cd ./utils/interrupt-timer && $(MAKE) clean
 	cd ./utils/pulse-generator && $(MAKE) clean
 	cd ./utils/NormalDistribParams && $(MAKE) clean
+	cd ./utils/udp-time-client && $(MAKE) clean
 		
 	rm ./installer/pps-client-install-hd
 	rm ./installer/pps-client-make-install

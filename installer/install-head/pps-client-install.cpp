@@ -26,7 +26,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-const char *version = "pps-client-installer v1.4.0";
+const char *version = "pps-client-installer v1.5.0";
 const char *cfgVersion = "1.2.0";
 
 char *configbuf = NULL;
@@ -292,6 +292,10 @@ int main(int argc, char *argv[]){
 	printf("Moving NormalDistribParams to /usr/sbin/NormalDistribParams\n");
 	sysCommand("mv ./pkg/NormalDistribParams /usr/sbin/NormalDistribParams");
 	sysCommand("chmod +x /usr/sbin/NormalDistribParams");
+
+	printf("Moving udp-time-client to /usr/sbin/udp-time-client\n");
+	sysCommand("mv ./pkg/udp-time-client /usr/sbin/udp-time-client");
+	sysCommand("chmod +x /usr/sbin/udp-time-client");
 
 	printf("Moving README.md to /usr/share/doc/pps-client/README.md\n");
 	sysCommand("mkdir /usr/share/doc/pps-client");

@@ -36,66 +36,7 @@ static struct sntpLocalVars {
 	int numServers;
 	int timeCheckEnable;
 	bool allServersQueried;
-	unsigned int lastServerUpdate;
 } f;
-
-const char* srv0 = "0.debian.pool.ntp.org";
-const char* srv1 = "1.debian.pool.ntp.org";
-const char* srv2 = "2.debian.pool.ntp.org";
-const char* srv3 = "3.debian.pool.ntp.org";
-
-/**
- * Allocates memory, reads the list of NTP servers above and
- * partitions the memory into an array of server addresses that are
- * returned by tcp->ntp_server[].
- *
- * The memory MUST be released by the caller by calling "delete" on
- * the tcp->buf param. That automatically frees the tcp->ntp_server[]
- * array memory.
- *
- * @param[out] tcp Struct pointer for passing data to a thread.
- *
- * @returns The number of server addresses or -1 on error.
- */
-int allocNTPServerList(timeCheckParams *tcp){
-
-	if (tcp->buf != NULL){
-		delete[] tcp->buf;
-		tcp->buf = NULL;
-	}
-
-	int buflen = 0;
-	buflen += strlen(srv0) + 1;
-	buflen += strlen(srv1) + 1;
-	buflen += strlen(srv2) + 1;
-	buflen += strlen(srv3) + 1;
-
-	tcp->ntp_server = f.ntp_server;
-
-	tcp->buf = new char[buflen];
-
-	char *bufptr = tcp->buf;
-	strcpy(bufptr, srv0);
-	f.ntp_server[0] = bufptr;
-
-	bufptr += strlen(srv0) + 1;
-	strcpy(bufptr, srv1);
-	f.ntp_server[1] = bufptr;
-
-	bufptr += strlen(srv1) + 1;
-	strcpy(bufptr, srv2);
-	f.ntp_server[2] = bufptr;
-
-	bufptr += strlen(srv2) + 1;
-	strcpy(bufptr, srv3);
-	f.ntp_server[3] = bufptr;
-
-	for (int i = 0; i < MAX_SERVERS; i++){
-		f.serverTimeDiff[i] = 1000000;
-		f.threadIsBusy[i] = false;
-	}
-	return 4;
-}
 
 void copyToLog(char *logbuf, const char* msg){
 	char timestamp[100];
@@ -108,24 +49,19 @@ void copyToLog(char *logbuf, const char* msg){
 
 /**
  * Gets the time correction in whole seconds determined by
- * an SNTP server.
+ * a NIST server.
  *
- * @param[in] server The server URL.
- * @param[in] id An identifer for constructing a filename for
+ * @param[in] id An identifer recognized by udp-time-client
+ * to select servers and used for constructing a filename for
  * server messages.
  * @param[in] strbuf A buffer to hold server messages.
  * @param[in] logbuf A buffer to hold messages for the error log.
  *
  * @returns The time correction to be made or -1 on error.
  */
-time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
+int getNISTTime(int id, char *strbuf, char *logbuf, time_t *timeDiff){
 	struct timeval startTime, returnTime;
 	struct stat stat_buf;
-	struct tm tm;
-	int rv;
-	char *end;
-	int fracSec;
-
 	char num[2];
 	char buf[500];
 
@@ -133,21 +69,20 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 	sprintf(num, "%d", id);							//    "/run/shm/sntp_outn" with n the id val.
 
 	char *cmd = buf;									// Construct a command string:
-	strcpy(cmd, "sntp ");							//    "sntp [server_name] > /run/shm/sntp_outn"
-	strcat(cmd, server);
+	sprintf(cmd, "udp-time-client -u%d ", id);		//    "udp-time-client -uxx > /run/shm/sntp_outn"
 	strcat(cmd, " > ");
 	strcat(cmd, filename);
 	strcat(cmd, num);
 
 	gettimeofday(&startTime, NULL);
-	rv = sysCommand(cmd);								// Issue the command:
+	int rv = sysCommand(cmd);						// Issue the command:
 	if (rv == -1){
 		return -1;
 	}
-	gettimeofday(&returnTime, NULL);					// system() will block until sntp returns or times out.
+	gettimeofday(&returnTime, NULL);					// sysCommand() will block until udp-time-client returns or times out.
 
 	if (returnTime.tv_sec - startTime.tv_sec > 0){	// Took more than 1 second
-												// Reusing buf for constructing error message on exit.
+													// Reusing buf for constructing error message on exit.
 		sprintf(buf, "Skipped server %d. Took more than 1 second to respond.\n", id);
 		copyToLog(logbuf, buf);
 		return -1;
@@ -188,45 +123,21 @@ time_t getServerTime(const char *server, int id, char *strbuf, char *logbuf){
 		return -1;
 	}
 
-	int i;
-	for (i = 0; i < sz; i++){						// Locate the first
-		if (strbuf[i] == '\n'){						// line feed.
-			i += 1;
-			break;
-		}
+	char *pNum = strpbrk(strbuf, "0123456789");
+	time_t delta;
+	if (pNum == strbuf){								// strbuf contains a time diff value
+		sscanf(strbuf, "%ld\n", &delta);
+		*timeDiff = -delta;
+		return 0;
 	}
-	char *pLine = strbuf + i;
-
-	if (pLine[4] != '-' || pLine[7] != '-'){
-													// Reusing buf for constructing error message on exit.
-		sprintf(buf, "SNTP server %d returned an error message:\n", id);
-		strcat(buf, strbuf);
-		strcat(buf, "\n");
-		copyToLog(logbuf, buf);
+	else {											// strbuf contains an error message
+		copyToLog(logbuf, strbuf);
 		return -1;
 	}
-
-	end = strstr(pLine, "+/-");						// Chop string here if this is returned
-	if (end != NULL){								// by a server.
-		*end = '\0';
-	}
-
-	int tz;
-	float delta;										// The floor of this in integer seconds will be the
-													// whole second time correction returned by SNTP.
-	memset(&tm, 0, sizeof(struct tm));
-													// Start decoding.
-	// For example: 2016-02-01 16:28:54.146050 (+0500) -0.01507
-	sscanf(pLine, "%4d-%2d-%2d %2d:%2d:%2d.%6d (%5d) %f",
-			&tm.tm_year, &tm.tm_mon, &tm.tm_mday,
-			&tm.tm_hour, &tm.tm_min, &tm.tm_sec,
-			&fracSec, &tz, &delta);
-
-	return (int)floor(delta);						// Time correction to be made in whole seconds
 }
 
 /**
- * Requests a date/time from an SNTP time server in a detached thread
+ * Requests a date/time from a NIST time server in a detached thread
  * that exits after filling the timeCheckParams struct, tcp, with the
  * requested information and any error info.
  *
@@ -242,10 +153,9 @@ void doTimeCheck(timeCheckParams *tcp){
 
 	tcp->threadIsBusy[i] = true;
 
-	char *ntp_server = tcp->ntp_server[i];
-
-	time_t timeDiff = getServerTime(ntp_server, i, strbuf, logbuf);
-	if (timeDiff == -1){
+	time_t timeDiff;
+	int r = getNISTTime(i+1, strbuf, logbuf, &timeDiff);
+	if (r == -1){
 		tcp->serverTimeDiff[i] = 1000000;			// Marker for no time returned
 	}
 	else {
@@ -340,6 +250,7 @@ void updateLog(char *buf, int numServers){
  *
  * @param[in,out] tcp Struct pointer for passing data.
  */
+
 void makeSNTPTimeQuery(timeCheckParams *tcp){
 	int rv;
 
@@ -355,21 +266,28 @@ void makeSNTPTimeQuery(timeCheckParams *tcp){
 		}
 	}
 
-	if (g.seq_num >= 600							// was g.seq_num >= 0
-			&& g.seq_num % 60 == 0){		// Start a time check against the list of SNTP servers
-		g.blockDetectClockChange = BLOCK_FOR_10;
-												// Refresh the server list once per day
-		if ((g.seq_num - f.lastServerUpdate) > SECS_PER_DAY
-				|| g.seq_num == CHECK_TIME){		// and at the first CHECK_TIME
 
-			f.numServers = allocNTPServerList(tcp);
+	if (g.seq_num >= 0	&& g.seq_num % CHECK_TIME == 0){		// Start a time check against the list of SNTP servers
 
-			if (f.numServers == -1){
-				sprintf(g.logbuf, "Unable to allocate the SNTP servers!\n");
-				writeToLog(g.logbuf);
-				return;
-			}
-			f.lastServerUpdate = g.seq_num;
+//		if ((g.seq_num - f.lastServerUpdate) > SECS_PER_DAY	// Refresh the server list once per day
+//				|| g.seq_num == 0){								// and at g.seq_num == 0
+//
+//			f.numServers = allocNTPServerList(tcp);
+//
+//			if (f.numServers == -1){
+//				sprintf(g.logbuf, "Unable to allocate the SNTP servers!\n");
+//				writeToLog(g.logbuf);
+//				return;
+//			}
+//
+//			f.lastServerUpdate = g.seq_num;
+//		}
+
+		f.numServers = MAX_SERVERS;
+
+		for (int i = 0; i < MAX_SERVERS; i++){
+			f.serverTimeDiff[i] = 1000000;
+			f.threadIsBusy[i] = false;
 		}
 
 		f.timeCheckEnable = f.numServers;

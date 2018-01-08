@@ -104,6 +104,10 @@
 #define HARD_LIMIT_1 1
 #define HARD_LIMIT_05 0.5
 
+#define FILTER_FACTOR 0.9
+#define FILTER_ACCUM_START 30
+#define JITTER_LIMIT 20.0
+
 #define HIGH 1
 #define LOW 0
 
@@ -172,7 +176,7 @@ struct G {
 	int t_count;										//!< Whole seconds counted at the time of \b G.t_now.
 	double t_mono_now;								//!< Current monotonic count of passing seconds
 	double t_mono_last;								//!< Last recorded monotonic count used to determine a lost PPS update
-	double zeroAccum;								//!< Accumulator to test nearness to zero in \b isNearZero()
+	double filterAccum;								//!< Accumulator to test average values in \b isBelow()
 
 	int intrptDelay;									//!< Value of the interrupt delay calibration measurement received from the PPS-Client device driver.
 	int intrptError;									//!< Set equal to "intrptDelay - sysDelay" in \b getInterruptDelay().
