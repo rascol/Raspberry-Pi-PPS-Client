@@ -9,7 +9,7 @@ The PPS-Client daemon is a fast, microsecond accuracy Pulse-Per-Second system cl
 - [Software Requirements](#software-requirements)
   - [Operating System](#operating-system)
   - [No Internet Time](#no-internet-time)
-  - [GPS Only](gps-only)
+  - [GPS Only](#gps-only)
   - [The chkconfig system services manager](#the-chkconfig-system-services-manager)
 - [Installing](#installing)
   - [Get the Files](#get-the-files)
@@ -76,7 +76,7 @@ Versions of Linux kernel 4.1 and later are supported. Currently PPS-Client v1.5 
 
 ## No Internet Time
 
-Currently the default for setting whole second time-of-day updates is to query NIST time servers over the Internet. You may want use some other program to handle setting time-of-day updates. To tell PPS-Client that it should totally ignore how the clock seconds are set, after installation use a setting in **/etc/pps-client.conf**:
+As of PPS-Client v1.5.0 the default for setting whole second time-of-day updates is to query NIST time servers over the Internet. You may want use some other program to handle setting time-of-day updates. To tell PPS-Client that it should totally ignore how the clock seconds are set, after installation use a setting in **/etc/pps-client.conf**:
 ```
 ~ $ sudo nano /etc/pps-client.conf
 ```
@@ -125,7 +125,11 @@ The steps below don't do a complete kernel installation. Only enough is done to 
 
 ## Get the Files
 
-Before compiling the kernel, be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case the Linux kernel version was updated.
+Previous versions of PPS-Client required the installation of NTP. PPS-Client now uses **timedatectl** from **systemd** to disable NTP clock discipline. This is currently the preferred way to do any kind of time control (see man timedatectl). But **timedatectl** will only take control if NTP is **not** installed. To insure that is the case, from the Raspberry Pi do,
+```
+~ $ sudo apt-get remove ntp
+```
+Also, before compiling the kernel, be certain your system and tools are up to date on the Raspberry Pi. The reboot is necessary in case the Linux kernel version was updated and, if necessary, to complete the removal of NTP.
 ```
 ~ $ sudo apt-get update
 ~ $ sudo apt-get upgrade

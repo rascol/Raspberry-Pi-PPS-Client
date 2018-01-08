@@ -372,7 +372,7 @@ double getAverageCorrection(int timeCorrection){
 /**
  * Sets the system time whenever there is an error
  * relative to the whole seconds obtained from
- * Internet SNTP servers by writing the whole
+ * Internet NIST servers by writing the whole
  * second correction to the PPS kernel driver.
  *
  * Errors are infrequent. But if one occurs the whole
@@ -661,29 +661,6 @@ void increaseMonotonicCount(void){
 	}
 }
 
-
-/**
- * Checks that arg val has been below limit for about the
- * previous 20 or so values.
- *
- * @param[in] limit The limit value.
- *
- * @param[in] val The arg to be checked relative to limit.
- *
- * @returns true if the magnitude of the average arg value
- * is less than limit else false.
- */
-bool isBelow(double limit, double val){
-
-	g.filterAccum = FILTER_FACTOR * g.filterAccum + (1.0 - FILTER_FACTOR) * val;
-
-	if (fabs(g.filterAccum) < limit){
-		return true;
-	}
-	return false;
-}
-
-
 /**
  * Determines whether the system clock has been set
  * externally.
@@ -693,15 +670,15 @@ bool isBelow(double limit, double val){
 bool detectExteralSystemClockChange(void){
 	bool clockChanged = false;
 
-	if (g.seq_num > FILTER_ACCUM_START && isBelow(JITTER_LIMIT, (double)g.jitter)) {
+	if (g.seq_num > SLEW_LEN && fabs(g.avgSlew) < SLEW_MAX) {
 
 		if (g.t_now != g.t_count){
 
-			sprintf(g.logbuf, "detectExteralSystemClockChange() Got error g.t_now: %d g.t_count: %d g.filterAccum: %lf\n", g.t_now, g.t_count, g.filterAccum);
+			sprintf(g.logbuf, "detectExteralSystemClockChange() Got error g.t_now: %d g.t_count: %d\n", g.t_now, g.t_count);
 			writeToLog(g.logbuf);
 
-			clockChanged = true;     			// The clock was set externally.
-			g.t_count = g.t_now;					// Update the seconds counter.
+			clockChanged = true;     						// The clock was set externally.
+			g.t_count = g.t_now;								// Update the seconds counter.
 		}
 	}
 	return clockChanged;
@@ -728,8 +705,8 @@ int makeTimeCorrection(struct timeval pps_t, int pps_fd){
 	int rv = 0;
 	g.interruptReceived = true;
 
-	if (g.doNTPsettime && g.consensusTimeError != 0){		// When an NTP time correction is needed
-		rv = setClockToNTPtime(pps_fd);					// apply it here.
+	if (g.doNTPsettime && g.consensusTimeError != 0){			// When an NTP time correction is needed
+		rv = setClockToNTPtime(pps_fd);						// apply it here.
 		if (rv == -1){
 			return rv;
 		}
@@ -1304,19 +1281,6 @@ int main(int argc, char *argv[])
 		return rv;
 	}
 
-	rv = sysCommand("timedatectl set-ntp 0");			// Disable NTP, to prevent it from disciolining the clock.
-	if (g.doNTPsettime && rv != 0){
-		return rv;
-	}
-
-	printf("Waiting two minutes for NTP to shut down");
-	for (int i = 0; i < 120; i++){
-		sleep(1);
-		fprintf(stdout, ".");
-		fflush(stdout);
-	}
-	printf("\n");
-
 	pid_t pid = fork();									// Fork a duplicate child of this process.
 
 	if (pid > 0){										// This is the parent process.
@@ -1340,10 +1304,10 @@ int main(int argc, char *argv[])
 		goto end0;
 	}
 
-//	rv = sysCommand("timedatectl set-ntp 0");			// Disable NTP, to prevent it from disciolining the clock.
-//	if (g.doNTPsettime && rv != 0){
-//		goto end0;
-//	}
+	rv = sysCommand("timedatectl set-ntp 0");			// Disable NTP, to prevent it from disciolining the clock.
+	if (g.doNTPsettime && rv != 0){
+		goto end0;
+	}
 
 	param.sched_priority = 99;							// to get real-time priority.
 	sched_setscheduler(0, SCHED_FIFO, &param);			// SCHED_FIFO: Don't yield to scheduler until sleep.
