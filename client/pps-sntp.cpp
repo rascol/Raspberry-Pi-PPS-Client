@@ -123,7 +123,7 @@ int getNISTTime(int id, char *strbuf, char *logbuf, time_t *timeDiff){
 		return -1;
 	}
 
-	char *pNum = strpbrk(strbuf, "0123456789");
+	char *pNum = strpbrk(strbuf, "-0123456789");
 	time_t delta;
 	if (pNum == strbuf){								// strbuf contains a time diff value
 		sscanf(strbuf, "%ld\n", &delta);
