@@ -1,4 +1,4 @@
-# PPS-Client v1.5.0
+# PPS-Client v1.5.1
 
 <p align="center"><img src="figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" width="400"/></p>
 
