@@ -81,6 +81,9 @@ int main(int argc, char *argv[])
 	printf("Removing /usr/share/doc/pps-client\n");
 	sysCommand("rm -rf /usr/share/doc/pps-client");
 
+	printf("Removing /usr/sbin/udp-time-client\n");
+	sysCommand("rm -f /usr/sbin/udp-time-client");
+
 	printf("Removing /usr/sbin/pps-client-remove\n");
 	char cmd[50];
 	strcpy(cmd, "rm -f /usr/sbin/");

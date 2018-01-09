@@ -439,8 +439,6 @@ int allocInitializeSerialThread(timeCheckParams *tcp){
 	tcp->threadIsBusy = f.threadIsBusy;
 	tcp->serialPort = f.serialPort;
 
-	printf("allocInitializeSerialThread() tcp->serialPort: %s\n", tcp->serialPort);
-
 	tcp->rv = 0;
 	tcp->doReadSerial = false;
 
