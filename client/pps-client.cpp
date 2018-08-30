@@ -47,8 +47,8 @@
  */
 extern int adjtimex (struct timex *timex);
 
-const char *version = "1.5.1";							//!< Program version 1.5.1 created on 09 Jan 2018.
-
+const char *version = "1.5.2";							//!< Program version 1.5.2 updated on 30 Aug 2018
+														//!< because of change to gps-pps-io.c
 struct G g;												//!< Declares the global variables defined in pps-client.h.
 
 /**

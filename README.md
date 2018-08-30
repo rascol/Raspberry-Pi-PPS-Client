@@ -1,4 +1,4 @@
-# PPS-Client v1.5.1
+# PPS-Client v1.5.2
 
 <p align="center"><img src="figures/RPi_with_GPS.jpg" alt="Raspberry Pi with GPS" width="400"/></p>
 
@@ -60,7 +60,7 @@ For a detailed description of the PPS-Client controller and accuracy testing run
 # Hardware Requirements
 ---
 
-1. A Raspberry Pi 3 or Pi 2 Model B.
+1. A Raspberry Pi 3 or Pi 2 Model B or B+.
 
 2. A GPS module that provides a PPS output. Development was done with the [Adafruit Ultimate GPS module](https://www.adafruit.com/products/2324). Others providing compatible logic levels can also be used.
 

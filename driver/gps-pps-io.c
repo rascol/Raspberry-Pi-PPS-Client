@@ -91,11 +91,12 @@
 #include <asm/segment.h>
 #include <asm/uaccess.h>
 #include <linux/buffer_head.h>
+#include <linux/version.h>
 
 /* The text below will appear in output from 'cat /proc/interrupt' */
 #define INTERRUPT_NAME "gps-pps-io"
 
-const char *version = "gps-pps-io v1.1.0";
+const char *version = "gps-pps-io v1.1.1";
 
 static int major = 0;							/* dynamic by default */
 /**
@@ -637,8 +638,10 @@ struct file* file_open(const char* path, int flags, int rights) {
 }
 
 int file_read(struct file* file, unsigned long long offset, unsigned char* data, unsigned int size) {
-    mm_segment_t oldfs;
     int ret;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
+    mm_segment_t oldfs;
 
     oldfs = get_fs();
     set_fs(get_ds());
@@ -646,6 +649,10 @@ int file_read(struct file* file, unsigned long long offset, unsigned char* data,
     ret = vfs_read(file, data, size, &offset);
 
     set_fs(oldfs);
+#else
+    ret = kernel_read(file, data, size, &offset);
+#endif
+
     return ret;
 }
 
